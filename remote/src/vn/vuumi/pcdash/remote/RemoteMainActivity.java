@@ -14,16 +14,11 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.StrictMode;
-import android.text.Editable;
-import android.text.InputType;
-import android.text.TextWatcher;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -33,7 +28,6 @@ import vn.vuumi.pcdash.net.PcnetState;
 import vn.vuumi.pcdash.net.PcnetBridge;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
@@ -1262,33 +1256,32 @@ public class RemoteMainActivity extends Activity {
 
     private void renderUnpairedScreen() {
         contentContainer.removeAllViews();
+        PairingScreen screen = new PairingScreen(this, getInstalledVersionName(), newLoginCallback(), new PairingScreen.Callback() {
+            @Override
+            public void onFindHostClicked() {
+                startUdpDiscovery();
+            }
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(Color.rgb(0, 0, 0));
+            @Override
+            public void onPairClicked() {
+                startPairing();
+            }
+        });
+        contentContainer.addView(screen);
+        loginPanel = screen.loginPanel;
+        deviceNameInputView = screen.deviceNameInput;
+        discoveredHostsLayout = screen.discoveredHostsLayout;
+        ipInputView = screen.ipInput;
+        codeInputView = screen.codeInput;
+        progressBar = screen.progressBar;
+        pairingStatusView = screen.statusView;
 
-        LinearLayout rootContainer = new LinearLayout(this);
-        rootContainer.setOrientation(LinearLayout.VERTICAL);
-        int pad = dpToPx(24);
-        rootContainer.setPadding(pad, pad, pad, pad);
-        scroll.addView(rootContainer);
-        contentContainer.addView(scroll);
+        startUdpDiscovery();
+    }
 
-        TextView title = new TextView(this);
-        title.setText(L10n.t("Pair this phone", "Ghép đôi thiết bị"));
-        title.setTextSize(26);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextColor(Color.rgb(230, 237, 243));
-        rootContainer.addView(title);
-
-        TextView sub = new TextView(this);
-        sub.setText(L10n.t("Sign in to Tailscale and connect to the home phone on the LAN", "Đăng nhập Tailscale và kết nối với máy tính trên mạng LAN"));
-        sub.setTextSize(13);
-        sub.setTextColor(Color.rgb(139, 148, 158));
-        sub.setPadding(0, dpToPx(4), 0, dpToPx(16));
-        rootContainer.addView(sub);
-
-        // Bước 1: Đăng nhập Tailscale
-        loginPanel = new LoginPanel(this, new LoginPanel.Callback() {
+    // Step 1 of the unpaired screen: diagnostics and the Tailscale sign-in page.
+    private LoginPanel.Callback newLoginCallback() {
+        return new LoginPanel.Callback() {
             @Override
             public void onDiagnosticsClicked() {
                 executor.submit(new Runnable() {
@@ -1325,168 +1318,7 @@ public class RemoteMainActivity extends Activity {
                     }
                 }
             }
-        });
-        rootContainer.addView(loginPanel);
-
-        addSpacing(rootContainer, dpToPx(20));
-
-        // Bước 2: Ghép đôi qua LAN
-        TextView pairSectionHeader = new TextView(this);
-        pairSectionHeader.setText(L10n.t("2. Pair over Wi-Fi", "2. Ghép đôi thiết bị qua Wi-Fi"));
-        pairSectionHeader.setTextSize(16);
-        pairSectionHeader.setTypeface(Typeface.DEFAULT_BOLD);
-        pairSectionHeader.setTextColor(Color.rgb(88, 166, 255));
-        pairSectionHeader.setPadding(0, 0, 0, dpToPx(6));
-        rootContainer.addView(pairSectionHeader);
-
-        TextView nameLabel = new TextView(this);
-        nameLabel.setText(L10n.t("Device name (shown on the host):", "Tên thiết bị (hiển thị trên host):"));
-        nameLabel.setTextSize(12);
-        nameLabel.setTextColor(Color.rgb(139, 148, 158));
-        nameLabel.setPadding(0, 0, 0, dpToPx(4));
-        rootContainer.addView(nameLabel);
-
-        deviceNameInputView = new EditText(this);
-        String defaultName = android.os.Build.MODEL != null ? android.os.Build.MODEL : "Android Remote";
-        deviceNameInputView.setText(defaultName);
-        deviceNameInputView.setTextColor(Color.rgb(230, 237, 243));
-        deviceNameInputView.setBackgroundColor(Color.rgb(16, 20, 26));
-        deviceNameInputView.setInputType(InputType.TYPE_CLASS_TEXT);
-        deviceNameInputView.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
-        rootContainer.addView(deviceNameInputView);
-
-        addSpacing(rootContainer, dpToPx(14));
-
-        // Discovery section
-        TextView discHeader = new TextView(this);
-        discHeader.setText(L10n.t("Find the host automatically:", "Tìm host tự động:"));
-        discHeader.setTextSize(13);
-        discHeader.setTextColor(Color.rgb(201, 209, 217));
-        discHeader.setPadding(0, 0, 0, dpToPx(4));
-        rootContainer.addView(discHeader);
-
-        discoveredHostsLayout = new LinearLayout(this);
-        discoveredHostsLayout.setOrientation(LinearLayout.VERTICAL);
-        rootContainer.addView(discoveredHostsLayout);
-
-        Button searchBtn = new Button(this);
-        searchBtn.setText(L10n.t("🔍 Find the host on this Wi-Fi", "🔍 Tìm host tự động trên Wi-Fi"));
-        searchBtn.setTextColor(Color.rgb(230, 237, 243));
-        searchBtn.setBackgroundColor(Color.rgb(33, 38, 45));
-        searchBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startUdpDiscovery();
-            }
-        });
-        rootContainer.addView(searchBtn);
-
-        addSpacing(rootContainer, dpToPx(18));
-
-        // Manual IP section
-        TextView ipHeader = new TextView(this);
-        ipHeader.setText(L10n.t("Or enter the IP:", "Hoặc nhập IP thủ công:"));
-        ipHeader.setTextSize(13);
-        ipHeader.setTextColor(Color.rgb(201, 209, 217));
-        rootContainer.addView(ipHeader);
-
-        TextView ipLabel = new TextView(this);
-        ipLabel.setText(L10n.t("IP address of the phone running PCDash host (same Wi-Fi)", "Địa chỉ IP máy chạy PCDash (cùng mạng Wi-Fi)"));
-        ipLabel.setTextSize(12);
-        ipLabel.setTextColor(Color.rgb(139, 148, 158));
-        ipLabel.setPadding(0, 0, 0, dpToPx(4));
-        rootContainer.addView(ipLabel);
-
-        ipInputView = new EditText(this);
-        ipInputView.setHint(L10n.t("Example: 192.168.1.100", "Ví dụ: 192.168.1.100"));
-        ipInputView.setHintTextColor(Color.rgb(110, 118, 129));
-        ipInputView.setTextColor(Color.rgb(230, 237, 243));
-        ipInputView.setBackgroundColor(Color.rgb(16, 20, 26));
-        ipInputView.setInputType(InputType.TYPE_CLASS_TEXT);
-        ipInputView.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
-        rootContainer.addView(ipInputView);
-
-        addSpacing(rootContainer, dpToPx(18));
-
-        // Code Section
-        TextView codeHeader = new TextView(this);
-        codeHeader.setText(L10n.t("6-character pairing code shown on the host:", "Mã ghép đôi 6 ký tự hiển thị trên PC:"));
-        codeHeader.setTextSize(13);
-        codeHeader.setTextColor(Color.rgb(201, 209, 217));
-        codeHeader.setPadding(0, 0, 0, dpToPx(4));
-        rootContainer.addView(codeHeader);
-
-        codeInputView = new EditText(this);
-        codeInputView.setHint(L10n.t("ABCDEF (6 characters)", "ABCDEF (tối đa 6 ký tự)"));
-        codeInputView.setHintTextColor(Color.rgb(110, 118, 129));
-        codeInputView.setTextColor(Color.rgb(230, 237, 243));
-        codeInputView.setTextSize(22);
-        codeInputView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        codeInputView.setGravity(Gravity.CENTER);
-        codeInputView.setBackgroundColor(Color.rgb(16, 20, 26));
-        codeInputView.setPadding(dpToPx(12), dpToPx(16), dpToPx(12), dpToPx(16));
-
-        codeInputView.addTextChangedListener(new TextWatcher() {
-            private boolean isUpdating = false;
-
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (isUpdating) return;
-                isUpdating = true;
-                String normalized = RemoteController.normalizeCode(s.toString());
-                s.replace(0, s.length(), normalized);
-                isUpdating = false;
-            }
-        });
-        rootContainer.addView(codeInputView);
-
-        addSpacing(rootContainer, dpToPx(24));
-
-        Button pairBtn = new Button(this);
-        pairBtn.setText(L10n.t("START PAIRING", "BẮT ĐẦU GHÉP ĐÔI"));
-        pairBtn.setTextColor(Color.rgb(255, 255, 255));
-        pairBtn.setTextSize(15);
-        pairBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        pairBtn.setBackgroundColor(Color.rgb(27, 102, 42));
-        int padH = dpToPx(16);
-        int padV = dpToPx(14);
-        pairBtn.setPadding(padH, padV, padH, padV);
-        pairBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startPairing();
-            }
-        });
-        rootContainer.addView(pairBtn);
-
-        progressBar = new ProgressBar(this);
-        progressBar.setVisibility(View.GONE);
-        progressBar.setPadding(0, dpToPx(12), 0, dpToPx(12));
-        rootContainer.addView(progressBar);
-
-        pairingStatusView = new TextView(this);
-        pairingStatusView.setText("");
-        pairingStatusView.setTextSize(13);
-        pairingStatusView.setTextColor(Color.rgb(210, 153, 34));
-        pairingStatusView.setPadding(0, dpToPx(8), 0, 0);
-        rootContainer.addView(pairingStatusView);
-
-        addSpacing(rootContainer, dpToPx(24));
-        TextView versionFooter = new TextView(this);
-        versionFooter.setText(L10n.t("Version ", "Phiên bản ") + getInstalledVersionName());
-        versionFooter.setTextSize(12);
-        versionFooter.setTextColor(Color.rgb(110, 118, 129));
-        versionFooter.setGravity(Gravity.CENTER);
-        versionFooter.setPadding(0, dpToPx(8), 0, dpToPx(16));
-        rootContainer.addView(versionFooter);
-
-        startUdpDiscovery();
+        };
     }
 
     void setSelectedHostIp(String ip) {

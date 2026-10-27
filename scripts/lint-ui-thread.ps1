@@ -1,5 +1,5 @@
 # Lint UI Thread Safety
-# Quet cac file UI (*Activity.java, *TabView.java, MoreSheet.java, BottomNavBar.java, WatchdogReceiver.java, BootReceiver.java)
+# Quet cac file UI (*Activity.java, *TabView.java, MoreSheet.java, BottomNavBar.java, WatchdogReceiver.java, BootReceiver.java, LoginPanel.java, PairingScreen.java)
 # Tim cac token cam chay truc tiep tren luong giao dien.
 
 $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
@@ -10,7 +10,7 @@ $targetDirs = @(
     (Join-Path $repoRoot "app\src")
 )
 $targetFiles = Get-ChildItem -Path $targetDirs -Recurse -Filter *.java | Where-Object {
-    $_.Name -match 'Activity\.java$|TabView\.java$|^MoreSheet\.java$|^BottomNavBar\.java$|^WatchdogReceiver\.java$|^BootReceiver\.java$|^LoginPanel\.java$'
+    $_.Name -match 'Activity\.java$|TabView\.java$|^MoreSheet\.java$|^BottomNavBar\.java$|^WatchdogReceiver\.java$|^BootReceiver\.java$|^LoginPanel\.java$|^PairingScreen\.java$'
 }
 
 function Lint-File {

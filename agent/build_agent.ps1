@@ -8,7 +8,7 @@ $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if (-not (Test-Path $csc)) { $csc = "C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
 if (-not (Test-Path $csc)) { throw "csc.exe not found (install .NET Framework)" }
 
-$src = @("$PSScriptRoot\PcAgent.cs", "$PSScriptRoot\QrCode.cs", "$PSScriptRoot\SetupWindow.cs")
+$src = @("$PSScriptRoot\PcAgent.cs", "$PSScriptRoot\QuotaAggregator.cs", "$PSScriptRoot\QrCode.cs", "$PSScriptRoot\SetupWindow.cs")
 if ($Out.EndsWith("\") -or (Test-Path $Out -PathType Container)) {
     $out = Join-Path $Out "PcAgent.exe"
 } else {
