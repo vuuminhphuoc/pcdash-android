@@ -1,9 +1,9 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -375,7 +375,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
     }
 
     private void handleRegenWebToken() {
-        new AlertDialog.Builder(this)
+        DialogStyle.show(DialogStyle.builder(this)
                 .setTitle(L10n.t("New code", "Tạo mã mới"))
                 .setMessage(L10n.t("Create a new web dashboard access code? Open browser sessions will need the new code.", "Tạo mã truy cập mới cho Web Dashboard? Các phiên đang kết nối sẽ cần nhập lại mã mới."))
                 .setPositiveButton(L10n.t("New code", "Tạo mã mới"), new DialogInterface.OnClickListener() {
@@ -398,7 +398,6 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
                         }, "pcdash-settings-regen").start();
                     }
                 })
-                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
-                .show();
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null), true);
     }
 }

@@ -1,9 +1,9 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -331,11 +331,10 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                         public void run() {
                             addDeviceButton.setEnabled(true);
                             Toast.makeText(RemoteDevicesActivity.this, msg, Toast.LENGTH_LONG).show();
-                            new AlertDialog.Builder(RemoteDevicesActivity.this)
+                            DialogStyle.show(DialogStyle.builder(RemoteDevicesActivity.this)
                                     .setTitle(L10n.t("Pairing", "Thông báo ghép đôi"))
                                     .setMessage(msg)
-                                    .setPositiveButton(L10n.t("Close", "Đóng"), null)
-                                    .show();
+                                    .setPositiveButton(L10n.t("Close", "Đóng"), null), false);
                         }
                     });
                 } catch (final Exception e) {
@@ -422,7 +421,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
     }
 
     private void confirmClearCommandLog() {
-        new AlertDialog.Builder(this)
+        DialogStyle.show(DialogStyle.builder(this)
                 .setTitle(L10n.t("Confirm delete", "Xác nhận xóa"))
                 .setMessage(L10n.t("Clear the whole command log?", "Xóa toàn bộ nhật ký lệnh?"))
                 .setPositiveButton(L10n.t("Delete", "Xóa"), new DialogInterface.OnClickListener() {
@@ -431,8 +430,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                         clearCommandLog();
                     }
                 })
-                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
-                .show();
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null), true);
     }
 
     private void clearCommandLog() {
@@ -588,7 +586,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
     }
 
     private void confirmDelete(final RemoteDevicesPresenter.DeviceRow row, final String displayName) {
-        new AlertDialog.Builder(this)
+        DialogStyle.show(DialogStyle.builder(this)
                 .setTitle(L10n.t("Confirm delete", "Xác nhận xóa"))
                 .setMessage(L10n.t("Remove device ", "Xóa thiết bị ") + displayName + L10n.t("? It loses control access right away.", "? Thiết bị sẽ mất quyền điều khiển ngay."))
                 .setPositiveButton(L10n.t("Delete", "Xóa"), new DialogInterface.OnClickListener() {
@@ -597,8 +595,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                         performDelete(row);
                     }
                 })
-                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
-                .show();
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null), true);
     }
 
     private void performDelete(final RemoteDevicesPresenter.DeviceRow row) {

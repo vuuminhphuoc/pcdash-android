@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -12,6 +13,7 @@ import android.os.PowerManager;
 import android.view.Window;
 import android.view.WindowManager;
 import java.util.function.Consumer;
+import vn.vuumi.pcdash.ui.DialogStyle;
 
 /**
  * Liquid-glass helpers. Real window blur only runs on API 31+ when the system allows it; everywhere else
@@ -20,6 +22,9 @@ import java.util.function.Consumer;
 final class GlassKit {
 
     static final int GLASS_FILL = Color.argb(214, 16, 20, 26);
+    // Alerts sit on the black page with only a dim behind them; the tab bar's fill vanished into it.
+    static final int ALERT_FILL = Color.argb(236, Color.red(DialogStyle.SURFACE), Color.green(DialogStyle.SURFACE),
+            Color.blue(DialogStyle.SURFACE));
     static final int GLASS_SOLID_ALPHA = 248;
     private static final int BLUR_RADIUS_PX = 28;
 
@@ -114,14 +119,19 @@ final class GlassKit {
         }
     }
 
-    /** Glass background for a floating AlertDialog: rounded all around, inset from the screen edge. */
-    static void styleAlert(Dialog dialog) {
+    /**
+     * Glass background for a floating AlertDialog: lighter than the page, rounded all around, inset from
+     * the screen edge, with light text and a red confirm button when the action is destructive.
+     */
+    static void styleAlert(AlertDialog dialog, boolean destructive) {
+        DialogStyle.colorText(dialog, destructive);
         Window window = dialog.getWindow();
         if (window == null) {
             return;
         }
         Context ctx = dialog.getContext();
-        GlassDrawable surface = surface(ctx, 20, 20);
+        GlassDrawable surface = new GlassDrawable(ALERT_FILL, 252,
+                UiKit.dp(ctx, 20), UiKit.dp(ctx, 20), Math.max(1f, UiKit.dp(ctx, 1)));
         window.setBackgroundDrawable(new InsetDrawable(surface, UiKit.dp(ctx, 6)));
         applyDialogBlur(dialog, surface);
     }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
@@ -1056,7 +1057,7 @@ public class RemoteMainActivity extends Activity {
         String msg = "shutdown".equals(action)
                 ? L10n.t("Shut down the PC now?", "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?")
                 : L10n.t("Hibernate the PC now?", "Bạn có chắc chắn muốn đưa PC vào chế độ ngủ đông (Hibernate) không?");
-        AlertDialog confirm = new AlertDialog.Builder(this)
+        AlertDialog confirm = DialogStyle.builder(this)
                 .setTitle(title)
                 .setMessage(msg)
                 .setPositiveButton(L10n.t("Continue", "Thực hiện"), new DialogInterface.OnClickListener() {
@@ -1072,7 +1073,7 @@ public class RemoteMainActivity extends Activity {
                     }
                 })
                 .create();
-        GlassKit.styleAlert(confirm);
+        GlassKit.styleAlert(confirm, true);
         confirm.show();
     }
 
@@ -1113,7 +1114,7 @@ public class RemoteMainActivity extends Activity {
     }
 
     private void confirmForgetHost() {
-        AlertDialog forget = new AlertDialog.Builder(this)
+        AlertDialog forget = DialogStyle.builder(this)
                 .setTitle(L10n.t("Forget host", "Quên host"))
                 .setMessage(L10n.t("Remove the pairing with this host? To reconnect you will need to pair again on the home LAN.", "Bạn có chắc muốn xóa ghép đôi với host này? Để kết nối lại, bạn sẽ cần ghép đôi lại trên mạng LAN."))
                 .setPositiveButton(L10n.t("Forget host", "Quên host"), new DialogInterface.OnClickListener() {
@@ -1176,7 +1177,7 @@ public class RemoteMainActivity extends Activity {
                 })
                 .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
                 .create();
-        GlassKit.styleAlert(forget);
+        GlassKit.styleAlert(forget, true);
         forget.show();
     }
 
