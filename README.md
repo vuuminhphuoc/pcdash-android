@@ -1,0 +1,94 @@
+# PCDash
+
+**English** | [Tiếng Việt](README.vi.md)
+
+<p align="center"><img src="docs/logo/pcdash-host.svg" width="96" alt="PCDash"> <img src="docs/logo/pcdash-remote.svg" width="96" alt="PCDash Remote"></p>
+
+Turn an old Android phone into a home controller for your Windows PC. From anywhere, including
+mobile data, you can wake the PC (Wake-on-LAN), put it to sleep, hibernate, shut it down, cancel a
+shutdown, and watch CPU, GPU, RAM, network and temperatures. No router port forwarding and no
+cloud service of your own: remote access runs over your own Tailscale network, and the controlling
+phone does not need the Tailscale app or a VPN turned on.
+
+## How it works
+
+```
+┌─────────────────────────┐   tsnet (userspace, no VPN app)
+│ Controlling phone       │ ─────────────────────────────────────┐
+│ PCDash Remote           │                                      │
+└─────────────────────────┘                                      ▼
+                                                     ┌────────────────────┐
+                                                     │ Old phone at home  │
+                                                     │ PCDash host        │
+                                                     │ :8091 Bearer API   │
+                                                     │ :8090 web fallback │
+                                                     └─────────┬──────────┘
+                                                               │ Wake-on-LAN packet
+                                                               │ HTTP :8799 (token)
+                                                               ▼
+                                                     ┌────────────────────┐
+                                                     │ Windows PC         │
+                                                     │ PcAgent.exe        │
+                                                     └────────────────────┘
+```
+
+| Part | What it is |
+|---|---|
+| `app/` | **PCDash host**, Android app that stays at home on the old phone. Sends Wake-on-LAN, calls PcAgent, serves the remote API and a web dashboard, embeds its own Tailscale node. |
+| `remote/` | **PCDash Remote**, Android app on the phone you carry. Tabs for control, monitoring with history charts, AI-service quota, command log. Updates itself from the host. |
+| `agent/` | **PcAgent**, a small Windows service (C#, built with `csc.exe`) that runs sleep, hibernate, shutdown, abort and reports metrics. |
+| `pcnet/` | Go `tsnet` library compiled to a native `.so` for both Android apps. |
+| `shared/` | Pairing protocol (SRP-6a) shared by host and remote. |
+
+## Features
+
+- Wake, Sleep, Hibernate, Shutdown, Abort. Hibernate, Shutdown and "Forget host" ask for biometrics or the screen lock.
+- Live CPU, GPU, RAM, disks, network, uptime and temperatures, with 1 h and 6 h history.
+- Command log with device, time and result.
+- Quota tab for AI services read through [omp](https://github.com/can1357/oh-my-pi) on the PC (optional).
+- Pure-black OLED theme, glass tab bar with a sliding selection pill, screen-reader friendly labels.
+- One-scan setup: the PC shows a QR code, the host phone scans it with its camera.
+- Resilient host: wake locks, boot start, watchdog, battery-optimization and autostart helpers.
+
+## Requirements
+
+- A free Tailscale account (both phones sign in inside the PCDash apps; no OAuth keys, tags or custom ACLs).
+- An always-on Android phone (host, Android 8+) on the same LAN as the PC, and a second Android phone (remote, Android 7+).
+- A Windows PC with Wake-on-LAN enabled in BIOS and in the network adapter driver.
+- To build: Android SDK (found at `%LOCALAPPDATA%\Android\Sdk`, or set `ANDROID_HOME`), JDK 17 (found in `~\.jdks` or Program Files, or set `PCDASH_JAVA_HOME`), Android NDK `27.1.12297006`, PowerShell 7, Go `1.27.1` or newer.
+
+## Quick start
+
+1. **Build.** `.\scripts\install-go-toolchain.ps1 -Version 1.27.1` then `.\build-all.ps1`. This produces
+   `app\build\pcdash-signed.apk` (host) and `remote\build\pcdash-remote-signed.apk`.
+2. **Install the apps.** `adb install -r` each APK on the matching phone.
+3. **Install PcAgent on the PC.** Run `agent\install.bat` and accept the UAC prompt. It installs the
+   agent for your user, opens TCP 8799 for the local subnet only, creates a secret **token** and opens a
+   window with a **setup QR code** (reopen it from the Start menu, "PCDash - Ma QR cai dat", or run
+   `agent\show-qr.bat`).
+4. **Configure the host.** In PCDash host open **Cài đặt PC** and tap **Quét mã QR từ PC**. One scan fills the
+   PC's LAN IP, MAC address, port and token. Review and tap **Lưu cài đặt**. You can also type the values
+   by hand (give the PC a DHCP reservation so the IP stays put; the token is printed by the installer).
+5. **Sign in to Tailscale** on both phones inside the apps (same account).
+6. **Pair.** With both phones on the home Wi-Fi, open **Thiết bị điều khiển từ xa -> Thêm thiết bị** on the
+   host, then enter the 6-character code on the remote. After that the remote works from anywhere.
+
+Detailed steps, release flow, tests and ANR guardrails are in [README.vi.md](README.vi.md).
+
+## Security
+
+Every control path is authenticated: per-device Bearer tokens on `:8091`, an access code on the web
+dashboard `:8090`, and a token on PcAgent `:8799`. Read [SECURITY.md](SECURITY.md) for the trust model,
+what to keep private, and how to report a vulnerability. Never expose `:8090` or `:8799` to the Internet.
+
+## Development
+
+Test runners live in `scripts/` (`test-host-*.ps1`, `test-remote-java.ps1`, `test-agent-metrics.ps1`,
+`test-pairing-e2e.ps1`, `lint-ui-thread.ps1`). `scripts/perf-smoke-remote.ps1` and
+`scripts/ux-walkthrough.ps1` run on real phones over adb (set `PCDASH_REMOTE_SERIAL` and
+`PCDASH_HOST_SERIAL`). `.claude/skills/` holds the review skills used while developing.
+
+## License
+
+[MIT](LICENSE). Third-party components are listed in [THIRD_PARTY.md](THIRD_PARTY.md). PCDash is an
+independent project and is not affiliated with Tailscale.

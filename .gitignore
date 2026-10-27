@@ -1,0 +1,49 @@
+# Build artifacts
+app/build/
+agent/*.exe
+agent/serve/
+
+# Android SDK / IDE
+*.keystore
+*.jks
+*.idsig
+
+# Logs
+*.log
+wol.log
+api-tmux.log
+ngrok-*.log
+
+# Secrets / local config
+scraper.env
+api.env.tmp
+*.env
+*.env.tmp
+
+# Temp / caches
+*.tar.gz
+*.sql.gz
+*.csv
+tmp-ngrok/
+manual-extract/
+
+# OS
+.DS_Store
+Thumbs.db
+__pycache__/
+
+# Local Go toolchain (installed by scripts/install-go-toolchain.ps1)
+tools/go*/
+tools/lhm/
+tools/zxing/
+
+# Local secrets and generated output
+tailscale.txt
+/build/
+remote/build/
+agent/build/
+pcnet/build/
+*.idsig
+app/assets/remote-update.apk
+app/assets/remote-update.json
+.superpowers/

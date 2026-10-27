@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PCDash</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: #0d1117; color: #e6edf3; min-height: 100vh; display: flex;
+         justify-content: center; padding: 22px 14px; }
+  .wrap { width: 100%; max-width: 460px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #8b949e; font-size: 13px; margin-bottom: 18px; }
+  .status { display: flex; align-items: center; gap: 10px; background: #161b22;
+            border: 1px solid #30363d; border-radius: 12px; padding: 14px 16px;
+            margin-bottom: 18px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #6e7681;
+         box-shadow: 0 0 8px transparent; transition: all .3s; }
+  .dot.on { background: #3fb950; box-shadow: 0 0 10px #3fb950aa; }
+  .dot.off { background: #f85149; box-shadow: 0 0 10px #f85149aa; }
+  .status .txt { font-weight: 600; }
+  .status .who { color: #8b949e; font-size: 12px; margin-left: auto; text-align: right; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button { border: 1px solid #30363d; background: #21262d; color: #e6edf3;
+           border-radius: 12px; padding: 18px 10px; font-size: 15px; font-weight: 600;
+           cursor: pointer; display: flex; flex-direction: column; align-items: center;
+           gap: 8px; transition: transform .08s, background .15s; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: .45; }
+  .ico { font-size: 26px; line-height: 1; }
+  .wake { border-color: #238636; } .wake:hover { background: #12351d; }
+  .sleep { border-color: #1f6feb; } .sleep:hover { background: #10203a; }
+  .hib { border-color: #8957e5; } .hib:hover { background: #1d1631; }
+  .power { border-color: #da3633; } .power:hover { background: #3a1210; }
+  .abort { grid-column: span 2; padding: 10px; font-size: 13px; font-weight: 400;
+           color: #8b949e; }
+  .log { margin-top: 18px; background: #161b22; border: 1px solid #30363d;
+         border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #8b949e;
+         max-height: 180px; overflow-y: auto; white-space: pre-wrap; }
+  .note { margin-top: 12px; font-size: 11px; color: #6e7681; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PCDash</h1>
+  <div class="sub">Quản lý PC — qua Tailscale từ xa</div>
+
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <div class="txt" id="state">Đang kiểm tra...</div>
+    <div class="who" id="who"></div>
+  </div>
+
+  <div class="grid">
+    <button class="wake" onclick="doAction('wake')">
+      <span class="ico">&#9889;</span>Bật / Đánh thức
+    </button>
+    <button class="sleep" onclick="doAction('sleep', true)">
+      <span class="ico">&#128164;</span>Sleep
+    </button>
+    <button class="hib" onclick="doAction('hibernate', true)">
+      <span class="ico">&#127769;</span>Hibernate
+    </button>
+    <button class="power" onclick="doAction('shutdown', true)">
+      <span class="ico">&#9211;</span>Shutdown
+    </button>
+    <button class="abort" onclick="doAction('abort')">Hủy lệnh tắt máy (shutdown /a)</button>
+  </div>
+
+  <div class="log" id="log"></div>
+  <div class="note">Nút Bật hoạt động khi điện thoại đang trong LAN nhà (magic packet broadcast không đi qua Tailscale).</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function addLog(msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  $('log').textContent = `[${t}] ${msg}\n` + $('log').textContent;
+}
+
+async function api(path, method = 'GET') {
+  const headers = {};
+  const token = localStorage.getItem('pcdash_token');
+  if (token) {
+    headers['X-PCDash-Token'] = token;
+  }
+  let res = await fetch(path, { method, headers });
+  if (res.status === 401 && method === 'POST') {
+    const code = window.prompt('Nhập mã truy cập Web Dashboard (X-PCDash-Token):');
+    if (code) {
+      const trimmed = code.trim();
+      localStorage.setItem('pcdash_token', trimmed);
+      headers['X-PCDash-Token'] = trimmed;
+      res = await fetch(path, { method, headers });
+    }
+  }
+  return res.json();
+}
+
+async function refreshStatus() {
+  try {
+    const s = await api('/api/status');
+    if (s.configured === false) {
+      $('dot').className = 'dot';
+      $('state').textContent = 'Chưa cấu hình PC';
+      $('who').textContent = '';
+    } else {
+      $('dot').className = 'dot ' + (s.online ? 'on' : 'off');
+      $('state').textContent = s.online ? 'PC đang bật' : 'PC đang tắt / offline';
+      $('who').textContent = s.online ? ('port ' + s.port + ' | ' + s.rtt_ms + 'ms') : '';
+    }
+  } catch (e) {
+    $('dot').className = 'dot';
+    $('state').textContent = 'Không kết nối được dashboard';
+  }
+}
+
+async function doAction(name, confirmFirst) {
+  if (confirmFirst && !confirm('Xác nhận ' + name.toUpperCase() + ' PC?')) return;
+  addLog('Gửi lệnh: ' + name + ' ...');
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await api('/api/' + name, 'POST');
+    addLog((r.ok ? 'OK' : 'LỖI') + ': ' + name + ' ' + JSON.stringify(r.detail));
+  } catch (e) {
+    addLog('LỖI kết nối: ' + e);
+  } finally {
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    setTimeout(refreshStatus, 1500);
+  }
+}
+
+refreshStatus();
+setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>

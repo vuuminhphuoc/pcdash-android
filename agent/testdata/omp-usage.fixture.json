@@ -1,0 +1,289 @@
+{
+  "generatedAt": 1793016628316,
+  "reports": [
+    {
+      "provider": "google-antigravity",
+      "fetchedAt": 1793016591324,
+      "limits": [
+        {
+          "id": "google-antigravity:google:default:gemini-5h",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-1",
+            "windowId": "5h"
+          },
+          "window": {
+            "id": "5h",
+            "label": "5 Hour",
+            "durationMs": 18000000,
+            "resetsAt": 1793027922000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 0.7,
+            "usedFraction": 0.3,
+            "remaining": 70,
+            "used": 30,
+            "limit": 100
+          },
+          "status": "ok"
+        },
+        {
+          "id": "google-antigravity:google:default:gemini-weekly",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-1",
+            "windowId": "weekly"
+          },
+          "window": {
+            "id": "weekly",
+            "label": "Weekly",
+            "durationMs": 604800000,
+            "resetsAt": 1793614722000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 0.9,
+            "usedFraction": 0.1,
+            "remaining": 90,
+            "used": 10,
+            "limit": 100
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "endpoint": "https://fake.endpoint.googleapis.com",
+        "projectId": "fake-proj-1",
+        "email": "user@*",
+        "accountId": "fake-acc-1",
+        "orgName": "fake-org-1"
+      }
+    },
+    {
+      "provider": "google-antigravity",
+      "fetchedAt": 1793016591325,
+      "limits": [
+        {
+          "id": "google-antigravity:google:default:gemini-5h",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-2",
+            "windowId": "5h"
+          },
+          "window": {
+            "id": "5h",
+            "label": "5 Hour",
+            "durationMs": 18000000,
+            "resetsAt": 1793034458000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 0.8,
+            "usedFraction": 0.2,
+            "remaining": 80,
+            "used": 20,
+            "limit": 100
+          },
+          "status": "ok"
+        },
+        {
+          "id": "google-antigravity:google:default:gemini-weekly",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-2",
+            "windowId": "weekly"
+          },
+          "window": {
+            "id": "weekly",
+            "label": "Weekly",
+            "durationMs": 604800000,
+            "resetsAt": 1793621258000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 1.0,
+            "usedFraction": 0.0,
+            "remaining": 100,
+            "used": 0,
+            "limit": 100
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "endpoint": "https://fake.endpoint.googleapis.com",
+        "projectId": "fake-proj-2",
+        "email": "user2@*",
+        "accountId": "fake-acc-2",
+        "orgName": "fake-org-2"
+      }
+    },
+    {
+      "provider": "google-antigravity",
+      "fetchedAt": 1793016591326,
+      "limits": [
+        {
+          "id": "google-antigravity:google:default:gemini-5h",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-3",
+            "windowId": "5h"
+          },
+          "window": {
+            "id": "5h",
+            "label": "5 Hour",
+            "durationMs": 18000000,
+            "resetsAt": 1793034568000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 0.9,
+            "usedFraction": 0.1,
+            "remaining": 90,
+            "used": 10,
+            "limit": 100
+          },
+          "status": "ok"
+        },
+        {
+          "id": "google-antigravity:google:default:gemini-weekly",
+          "label": "Gemini",
+          "scope": {
+            "provider": "google-antigravity",
+            "projectId": "fake-proj-3",
+            "windowId": "weekly"
+          },
+          "window": {
+            "id": "weekly",
+            "label": "Weekly",
+            "durationMs": 604800000,
+            "resetsAt": 1793621368000
+          },
+          "amount": {
+            "unit": "percent",
+            "remainingFraction": 0.95,
+            "usedFraction": 0.05,
+            "remaining": 95,
+            "used": 5,
+            "limit": 100
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "endpoint": "https://fake.endpoint.googleapis.com",
+        "projectId": "fake-proj-3",
+        "accountId": "fake-acc-3",
+        "orgName": "fake-org-3"
+      }
+    },
+    {
+      "provider": "openai-codex",
+      "fetchedAt": 1793016457530,
+      "limits": [
+        {
+          "id": "openai-codex:primary",
+          "label": "30 days",
+          "scope": {
+            "provider": "openai-codex",
+            "windowId": "30d",
+            "shared": true
+          },
+          "window": {
+            "id": "30d",
+            "label": "30 days",
+            "durationMs": 2592000000,
+            "resetsAt": 1794999274000
+          },
+          "amount": {
+            "used": 65,
+            "limit": 100,
+            "remaining": 35,
+            "usedFraction": 0.65,
+            "remainingFraction": 0.35,
+            "unit": "percent"
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "email": "user3@*",
+        "accountId": "fake-acc-4",
+        "orgName": "fake-org-4"
+      }
+    },
+    {
+      "provider": "openai-codex",
+      "fetchedAt": 1793016457531,
+      "limits": [
+        {
+          "id": "openai-codex:secondary",
+          "label": "30 days",
+          "scope": {
+            "provider": "openai-codex",
+            "windowId": "30d"
+          },
+          "window": {
+            "id": "30d",
+            "label": "30 days",
+            "durationMs": 2592000000,
+            "resetsAt": 1794999274000
+          },
+          "amount": {
+            "used": 50,
+            "limit": 100,
+            "remaining": 50,
+            "usedFraction": 0.5,
+            "remainingFraction": 0.5,
+            "unit": "percent"
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "email": "alice@example.com"
+      }
+    },
+    {
+      "provider": "anthropic",
+      "fetchedAt": 1793016457533,
+      "limits": [
+        {
+          "id": "anthropic:test",
+          "label": "Claude",
+          "scope": {
+            "provider": "anthropic",
+            "windowId": "5h"
+          },
+          "window": {
+            "id": "5h",
+            "label": "5 Hour",
+            "durationMs": 18000000,
+            "resetsAt": 1793034568000
+          },
+          "amount": {
+            "remainingFraction": 0.8
+          },
+          "status": "ok"
+        }
+      ],
+      "metadata": {
+        "email": "claude-user@*"
+      }
+    },
+    {
+      "provider": "ollama-cloud",
+      "fetchedAt": 1793016457532,
+      "limits": [],
+      "notes": [
+        "Ollama does not expose a standalone quota usage API; per-response token usage is reported during requests."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="256" height="256">
+  <title>PCDash host</title>
+  <style>
+    .bg{fill:#0B1220} .mk{stroke:#34D399}
+    @media (prefers-color-scheme: light){.bg{fill:#F1F5F9}.mk{stroke:#059669}}
+  </style>
+  <rect class="bg" x="6" y="6" width="96" height="96" rx="22"/>
+  <g class="mk" fill="none" stroke-linecap="round">
+    <path d="M54,35 L54,52" stroke-width="5.5"/>
+    <path d="M66.86,38.68 A20,20 0 1 1 41.14,38.68" stroke-width="5.5"/>
+  </g>
+</svg>
