@@ -1,10 +1,12 @@
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// PCDash Remote: the phone you carry. Java and Kotlin sources live side by side in src/.
+// PCDash Remote: the phone you carry. Java and Kotlin sources live side by side in src/; the Control
+// tab and the PC bar are drawn with Jetpack Compose.
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 val versionProps = Properties().apply { file("version.properties").inputStream().use { load(it) } }
@@ -51,9 +53,15 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            // Shrinks and optimizes the libraries (Compose); the app's own code is kept as written.
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     packaging {
@@ -83,6 +91,10 @@ kotlin {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+    implementation(libs.activity.compose)
     testImplementation(libs.junit)
 }
 

@@ -79,7 +79,7 @@ Measured on the Honor with `perf-smoke-remote.ps1` after adding it: 4577 frames,
 2. "Thêm" bottom sheet and the confirm AlertDialogs: window blur on API 31+ with an opaque fallback (`GlassKit.applyDialogBlur`, `GlassKit.styleAlert`). Verified by screenshot that the page behind the sheet is blurred; the AlertDialogs are not screenshot-verified because they sit behind power buttons the walkthrough never presses.
 3. Update card tint by state (green available, orange permission, blue downloading, red error).
 
-Files: `GlassDrawable.java`, `GlassKit.java`, `UiKit.java`, `IconDrawable.java`, `BottomNavBar.java`.
+Files: `GlassDrawable.java`, `GlassKit.java`, `UiKit.java`, `BottomNavBar.java`; the Control tab and the update card are Compose (`ControlScreen.kt`, icons in `PowerIcons.kt`).
 
 Skip: glass on Monitor/Quota/Log cards (content layer), blur behind charts, any shader. The host app has no tab bar or sheet; its dialogs are not glass yet.
 

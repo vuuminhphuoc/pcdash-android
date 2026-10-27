@@ -49,7 +49,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 | `app/src/.../WebDashboard.java` | Dashboard HTTP `:8090` và API hiện có; giữ nguyên làm đường dự phòng. |
 | `app/src/.../RemoteApiServer.java` | API HTTP `:8091`, xác thực Bearer và chuyển tiếp trạng thái/lệnh qua `PcConn`. |
 | `app/src/.../RemoteDeviceStore.java` | Lưu thông tin thiết bị đã ghép và hash token, không lưu token thô. |
-| `remote/` | APK `PCDash Remote` cho máy điều khiển; pairing, giao diện điều khiển và cầu JNI tới tsnet. Build bằng `build-remote.ps1`. |
+| `remote/` | APK `PCDash Remote` cho máy điều khiển (Java và Kotlin; tab Điều khiển và thanh chọn PC vẽ bằng Jetpack Compose); pairing, giao diện điều khiển và cầu JNI tới tsnet. Build bằng `build-remote.ps1`. |
 | `pcnet/` | Thư viện Go tsnet userspace, đóng gói native cho `arm64-v8a` và `armeabi-v7a`. |
 | `shared/` | Giao thức ghép đôi SRP-6a dùng chung giữa host và Remote. |
 | `app/src/.../PcConn.java` | Gửi WOL, kiểm tra trạng thái PC (TCP probe), gọi agent `/exec`. |

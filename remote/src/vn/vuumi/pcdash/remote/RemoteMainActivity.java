@@ -9,7 +9,7 @@ import vn.vuumi.pcdash.qr.QrScanActivity;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
 import android.app.AlertDialog;
 import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
@@ -50,7 +50,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RemoteMainActivity extends Activity {
+public class RemoteMainActivity extends ComponentActivity {
 
     private final Handler ui = new Handler(Looper.getMainLooper());
 

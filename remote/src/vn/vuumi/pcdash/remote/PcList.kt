@@ -3,7 +3,7 @@ package vn.vuumi.pcdash.remote
 /** The host's PCs from GET /v1/pcs: id, name, and the state of each. */
 class PcList private constructor(@JvmField val pcs: List<Pc>) {
 
-    class Pc(
+    data class Pc(
         @JvmField val id: String,
         @JvmField val name: String,
         @JvmField val online: Boolean,
