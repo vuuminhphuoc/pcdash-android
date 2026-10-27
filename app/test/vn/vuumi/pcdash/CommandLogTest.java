@@ -73,7 +73,9 @@ public class CommandLogTest {
                 });
             }
 
-            boolean done = latch.await(10, TimeUnit.SECONDS);
+            // Guards against a deadlock, not disk speed: each write rewrites and fsyncs the file, and
+            // 500 of them took 9-11 s on the Windows CI runner.
+            boolean done = latch.await(60, TimeUnit.SECONDS);
             pool.shutdown();
             assertTrue(done, "Concurrent writes must complete in time");
             assertEquals(errors.get(), 0, "No exceptions during concurrent writes");
