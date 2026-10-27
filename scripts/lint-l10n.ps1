@@ -1,4 +1,4 @@
-# Fails when Java code shows Vietnamese text that is not wrapped in L10n.t("English", "Vietnamese"),
+# Fails when Java or Kotlin code shows Vietnamese text that is not wrapped in L10n.t("English", "Vietnamese"),
 # so the English UI does not regress. Allowed without L10n: log calls, comments, and lines marked
 # "// l10n-ok: <reason>" (for example text that is matched in both languages on purpose).
 $ErrorActionPreference = "Stop"
@@ -10,7 +10,7 @@ $vietnamese = '[\u00C0-\u1EF9\u0110\u0111]'
 $literal = '"(?:[^"\\]|\\.)*"'
 
 $violations = @()
-$files = Get-ChildItem -Path $roots -Recurse -Filter *.java
+$files = Get-ChildItem -Path $roots -Recurse -Include *.java, *.kt
 foreach ($file in $files) {
     $lines = [IO.File]::ReadAllLines($file.FullName, [Text.Encoding]::UTF8)
     $previous = ""
@@ -39,4 +39,4 @@ if ($violations.Count -gt 0) {
     foreach ($v in $violations) { Write-Host "  $v" -ForegroundColor Red }
     exit 1
 }
-Write-Host "PASS: $($files.Count) Java files keep UI text in L10n.t(...)" -ForegroundColor Green
+Write-Host "PASS: $($files.Count) Java/Kotlin files keep UI text in L10n.t(...)" -ForegroundColor Green

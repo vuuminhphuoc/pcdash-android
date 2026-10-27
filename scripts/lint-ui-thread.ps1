@@ -10,8 +10,8 @@ $targetDirs = @(
     (Join-Path $repoRoot "app\src"),
     (Join-Path $repoRoot "shared\src")
 )
-$targetFiles = Get-ChildItem -Path $targetDirs -Recurse -Filter *.java | Where-Object {
-    $_.Name -match 'Activity\.java$|TabView\.java$|^MoreSheet\.java$|^BottomNavBar\.java$|^WatchdogReceiver\.java$|^BootReceiver\.java$|^LoginPanel\.java$|^PairingScreen\.java$'
+$targetFiles = Get-ChildItem -Path $targetDirs -Recurse -Include *.java, *.kt | Where-Object {
+    $_.Name -match 'Activity\.(java|kt)$|TabView\.(java|kt)$|^MoreSheet\.java$|^BottomNavBar\.java$|^WatchdogReceiver\.java$|^BootReceiver\.java$|^LoginPanel\.java$|^PairingScreen\.java$'
 }
 
 function Lint-File {
@@ -36,14 +36,15 @@ function Lint-File {
         $hasException = $line -match '//\s*ui-thread-ok:'
 
         # Phat hien bat dau khoi chay tren luong nen
-        if ($line -match '(executor|lifecycleExecutor)\.submit\s*\(' -or $line -match 'new\s+Thread\s*\(') {
+        # Kotlin: executor.submit { ... }, thread { ... }
+        if ($line -match '(executor|lifecycleExecutor)\.(submit|execute)\s*[\({]' -or $line -match 'new\s+Thread\s*\(' -or $line -match '\bthread\s*(\([^)]*\))?\s*\{') {
             $pendingContexts.Enqueue('BACKGROUND')
         }
         if ($line -match 'class\s+\w*(Worker|Task)\s+implements\s+Runnable') {
             $pendingContexts.Enqueue('BACKGROUND')
         }
         # Quay lai luong giao dien khi co ui.post(new Runnable...)
-        if ($line -match '\b(ui|handler|uiHandler|view)\.post(Delayed)?\s*\(\s*new\s+Runnable' -or $line -match '\brunOnUiThread\s*\(\s*new\s+Runnable') {
+        if ($line -match '\b(ui|handler|uiHandler|view)\.post(Delayed)?\s*(\(\s*new\s+Runnable|\{|\(\s*\{)' -or $line -match '\brunOnUiThread\s*(\(\s*new\s+Runnable|\{)') {
             $pendingContexts.Enqueue('UI_THREAD')
         }
 

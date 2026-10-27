@@ -1,8 +1,10 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// PCDash Remote: the phone you carry.
+// PCDash Remote: the phone you carry. Java and Kotlin sources live side by side in src/.
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
 
 val versionProps = Properties().apply { file("version.properties").inputStream().use { load(it) } }
@@ -70,6 +72,12 @@ android {
         // Lint runs as its own step; it does not stop a release build.
         checkReleaseBuilds = false
         abortOnError = false
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
