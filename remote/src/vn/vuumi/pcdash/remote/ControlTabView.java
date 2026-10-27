@@ -276,7 +276,10 @@ public class ControlTabView implements TabContent {
     @Override
     public void onHide() {}
 
-    public void updateStatus(RemoteApiClient.RemoteStatus status, Exception error) {
+    /**
+     * @param hostPeer the home phone in the Tailscale device list, when it did not answer (may be null)
+     */
+    public void updateStatus(RemoteApiClient.RemoteStatus status, Exception error, TailnetPeers.Peer hostPeer) {
         if (status != null) {
             if (status.online) {
                 pcStatusView.setText(L10n.t("PC is ON", "PC đang BẬT"));
@@ -290,11 +293,22 @@ public class ControlTabView implements TabContent {
                 pcDetailView.setText(L10n.t("Cannot reach the PC", "Không thể kết nối đến PC"));
             }
         } else if (error != null) {
-            pcStatusView.setText(L10n.t("Cannot reach the home phone", "Không kết nối được tới máy ở nhà"));
-            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
             String shortMsg = (error.getMessage() != null && !error.getMessage().isEmpty())
                     ? error.getMessage() : L10n.t("Timed out", "Hết thời gian chờ (timeout)");
-            pcDetailView.setText(shortMsg);
+            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+            if (hostPeer != null && !hostPeer.online) {
+                // The device list says why: the phone itself is off the network.
+                pcStatusView.setText(L10n.t("Home phone is offline", "Máy ở nhà đang offline"));
+                String ago = TailnetPeers.ago(hostPeer.lastSeenMs, System.currentTimeMillis());
+                pcDetailView.setText(L10n.t("Tailscale shows it offline", "Tailscale báo máy này offline")
+                        + (ago.isEmpty() ? "" : L10n.t(" · last seen ", " · lần cuối online ") + ago));
+            } else if (hostPeer != null) {
+                pcStatusView.setText(L10n.t("PCDash host is not answering", "App PCDash ở nhà không phản hồi"));
+                pcDetailView.setText(L10n.t("The home phone is online in Tailscale. ", "Máy ở nhà vẫn online trên Tailscale. ") + shortMsg);
+            } else {
+                pcStatusView.setText(L10n.t("Cannot reach the home phone", "Không kết nối được tới máy ở nhà"));
+                pcDetailView.setText(shortMsg);
+            }
         }
     }
 

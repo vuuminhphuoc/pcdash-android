@@ -29,6 +29,8 @@ public class MoreSheet {
         default void onReloginTailscale() {}
         default void onAppLock() {}
         default void onHostAlertsChanged(boolean enabled) {}
+
+        default void onPcAlertsChanged(boolean enabled) {}
     }
 
     public interface DiagnosticsCallback {
@@ -111,18 +113,43 @@ public class MoreSheet {
         alertsSwitch.setTextColor(Color.rgb(201, 209, 217));
         alertsSwitch.setTextSize(13);
         alertsSwitch.setChecked(HostWatch.isEnabled(context));
+        content.addView(alertsSwitch);
+
+        final CheckBox pcAlertsSwitch = new CheckBox(context);
+        pcAlertsSwitch.setText(L10n.t("Also when the PC turns off (not after Sleep / Shut down from this app)",
+                "Báo cả khi PC tắt (trừ khi tắt / Sleep từ app này)"));
+        pcAlertsSwitch.setTextColor(Color.rgb(201, 209, 217));
+        pcAlertsSwitch.setTextSize(13);
+        pcAlertsSwitch.setChecked(HostWatch.isPcAlertsEnabled(context));
+        pcAlertsSwitch.setEnabled(alertsSwitch.isChecked());
+        pcAlertsSwitch.setAlpha(alertsSwitch.isChecked() ? 1f : 0.45f);
+        LinearLayout.LayoutParams pcLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        pcLp.leftMargin = dpToPx(context, 24);
+        pcAlertsSwitch.setLayoutParams(pcLp);
+        pcAlertsSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (callback != null) {
+                    callback.onPcAlertsChanged(isChecked);
+                }
+            }
+        });
         alertsSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                pcAlertsSwitch.setEnabled(isChecked);
+                pcAlertsSwitch.setAlpha(isChecked ? 1f : 0.45f);
                 if (callback != null) {
                     callback.onHostAlertsChanged(isChecked);
                 }
             }
         });
-        content.addView(alertsSwitch);
+        content.addView(pcAlertsSwitch);
+
         TextView alertsNote = new TextView(context);
-        alertsNote.setText(L10n.t("Checks about every 15 minutes in the background (a little battery and data). Android may delay checks while this phone sits idle.",
-                "Kiểm tra khoảng 15 phút một lần ở chế độ nền (tốn một ít pin và dữ liệu). Android có thể hoãn khi máy này để yên lâu."));
+        alertsNote.setText(L10n.t("About every 15 minutes this phone reads the Tailscale device list in the background (a little battery and data), so it knows at once whether the home phone is online; the PC's state comes from the home phone. Android may delay checks while this phone sits idle.",
+                "Khoảng 15 phút một lần, máy này đọc danh sách thiết bị Tailscale ở chế độ nền (tốn một ít pin và dữ liệu) để biết ngay máy ở nhà còn online không; trạng thái PC do máy ở nhà báo. Android có thể hoãn khi máy này để yên lâu."));
         alertsNote.setTextColor(Color.rgb(139, 148, 158));
         alertsNote.setTextSize(11);
         alertsNote.setPadding(dpToPx(context, 32), 0, 0, 0);

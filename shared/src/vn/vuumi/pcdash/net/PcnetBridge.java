@@ -116,6 +116,17 @@ public class PcnetBridge {
         return nativeDiagnostics();
     }
 
+    /**
+     * The tailnet's other devices and whether each is online, as the coordination server sees them
+     * (the Tailscale device list), as JSON; null when the node is not available.
+     */
+    public String peersJson() {
+        if (!isNativeAvailable()) {
+            return null;
+        }
+        return nativePeersJson();
+    }
+
     public int getBoundPort() {
         return boundPort;
     }
@@ -132,4 +143,5 @@ public class PcnetBridge {
     private static native String nativeNodeId();
     private static native String nativeLastError();
     private static native String nativeDiagnostics();
+    private static native String nativePeersJson();
 }

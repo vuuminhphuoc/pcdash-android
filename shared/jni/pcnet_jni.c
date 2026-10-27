@@ -16,6 +16,7 @@ extern void PcnetFreeCString(char* s);
 extern char* PcnetDiagnostics(void);
 extern int PcnetBegin(char* cStateDir, char* cHostname, int cMode, char* cHost, int cHostPort, int cLocalPort);
 extern char* PcnetState(void);
+extern char* PcnetPeers(void);
 
 /*
  * vn.vuumi.pcdash.net.PcnetBridge JNI implementations
@@ -127,6 +128,18 @@ Java_vn_vuumi_pcdash_net_PcnetBridge_nativeDiagnostics(
     }
     jstring result = (*env)->NewStringUTF(env, diag);
     PcnetFreeCString(diag);
+    return result;
+}
+
+JNIEXPORT jstring JNICALL
+Java_vn_vuumi_pcdash_net_PcnetBridge_nativePeersJson(
+    JNIEnv* env, jclass clazz) {
+    char* peers = PcnetPeers();
+    if (peers == NULL) {
+        return NULL;
+    }
+    jstring result = (*env)->NewStringUTF(env, peers);
+    PcnetFreeCString(peers);
     return result;
 }
 

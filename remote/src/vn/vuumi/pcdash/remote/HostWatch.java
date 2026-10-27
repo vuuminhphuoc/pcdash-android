@@ -17,10 +17,12 @@ import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 
 /**
- * Optional alerts when the home phone goes offline or its battery runs low. Off by default: it is the
- * one thing that makes the remote work in the background. When on, a JobScheduler job checks about
- * every 15 minutes while this phone has a network: it opens the tailnet for a few seconds, asks the
- * host for its status and battery, and notifies through {@link HostAlertRules}.
+ * Optional alerts when the home phone goes offline or its battery runs low, and (a second choice) when
+ * the PC turns off. Off by default: it is the one thing that makes the remote work in the background.
+ * When on, a JobScheduler job checks about every 15 minutes while this phone has a network: it opens
+ * the tailnet for a few seconds and reads the Tailscale device list, which tells at once whether the
+ * home phone is online. Only when it is does the check ask the PCDash host app for the PC's state and
+ * the battery. {@link HostAlertRules} decides what to notify.
  *
  * The job is not kept across a reboot of this phone (that would need a boot receiver); opening the
  * app schedules it again. Android may also delay it while the phone sits idle (Doze).
@@ -31,10 +33,12 @@ final class HostWatch {
     static final String CHANNEL_ID = "host_alerts";
     static final int NOTIFY_CONNECTION = 1;
     static final int NOTIFY_BATTERY = 2;
+    static final int NOTIFY_PC = 3;
 
     private static final String PREFS = "pcdash_host_watch";
     private static final String KEY_ENABLED = "enabled";
     private static final String KEY_STATE = "state";
+    private static final String KEY_PC_ALERTS = "pcAlerts";
     private static final long TAILNET_WAIT_MS = 30_000L;
 
     private HostWatch() {}
@@ -56,8 +60,31 @@ final class HostWatch {
             if (nm != null) {
                 nm.cancel(NOTIFY_CONNECTION);
                 nm.cancel(NOTIFY_BATTERY);
+                nm.cancel(NOTIFY_PC);
             }
         }
+    }
+
+    /** Also alert when the PC turns off or comes back (off by default: a PC is often turned off on purpose). */
+    static boolean isPcAlertsEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_PC_ALERTS, false);
+    }
+
+    static void setPcAlertsEnabled(Context context, boolean enabled) {
+        prefs(context).edit().putBoolean(KEY_PC_ALERTS, enabled).commit();
+        if (!enabled) {
+            NotificationManager nm = context.getSystemService(NotificationManager.class);
+            if (nm != null) nm.cancel(NOTIFY_PC);
+        }
+    }
+
+    /** This app just sent Sleep, Hibernate or Shut down: the PC going off is no surprise. Not on the UI thread. */
+    static synchronized void notePcOffExpected(Context context) {
+        if (!isEnabled(context)) return;
+        SharedPreferences p = prefs(context);
+        HostAlertRules.State state = HostAlertRules.State.decode(p.getString(KEY_STATE, null));
+        state.pcOffExpected = true;
+        p.edit().putString(KEY_STATE, state.encode()).commit();
     }
 
     /** Schedules the job again if it is on but missing (after a reboot of this phone). */
@@ -88,20 +115,25 @@ final class HostWatch {
                 // This phone's own tailnet is not up (no sign-in, no route): says nothing about the host.
                 return;
             }
-            boolean reachable = false;
-            for (int attempt = 0; attempt < 3 && !reachable; attempt++) {
+            TailnetPeers peers = TailnetPeers.parse(c.getBridge().peersJson());
+            TailnetPeers.Peer host = peers != null ? peers.host() : null;
+            Boolean listedOnline = host != null ? Boolean.valueOf(host.online) : null;
+            // Offline in the device list: one request in case the list lags; otherwise up to three
+            // (a single request can land on a blip).
+            int tries = Boolean.FALSE.equals(listedOnline) ? 1 : 3;
+            RemoteApiClient.RemoteStatus status = null;
+            for (int attempt = 0; attempt < tries && status == null; attempt++) {
                 try {
-                    c.getStatus();
-                    reachable = true;
+                    status = c.getStatus();
                 } catch (RemoteApiClient.DeviceRevokedException e) {
                     return;
                 } catch (IOException e) {
-                    if (attempt < 2) Thread.sleep(5000);
+                    if (attempt < tries - 1) Thread.sleep(5000);
                 }
             }
             Double battery = null;
             Boolean charging = null;
-            if (reachable) {
+            if (status != null) {
                 try {
                     MetricsSnapshot m = MetricsParser.parse(c.getMetrics());
                     if (m.phone != null && m.phone.battery != null) {
@@ -110,7 +142,9 @@ final class HostWatch {
                     }
                 } catch (IOException ignored) {}
             }
-            record(context, new HostAlertRules.Check(reachable, battery, charging));
+            record(context, new HostAlertRules.Check(listedOnline, status != null,
+                    status != null ? Boolean.valueOf(status.online) : null, battery, charging),
+                    host != null ? host.lastSeenMs : -1L);
         } catch (IOException | InterruptedException ignored) {
             // Stopped by the system or the tailnet would not start; the next run tries again.
         } finally {
@@ -118,13 +152,13 @@ final class HostWatch {
         }
     }
 
-    private static synchronized void record(Context context, HostAlertRules.Check check) {
+    private static synchronized void record(Context context, HostAlertRules.Check check, long hostLastSeenMs) {
         SharedPreferences p = prefs(context);
         HostAlertRules.State state = HostAlertRules.State.decode(p.getString(KEY_STATE, null));
-        List<HostAlertRules.Alert> alerts = HostAlertRules.apply(state, check);
+        List<HostAlertRules.Alert> alerts = HostAlertRules.apply(state, check, isPcAlertsEnabled(context));
         p.edit().putString(KEY_STATE, state.encode()).commit();
         for (HostAlertRules.Alert alert : alerts) {
-            notify(context, alert, check.batteryPercent);
+            notify(context, alert, check.batteryPercent, hostLastSeenMs);
         }
     }
 
@@ -139,7 +173,7 @@ final class HostWatch {
         return false;
     }
 
-    private static void notify(Context context, HostAlertRules.Alert alert, Double battery) {
+    private static void notify(Context context, HostAlertRules.Alert alert, Double battery, long hostLastSeenMs) {
         NotificationManager nm = context.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -151,11 +185,31 @@ final class HostWatch {
         String text;
         int id;
         switch (alert) {
-            case HOST_OFFLINE:
+            case HOST_OFFLINE: {
                 id = NOTIFY_CONNECTION;
+                String ago = TailnetPeers.ago(hostLastSeenMs, System.currentTimeMillis());
+                String seen = ago.isEmpty() ? "" : L10n.t(" (last seen " + ago + ")", " (lần cuối online " + ago + ")");
                 title = L10n.t("Home phone is offline", "Máy ở nhà mất kết nối");
-                text = L10n.t("PCDash Remote cannot reach the home phone over Tailscale. Check its Wi-Fi, power and the PCDash host app.",
-                        "PCDash Remote không liên lạc được với điện thoại ở nhà qua Tailscale. Kiểm tra Wi-Fi, nguồn điện và app PCDash host.");
+                text = L10n.t("Tailscale shows the home phone offline" + seen + ". Check its Wi-Fi and power.",
+                        "Tailscale báo điện thoại ở nhà đang offline" + seen + ". Kiểm tra Wi-Fi và nguồn điện của máy.");
+                break;
+            }
+            case HOST_NOT_ANSWERING:
+                id = NOTIFY_CONNECTION;
+                title = L10n.t("PCDash host is not answering", "App PCDash ở nhà không phản hồi");
+                text = L10n.t("The home phone is online in Tailscale, but the PCDash host app does not answer. Open it on that phone and check its battery optimization.",
+                        "Điện thoại ở nhà vẫn online trên Tailscale nhưng app PCDash host không trả lời. Mở app trên máy đó và kiểm tra tối ưu pin.");
+                break;
+            case PC_OFFLINE:
+                id = NOTIFY_PC;
+                title = L10n.t("PC is off or unreachable", "PC đã tắt hoặc mất kết nối");
+                text = L10n.t("The home phone can no longer reach the PC. You can turn it on again with Wake.",
+                        "Điện thoại ở nhà không còn thấy PC. Có thể bật lại bằng nút Bật / Đánh thức PC.");
+                break;
+            case PC_BACK_ONLINE:
+                id = NOTIFY_PC;
+                title = L10n.t("PC is back on", "PC đã bật lại");
+                text = L10n.t("The home phone can reach the PC again.", "Điện thoại ở nhà đã thấy PC trở lại.");
                 break;
             case HOST_BACK_ONLINE:
                 id = NOTIFY_CONNECTION;

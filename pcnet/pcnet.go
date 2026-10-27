@@ -16,10 +16,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 
 	"github.com/wlynxg/anet"
@@ -363,17 +365,7 @@ func GetDiagnostics() (*Diagnostics, error) {
 					if peer == nil {
 						continue
 					}
-					matched := false
-					for _, ip := range peer.TailscaleIPs {
-						if ip.String() == peerHostTarget {
-							matched = true
-							break
-						}
-					}
-					if !matched && (peer.HostName == peerHostTarget || strings.TrimSuffix(peer.DNSName, ".") == peerHostTarget) {
-						matched = true
-					}
-					if matched {
+					if peerMatchesTarget(peer, peerHostTarget) {
 						pDiag := &PeerHostDiag{
 							Online:  peer.Online,
 							Relay:   peer.Relay,
@@ -448,6 +440,88 @@ func GetDiagnostics() (*Diagnostics, error) {
 	}
 
 	return diag, nil
+}
+
+// peerMatchesTarget reports whether peer is the host this node was told to reach (by tailnet IP,
+// hostname or MagicDNS name).
+func peerMatchesTarget(peer *ipnstate.PeerStatus, target string) bool {
+	if target == "" {
+		return false
+	}
+	for _, ip := range peer.TailscaleIPs {
+		if ip.String() == target {
+			return true
+		}
+	}
+	return peer.HostName == target || strings.TrimSuffix(peer.DNSName, ".") == target
+}
+
+// PeerInfo is one device of the tailnet as this node's network map shows it: the same list, and the
+// same online state, as the Tailscale admin console's device list.
+type PeerInfo struct {
+	HostName string   `json:"hostName"`
+	DNSName  string   `json:"dnsName,omitempty"`
+	OS       string   `json:"os,omitempty"`
+	IPs      []string `json:"ips"`
+	Online   bool     `json:"online"`
+	LastSeen string   `json:"lastSeen,omitempty"`
+	// Target marks the host this node dials (the home phone, seen from the remote).
+	Target bool `json:"target"`
+}
+
+type PeersInfo struct {
+	BackendState string     `json:"backendState"`
+	Peers        []PeerInfo `json:"peers"`
+}
+
+// GetPeers lists the tailnet's other devices with their online state. The state comes from the
+// coordination server, so asking costs no traffic to the devices themselves.
+func GetPeers(ctx context.Context) (*PeersInfo, error) {
+	lifecycleMu.Lock()
+	srv := activeServer
+	lifecycleMu.Unlock()
+
+	targetPeerHostMu.Lock()
+	target := targetPeerHost
+	targetPeerHostMu.Unlock()
+
+	out := &PeersInfo{BackendState: "Stopped", Peers: []PeerInfo{}}
+	if srv == nil {
+		return out, nil
+	}
+	lc, err := srv.LocalClient()
+	if err != nil {
+		return nil, err
+	}
+	status, err := lc.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out.BackendState = status.BackendState
+	for _, peer := range status.Peer {
+		if peer == nil {
+			continue
+		}
+		info := PeerInfo{
+			HostName: peer.HostName,
+			DNSName:  strings.TrimSuffix(peer.DNSName, "."),
+			OS:       peer.OS,
+			IPs:      []string{},
+			Online:   peer.Online,
+			Target:   peerMatchesTarget(peer, target),
+		}
+		for _, ip := range peer.TailscaleIPs {
+			info.IPs = append(info.IPs, ip.String())
+		}
+		if !peer.Online && !peer.LastSeen.IsZero() {
+			info.LastSeen = peer.LastSeen.UTC().Format(time.RFC3339)
+		}
+		out.Peers = append(out.Peers, info)
+	}
+	sort.Slice(out.Peers, func(i, j int) bool {
+		return out.Peers[i].HostName < out.Peers[j].HostName
+	})
+	return out, nil
 }
 
 func GetDiagnosticsJSON() (string, error) {
@@ -1636,6 +1710,60 @@ func PcnetDiagnostics() (ret *C.char) {
 		}
 	}()
 	str := pcnetDiagnosticsInternal()
+	if str == "" {
+		return nil
+	}
+	return C.CString(str)
+}
+
+func pcnetPeersInternal() string {
+	defer func() {
+		if r := recover(); r != nil {
+			setLastError(fmt.Sprintf("panic in PcnetPeers: %v", r))
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	peers, err := GetPeers(ctx)
+	if err != nil {
+		setLastError(err.Error())
+		return ""
+	}
+	b, err := json.Marshal(peers)
+	if err != nil {
+		setLastError(err.Error())
+		return ""
+	}
+	return asciiJSON(b)
+}
+
+// asciiJSON escapes every non-ASCII character of a JSON text as \uXXXX. JNI's NewStringUTF reads
+// modified UTF-8, which a device name with an emoji (4-byte UTF-8) would break.
+func asciiJSON(b []byte) string {
+	var sb strings.Builder
+	for _, r := range string(b) {
+		if r < 0x80 {
+			sb.WriteRune(r)
+			continue
+		}
+		for _, u := range utf16.Encode([]rune{r}) {
+			fmt.Fprintf(&sb, "\\u%04x", u)
+		}
+	}
+	return sb.String()
+}
+
+// PcnetPeers returns the tailnet's other devices as JSON (see PeersInfo), or NULL on error.
+//
+//export PcnetPeers
+func PcnetPeers() (ret *C.char) {
+	defer func() {
+		if r := recover(); r != nil {
+			setLastError(fmt.Sprintf("panic in PcnetPeers: %v", r))
+			ret = nil
+		}
+	}()
+	str := pcnetPeersInternal()
 	if str == "" {
 		return nil
 	}

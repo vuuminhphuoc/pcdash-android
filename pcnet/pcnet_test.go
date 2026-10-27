@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"tailscale.com/envknob"
+	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/logpolicy"
 	"tailscale.com/logtail"
 	"tailscale.com/tsnet"
@@ -1117,5 +1119,126 @@ func TestStateJSONNeverContainsAuthKeyOrTokens(t *testing.T) {
 		if strings.Contains(lowerRaw, term) {
 			t.Fatalf("state JSON leaked forbidden term %q: %s", term, raw)
 		}
+	}
+}
+
+func TestPeerMatchesTarget(t *testing.T) {
+	peer := &ipnstate.PeerStatus{
+		HostName:     "pixel-home",
+		DNSName:      "pixel-home.tail-scale.ts.net.",
+		TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.7")},
+	}
+	for _, target := range []string{"100.64.0.7", "pixel-home", "pixel-home.tail-scale.ts.net"} {
+		if !peerMatchesTarget(peer, target) {
+			t.Errorf("expected %q to match", target)
+		}
+	}
+	for _, target := range []string{"", "100.64.0.8", "pixel"} {
+		if peerMatchesTarget(peer, target) {
+			t.Errorf("expected %q not to match", target)
+		}
+	}
+}
+
+func TestPeersBeforeStartIsEmpty(t *testing.T) {
+	Stop()
+	peers, err := GetPeers(context.Background())
+	if err != nil {
+		t.Fatalf("GetPeers failed: %v", err)
+	}
+	if peers.BackendState != "Stopped" || len(peers.Peers) != 0 {
+		t.Fatalf("unexpected peers before start: %+v", peers)
+	}
+	b, _ := json.Marshal(peers)
+	if !strings.Contains(string(b), `"peers":[]`) {
+		t.Fatalf("peers must be a JSON array, got %s", b)
+	}
+}
+
+func TestPeersListsTargetWithOnlineState(t *testing.T) {
+	tc, ts := newTestControlServer(t)
+	tc.AllOnline = true
+
+	hostServer := &tsnet.Server{
+		Dir:        t.TempDir(),
+		Hostname:   "pcdash-host",
+		ControlURL: ts.URL,
+		Ephemeral:  true,
+		Logf:       func(string, ...any) {},
+		UserLogf:   func(string, ...any) {},
+	}
+	t.Cleanup(func() {
+		hostServer.Close()
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	hostStatus, err := hostServer.Up(ctx)
+	if err != nil {
+		t.Fatalf("hostServer.Up failed: %v", err)
+	}
+	hostIP := hostStatus.TailscaleIPs[0].String()
+
+	cfg := Config{
+		StateDir:   t.TempDir(),
+		ControlURL: ts.URL,
+		Host:       hostIP,
+		HostPort:   8091,
+		Hostname:   "pcdash-remote",
+	}
+	if _, err := Start(ctx, cfg); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	t.Cleanup(func() {
+		Stop()
+	})
+
+	// The host shows up in the network map shortly after the remote joins.
+	var target *PeerInfo
+	for target == nil {
+		peers, err := GetPeers(ctx)
+		if err != nil {
+			t.Fatalf("GetPeers failed: %v", err)
+		}
+		for i := range peers.Peers {
+			if peers.Peers[i].Target {
+				target = &peers.Peers[i]
+			}
+		}
+		if target == nil {
+			select {
+			case <-ctx.Done():
+				t.Fatalf("host never appeared in the peer list: %+v", peers)
+			case <-time.After(200 * time.Millisecond):
+			}
+		}
+	}
+	if target.HostName != "pcdash-host" || !target.Online || target.LastSeen != "" {
+		t.Fatalf("unexpected host entry: %+v", *target)
+	}
+	if len(target.IPs) == 0 || target.IPs[0] != hostIP {
+		t.Fatalf("host entry has the wrong IPs: %+v", target.IPs)
+	}
+
+	raw := pcnetPeersInternal()
+	if !strings.Contains(raw, `"target":true`) || !strings.Contains(raw, `"online":true`) {
+		t.Fatalf("PcnetPeers JSON misses the host: %s", raw)
+	}
+}
+
+func TestAsciiJSONKeepsTextAndDropsNonASCIIBytes(t *testing.T) {
+	in := map[string]string{"hostName": "Phước's Pixel 📱"}
+	b, _ := json.Marshal(in)
+	out := asciiJSON(b)
+	for i := 0; i < len(out); i++ {
+		if out[i] >= 0x80 {
+			t.Fatalf("non-ASCII byte left at %d: %q", i, out)
+		}
+	}
+	var back map[string]string
+	if err := json.Unmarshal([]byte(out), &back); err != nil {
+		t.Fatalf("not valid JSON: %v (%s)", err, out)
+	}
+	if back["hostName"] != in["hostName"] {
+		t.Fatalf("round trip changed the text: %q", back["hostName"])
 	}
 }

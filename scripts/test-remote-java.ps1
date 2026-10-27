@@ -169,6 +169,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "HostAlertRulesTest failed"
 }
 
+Write-Host "Executing TailnetPeersTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.remote.TailnetPeersTest
+if ($LASTEXITCODE -ne 0) {
+    throw "TailnetPeersTest failed"
+}
+
 Write-Host "Executing PowerActionWatchTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.PowerActionWatchTest
 if ($LASTEXITCODE -ne 0) {

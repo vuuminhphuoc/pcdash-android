@@ -222,6 +222,8 @@ public class RemoteMainActivity extends Activity {
         private boolean isUiPass = false;
         private RemoteApiClient.RemoteStatus status;
         private Exception error;
+        // The home phone in the Tailscale device list, read when it did not answer.
+        private TailnetPeers.Peer hostPeer;
 
         PollWorker(RemoteMainActivity activity, int generation) {
             this.activityRef = new WeakReference<RemoteMainActivity>(activity);
@@ -243,18 +245,25 @@ public class RemoteMainActivity extends Activity {
                 } catch (Exception e) {
                     error = e;
                 }
+                if (error != null && !(error instanceof RemoteApiClient.DeviceRevokedException)) {
+                    try {
+                        TailnetPeers peers = TailnetPeers.parse(act.controller.getBridge().peersJson());
+                        hostPeer = peers != null ? peers.host() : null;
+                    } catch (Exception ignored) {}
+                }
                 if (!act.statusGeneration.isValid(generation)) {
                     return;
                 }
                 isUiPass = true;
                 act.ui.post(this);
             } else {
-                act.onStatusDeliver(status, error, generation);
+                act.onStatusDeliver(status, error, hostPeer, generation);
             }
         }
     }
 
-    private void onStatusDeliver(RemoteApiClient.RemoteStatus status, Exception error, int generation) {
+    private void onStatusDeliver(RemoteApiClient.RemoteStatus status, Exception error, TailnetPeers.Peer hostPeer,
+                                 int generation) {
         if (isStopped || isDestroyed || !statusGeneration.isValid(generation)) return;
         if (error instanceof RemoteApiClient.DeviceRevokedException) {
             handleDeviceRevoked();
@@ -265,7 +274,7 @@ public class RemoteMainActivity extends Activity {
             triggerUpdateCheck();
         }
         if (controlTabView != null) {
-            controlTabView.updateStatus(status, error);
+            controlTabView.updateStatus(status, error, hostPeer);
         }
         followActionWatch(status);
         if (!isStopped && !isDestroyed && isPolling && navigator != null && navigator.current() == MainTab.CONTROL && statusGeneration.isValid(generation)) {
@@ -983,6 +992,16 @@ public class RemoteMainActivity extends Activity {
             }
 
             @Override
+            public void onPcAlertsChanged(final boolean enabled) {
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        HostWatch.setPcAlertsEnabled(getApplicationContext(), enabled);
+                    }
+                });
+            }
+
+            @Override
             public void onRequireDangerousAuthChanged(final boolean required) {
                 executor.submit(new Runnable() {
                     @Override
@@ -1272,6 +1291,16 @@ public class RemoteMainActivity extends Activity {
             return;
         }
         actionWatch = PowerActionWatch.start(action, SystemClock.elapsedRealtime());
+        if (actionWatch != null && !actionWatch.expectOnline) {
+            // The PC going off now is no surprise for the background alerts.
+            final Context app = getApplicationContext();
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    HostWatch.notePcOffExpected(app);
+                }
+            });
+        }
         if (actionWatch == null) {
             controlTabView.showOutcome(action, true, L10n.t("Done", "Xong"), null, 0);
         } else {
