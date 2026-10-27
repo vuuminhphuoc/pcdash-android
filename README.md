@@ -46,6 +46,8 @@ phone does not need the Tailscale app or a VPN turned on.
 - Live CPU, GPU, RAM, disks, network, uptime and temperatures, with 1 h and 6 h history.
 - Command log with device, time and result.
 - Quota tab for AI services read through [omp](https://github.com/can1357/oh-my-pi) on the PC (optional).
+- Wake PC Quick Settings tile and Wake / Sleep app shortcuts (long-press the PCDash Remote icon). They open the app, which sends the command once connected; nothing runs in the background.
+- English and Vietnamese UI in both apps, the web dashboard and the PC setup window. The apps follow the phone language; on Android 13+ you can pick either under Settings > Apps > PCDash > Language.
 - Pure-black OLED theme, glass tab bar with a sliding selection pill, screen-reader friendly labels.
 - One-scan setup: the PC shows a QR code, the host phone scans it with its camera.
 - Resilient host: wake locks, boot start, watchdog, battery-optimization and autostart helpers.
@@ -59,18 +61,21 @@ phone does not need the Tailscale app or a VPN turned on.
 
 ## Quick start
 
-1. **Build.** `.\scripts\install-go-toolchain.ps1 -Version 1.27.1` then `.\build-all.ps1`. This produces
+1. **Get the files.** Download `pcdash-host-*.apk`, `pcdash-remote-*.apk` and `pcdash-agent-windows-*.zip`
+   from [Releases](https://github.com/vuuminhphuoc/pcdash-android/releases), or build them yourself:
+   `.\scripts\install-go-toolchain.ps1 -Version 1.27.1` then `.\build-all.ps1`, which produces
    `app\build\pcdash-signed.apk` (host) and `remote\build\pcdash-remote-signed.apk`.
-2. **Install the apps.** `adb install -r` each APK on the matching phone.
-3. **Install PcAgent on the PC.** Run `agent\install.bat` and accept the UAC prompt. It installs the
+2. **Install the apps.** Open each APK on the matching phone, or `adb install -r` it.
+3. **Install PcAgent on the PC.** Unzip the agent and run `install.bat` (or `agent\install.bat` in a source
+   checkout), then accept the UAC prompt. It installs the
    agent for your user, opens TCP 8799 for the local subnet only, creates a secret **token** and opens a
    window with a **setup QR code** (reopen it from the Start menu, "PCDash - Ma QR cai dat", or run
    `agent\show-qr.bat`).
-4. **Configure the host.** In PCDash host open **Cài đặt PC** and tap **Quét mã QR từ PC**. One scan fills the
-   PC's LAN IP, MAC address, port and token. Review and tap **Lưu cài đặt**. You can also type the values
+4. **Configure the host.** In PCDash host open **PC settings** and tap **Scan QR code from PC**. One scan fills the
+   PC's LAN IP, MAC address, port and token. Review and tap **Save settings**. You can also type the values
    by hand (give the PC a DHCP reservation so the IP stays put; the token is printed by the installer).
 5. **Sign in to Tailscale** on both phones inside the apps (same account).
-6. **Pair.** With both phones on the home Wi-Fi, open **Thiết bị điều khiển từ xa -> Thêm thiết bị** on the
+6. **Pair.** With both phones on the home Wi-Fi, open **Remote devices -> Add device** on the
    host, then enter the 6-character code on the remote. After that the remote works from anywhere.
 
 Detailed steps, release flow, tests and ANR guardrails are in [README.vi.md](README.vi.md).
@@ -84,9 +89,30 @@ what to keep private, and how to report a vulnerability. Never expose `:8090` or
 ## Development
 
 Test runners live in `scripts/` (`test-host-*.ps1`, `test-remote-java.ps1`, `test-agent-metrics.ps1`,
-`test-pairing-e2e.ps1`, `lint-ui-thread.ps1`). `scripts/perf-smoke-remote.ps1` and
+`test-pairing-e2e.ps1`, `lint-ui-thread.ps1`, `lint-l10n.ps1`). `scripts/perf-smoke-remote.ps1` and
 `scripts/ux-walkthrough.ps1` run on real phones over adb (set `PCDASH_REMOTE_SERIAL` and
 `PCDASH_HOST_SERIAL`). `.claude/skills/` holds the review skills used while developing.
+
+**UI text.** Every string the user sees goes through `L10n.t("English", "Tiếng Việt")`
+(`shared/src/vn/vuumi/pcdash/i18n/L10n.java`); labels the system shows (activity titles, the tile,
+shortcuts) are in `res/values/strings.xml` and `res/values-vi/strings.xml`. `lint-l10n.ps1` fails on
+Vietnamese text outside `L10n.t`.
+
+**CI and releases.** `.github/workflows/build.yml` builds both APKs and PcAgent on Windows, runs every
+test script and the pcnet Go tests on each push, and uploads the release files as a workflow artifact.
+Pushing a `v*` tag also creates a draft GitHub release with `pcdash-host-<tag>.apk`,
+`pcdash-remote-<tag>.apk`, `pcdash-agent-windows-<tag>.zip` and `SHA256SUMS.txt`
+(`scripts/package-release.ps1` makes the same files locally). Releases must be signed with your own keys,
+so the release job stops unless these repository secrets exist:
+
+| Secret | Value |
+|---|---|
+| `PCDASH_HOST_KEYSTORE_B64` | `app\pcdash.keystore` as base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("app\pcdash.keystore"))` |
+| `PCDASH_REMOTE_KEYSTORE_B64` | `remote\pcdash-remote.keystore` as base64 |
+| `PCDASH_KEYSTORE_PASSWORD` | Keystore password, only if it is not the default `android` |
+
+Raise `versionCode` in `app/version.properties` and `remote/version.properties` before tagging, or phones
+will not update.
 
 ## License
 

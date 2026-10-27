@@ -66,7 +66,9 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 
 Chỉ cần một tài khoản Tailscale (gói miễn phí đủ dùng). Không cần OAuth client, tag hay ACL tùy chỉnh: ACL mặc định của tailnet cá nhân cho phép các thiết bị của bạn truy cập nhau. Điện thoại host và điện thoại remote đăng nhập **cùng một tài khoản** trong chính app PCDash (không cần app Tailscale).
 
-### 2. Build APK
+### 2. Tải bản dựng sẵn hoặc build APK
+
+Có thể tải `pcdash-host-*.apk`, `pcdash-remote-*.apk` và `pcdash-agent-windows-*.zip` ở trang [Releases](https://github.com/vuuminhphuoc/pcdash-android/releases) rồi bỏ qua phần build bên dưới.
 
 Cần Android SDK, JDK 17 (ví dụ Amazon Corretto 17), Android NDK `27.1.12297006`, PowerShell và Go `1.27.1` trở lên. SDK được tìm ở `%LOCALAPPDATA%\Android\Sdk` (hoặc đặt `ANDROID_HOME`); script tự tìm JDK 17 trong `~\.jdks` hoặc Program Files, nếu không thấy thì đặt `PCDASH_JAVA_HOME` (hoặc `JAVA_HOME`) trỏ tới JDK 17. Cài Go vào thư mục dự án `tools/`:
 
@@ -100,6 +102,16 @@ Trên điện thoại Xiaomi/MIUI, bật **Cài đặt qua USB** nếu MIUI ch�
    - Chạy `.\build-all.ps1` để build remote, nhúng APK mới vào `app/assets/remote-update.apk` (kèm SHA-256 và size trong `remote-update.json`), rồi build host.
    - Cài lại host trên điện thoại ở nhà: `adb install -r app\build\pcdash-signed.apk`.
    - Trên máy điều khiển: mở PCDash Remote, app tự phát hiện bản cập nhật mới từ host; bấm nút **Cập nhật** để tải và cài đặt một chạm qua tsnet mà không cần adb hay cáp nối.
+
+### CI và phát hành trên GitHub
+
+`.github/workflows/build.yml` build hai APK và PcAgent trên Windows, chạy mọi script kiểm thử và test Go của `pcnet` ở mỗi lần push, rồi đính kèm các tệp phát hành vào lượt chạy. Push tag `v*` tạo thêm bản phát hành nháp (draft) với `pcdash-host-<tag>.apk`, `pcdash-remote-<tag>.apk`, `pcdash-agent-windows-<tag>.zip` và `SHA256SUMS.txt` (`scripts\package-release.ps1` tạo đúng các tệp này trên máy). APK phát hành phải ký bằng khóa của bạn, nên bước phát hành dừng lại nếu repo chưa có các secret sau:
+
+| Secret | Giá trị |
+|---|---|
+| `PCDASH_HOST_KEYSTORE_B64` | `app\pcdash.keystore` dạng base64: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("app\pcdash.keystore"))` |
+| `PCDASH_REMOTE_KEYSTORE_B64` | `remote\pcdash-remote.keystore` dạng base64 |
+| `PCDASH_KEYSTORE_PASSWORD` | Mật khẩu keystore, chỉ cần nếu khác mặc định `android` |
 
 ### 4. Cài PcAgent trên PC Windows
 
@@ -137,6 +149,8 @@ Tính năng trong PCDash Remote:
 - **Kiểm tra cập nhật**: nút **Kiểm tra cập nhật** ở cuối màn hình. APK cập nhật tải vào cache riêng của app và bị xóa mỗi lần mở lại app.
 - **Điều hướng**: thanh tab dưới cùng gồm Điều khiển, Giám sát, Quota, Nhật ký và Thêm (Cài đặt, Quên host). App luôn mở ở Điều khiển.
 - **Quota**: PcAgent chạy `omp usage --json --redact` (đường dẫn tùy chỉnh bằng `PCAGENT_OMP_PATH`), gộp theo nhà cung cấp và nhóm, phục vụ `GET /quota`; host chuyển tiếp ở `/v1/quota` và giữ số cũ khi PC tắt. Mỗi thẻ hiện thanh gộp 5 giờ và tuần, chạm để xem mọi cửa sổ và từng tài khoản. Nhãn tài khoản là email đã che của omp (`ten@*`); không gửi email đầy đủ, accountId hay token. Claude chưa có trong tab này.
+- **Lối tắt**: ô **Bật PC** trong Cài đặt nhanh và lối tắt **Bật PC** / **Cho PC ngủ** khi nhấn giữ biểu tượng PCDash Remote. Chúng chỉ mở app với lệnh chờ sẵn; app gửi lệnh khi đã kết nối (tối đa 60 giây sau khi bấm), không có gì chạy nền.
+- **Ngôn ngữ**: hai app, dashboard web và cửa sổ QR trên PC có tiếng Anh và tiếng Việt, tự theo ngôn ngữ máy. Android 13 trở lên chọn riêng trong Cài đặt > Ứng dụng > PCDash > Ngôn ngữ. Chuỗi giao diện nằm trong `L10n.t("English", "Tiếng Việt")` (`shared/src/vn/vuumi/pcdash/i18n/L10n.java`); `scripts\lint-l10n.ps1` báo lỗi nếu có chữ tiếng Việt viết cứng ngoài `L10n.t`.
 - **Host bền vững**: wake lock và Wi-Fi lock, tự chạy lại sau reboot hoặc khi cài bản mới, watchdog mỗi 15 phút, thẻ **Sức khỏe host** (loại trừ tối ưu pin, tự khởi động Xiaomi). Nên bật Always-on VPN cho Tailscale trong cài đặt hệ thống.
 
 ## Bảo mật
@@ -173,6 +187,7 @@ Các runner PowerShell hiện có:
 .\scripts\test-host-log-history.ps1
 .\scripts\test-agent-metrics.ps1
 .\scripts\lint-ui-thread.ps1
+.\scripts\lint-l10n.ps1
 ```
 
 ## Giấy phép
