@@ -1,5 +1,7 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
+
 public final class PackageInstallerStatus {
 
     public static final int STATUS_PENDING_USER_ACTION = -1;
@@ -17,25 +19,25 @@ public final class PackageInstallerStatus {
     public static String getStatusMessage(int status, String extraMsg) {
         switch (status) {
             case STATUS_SUCCESS:
-                return "Cập nhật thành công!";
+                return L10n.t("Update installed!", "Cập nhật thành công!");
             case STATUS_FAILURE_ABORTED:
-                return "Người dùng đã hủy cài đặt";
+                return L10n.t("Installation cancelled", "Người dùng đã hủy cài đặt");
             case STATUS_FAILURE_BLOCKED:
-                return "Cài đặt bị chặn bởi thiết bị";
+                return L10n.t("The device blocked the installation", "Cài đặt bị chặn bởi thiết bị");
             case STATUS_FAILURE_CONFLICT:
-                return "Xung đột với bản cài đặt hiện tại (chữ ký không khớp)";
+                return L10n.t("Conflicts with the installed app (signature mismatch)", "Xung đột với bản cài đặt hiện tại (chữ ký không khớp)");
             case STATUS_FAILURE_STORAGE:
-                return "Không đủ dung lượng bộ nhớ để cài đặt";
+                return L10n.t("Not enough storage to install", "Không đủ dung lượng bộ nhớ để cài đặt");
             case STATUS_FAILURE_INCOMPATIBLE:
-                return "Bản cập nhật không tương thích với thiết bị";
+                return L10n.t("The update is not compatible with this device", "Bản cập nhật không tương thích với thiết bị");
             case STATUS_FAILURE_INVALID:
-                return "Tệp APK cập nhật không hợp lệ";
+                return L10n.t("The update APK is invalid", "Tệp APK cập nhật không hợp lệ");
             case STATUS_FAILURE:
             default:
                 if (extraMsg != null && !extraMsg.trim().isEmpty()) {
-                    return "Cài đặt thất bại: " + extraMsg.trim();
+                    return L10n.t("Installation failed: ", "Cài đặt thất bại: ") + extraMsg.trim();
                 }
-                return "Cài đặt thất bại";
+                return L10n.t("Installation failed", "Cài đặt thất bại");
         }
     }
 }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -513,6 +514,7 @@ public class HostMetricsTest {
     }
 
     public static void main(String[] args) {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running HostMetricsTest...");
         try {
             testMetricsJsonValidFullData();

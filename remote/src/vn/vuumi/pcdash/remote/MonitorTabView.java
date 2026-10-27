@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -45,14 +46,14 @@ public class MonitorTabView implements TabContent {
         scrollView.addView(container);
 
         TextView title = new TextView(context);
-        title.setText("Giám sát");
+        title.setText(L10n.t("Monitor", "Giám sát"));
         title.setTextSize(26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
         container.addView(title);
 
         TextView sub = new TextView(context);
-        sub.setText("Số liệu hiệu năng PC & Thiết bị");
+        sub.setText(L10n.t("PC and home phone performance", "Số liệu hiệu năng PC & Thiết bị"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dpToPx(context, 4), 0, dpToPx(context, 20));
@@ -76,7 +77,7 @@ public class MonitorTabView implements TabContent {
         pcHeader.addView(pcCardTitle);
 
         pcStaleBadge = new TextView(context);
-        pcStaleBadge.setText("dữ liệu cũ");
+        pcStaleBadge.setText(L10n.t("stale", "dữ liệu cũ"));
         pcStaleBadge.setTextSize(12);
         pcStaleBadge.setTextColor(Color.rgb(240, 136, 62));
         pcStaleBadge.setVisibility(View.GONE);
@@ -84,7 +85,7 @@ public class MonitorTabView implements TabContent {
         pcBlock.addView(pcHeader);
 
         pcOfflineView = new TextView(context);
-        pcOfflineView.setText("PC không phản hồi");
+        pcOfflineView.setText(L10n.t("PC not responding", "PC không phản hồi"));
         pcOfflineView.setTextSize(13);
         pcOfflineView.setTextColor(Color.rgb(248, 81, 73));
         pcOfflineView.setPadding(0, dpToPx(context, 6), 0, 0);
@@ -96,7 +97,7 @@ public class MonitorTabView implements TabContent {
         pcMetricsRows.setPadding(0, dpToPx(context, 6), 0, 0);
 
         TextView pcLoading = new TextView(context);
-        pcLoading.setText("Đang tải số liệu PC...");
+        pcLoading.setText(L10n.t("Loading PC metrics...", "Đang tải số liệu PC..."));
         pcLoading.setTextSize(13);
         pcLoading.setTextColor(Color.rgb(139, 148, 158));
         pcMetricsRows.addView(pcLoading);
@@ -114,7 +115,7 @@ public class MonitorTabView implements TabContent {
         LinearLayout phoneHeader = new LinearLayout(context);
         phoneHeader.setOrientation(LinearLayout.HORIZONTAL);
         TextView phoneCardTitle = new TextView(context);
-        phoneCardTitle.setText("Điện thoại nhà");
+        phoneCardTitle.setText(L10n.t("Home phone", "Điện thoại nhà"));
         phoneCardTitle.setTextSize(18);
         phoneCardTitle.setTypeface(Typeface.DEFAULT_BOLD);
         phoneCardTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -123,7 +124,7 @@ public class MonitorTabView implements TabContent {
         phoneHeader.addView(phoneCardTitle);
 
         phoneStaleBadge = new TextView(context);
-        phoneStaleBadge.setText("dữ liệu cũ");
+        phoneStaleBadge.setText(L10n.t("stale", "dữ liệu cũ"));
         phoneStaleBadge.setTextSize(12);
         phoneStaleBadge.setTextColor(Color.rgb(240, 136, 62));
         phoneStaleBadge.setVisibility(View.GONE);
@@ -135,7 +136,7 @@ public class MonitorTabView implements TabContent {
         phoneMetricsRows.setPadding(0, dpToPx(context, 6), 0, 0);
 
         TextView phoneLoading = new TextView(context);
-        phoneLoading.setText("Đang tải số liệu điện thoại...");
+        phoneLoading.setText(L10n.t("Loading phone metrics...", "Đang tải số liệu điện thoại..."));
         phoneLoading.setTextSize(13);
         phoneLoading.setTextColor(Color.rgb(139, 148, 158));
         phoneMetricsRows.addView(phoneLoading);
@@ -155,7 +156,7 @@ public class MonitorTabView implements TabContent {
         chartHeader.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView chartTitle = new TextView(context);
-        chartTitle.setText("Biểu đồ");
+        chartTitle.setText(L10n.t("Charts", "Biểu đồ"));
         chartTitle.setTextSize(18);
         chartTitle.setTypeface(Typeface.DEFAULT_BOLD);
         chartTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -205,7 +206,7 @@ public class MonitorTabView implements TabContent {
         chartStatusView.setTextSize(13);
         chartStatusView.setTextColor(Color.rgb(139, 148, 158));
         chartStatusView.setPadding(0, dpToPx(context, 8), 0, dpToPx(context, 4));
-        chartStatusView.setText("Đang tải dữ liệu biểu đồ...");
+        chartStatusView.setText(L10n.t("Loading chart data...", "Đang tải dữ liệu biểu đồ..."));
         chartBlock.addView(chartStatusView);
 
         chartsContainer = new LinearLayout(context);
@@ -231,14 +232,14 @@ public class MonitorTabView implements TabContent {
         chartsContainer.addView(ramChartView);
 
         netChartView = new HistoryChartView(context);
-        netChartView.setChartConfig("Mạng (Tải xuống / Tải lên)", HistoryChartView.UnitType.SPEED,
-                "Tải xuống", Color.rgb(63, 185, 80),
-                "Tải lên", Color.rgb(88, 166, 255));
+        netChartView.setChartConfig(L10n.t("Network (download / upload)", "Mạng (Tải xuống / Tải lên)"), HistoryChartView.UnitType.SPEED,
+                L10n.t("Download", "Tải xuống"), Color.rgb(63, 185, 80),
+                L10n.t("Upload", "Tải lên"), Color.rgb(88, 166, 255));
         netChartView.setLayoutParams(chartLp);
         chartsContainer.addView(netChartView);
 
         tempChartView = new HistoryChartView(context);
-        tempChartView.setChartConfig("Nhiệt độ (°C)", HistoryChartView.UnitType.TEMP,
+        tempChartView.setChartConfig(L10n.t("Temperature (°C)", "Nhiệt độ (°C)"), HistoryChartView.UnitType.TEMP,
                 "CPU", Color.rgb(240, 136, 62),
                 "GPU", Color.rgb(248, 81, 73));
         tempChartView.setLayoutParams(chartLp);
@@ -303,7 +304,7 @@ public class MonitorTabView implements TabContent {
                     && Boolean.TRUE.equals(snapshot.pc.online);
 
             if (!pcOnline) {
-                pcOfflineView.setText("PC không phản hồi");
+                pcOfflineView.setText(L10n.t("PC not responding", "PC không phản hồi"));
                 pcOfflineView.setVisibility(View.VISIBLE);
                 pcMetricsRows.setVisibility(View.GONE);
             } else {
@@ -344,7 +345,7 @@ public class MonitorTabView implements TabContent {
 
                 if (pc.net != null && (pc.net.downBps != null || pc.net.upBps != null)) {
                     String val = MetricsFormatter.formatNetBoth(pc.net.downBps, pc.net.upBps);
-                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, "Mạng", val, null);
+                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, L10n.t("Network", "Mạng"), val, null);
                 }
 
                 String cpuOrSys = MetricsFormatter.formatCpuOrSysTemp(pc);
@@ -358,7 +359,7 @@ public class MonitorTabView implements TabContent {
                         if (sb.length() > 0) sb.append("  ·  ");
                         sb.append("GPU: ").append(MetricsFormatter.formatTemp(pc.gpu.tempC));
                     }
-                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, "Nhiệt độ", sb.toString(), null);
+                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, L10n.t("Temperature", "Nhiệt độ"), sb.toString(), null);
                 }
 
                 if (pc.disks != null && !pc.disks.isEmpty()) {
@@ -368,7 +369,7 @@ public class MonitorTabView implements TabContent {
                             Double diskPct = (d.usedGB != null && d.totalGB != null && d.totalGB > 0)
                                     ? (d.usedGB * 100.0 / d.totalGB) : null;
                             String dLabel = (d.name != null && !d.name.trim().isEmpty())
-                                    ? "Đĩa (" + d.name.trim() + ")" : "Đĩa";
+                                    ? L10n.t("Disk (", "Đĩa (") + d.name.trim() + ")" : L10n.t("Disk", "Đĩa");
                             String dVal = MetricsFormatter.formatDisk(d.usedGB, d.totalGB);
                             if (diskPct != null) {
                                 dVal += " (" + MetricsFormatter.formatPercent(diskPct) + ")";
@@ -379,7 +380,7 @@ public class MonitorTabView implements TabContent {
                 }
 
                 if (pc.uptimeSec != null) {
-                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, "Thời gian hoạt động", MetricsFormatter.formatUptime(pc.uptimeSec), null);
+                    setOrUpdateMetricRow(pcMetricsRows, pcRowIndex++, L10n.t("Uptime", "Thời gian hoạt động"), MetricsFormatter.formatUptime(pc.uptimeSec), null);
                 }
 
                 trimTrailingRows(pcMetricsRows, pcRowIndex);
@@ -393,7 +394,7 @@ public class MonitorTabView implements TabContent {
                 if (phoneMetricsRows.getChildCount() != 1 || !(phoneMetricsRows.getChildAt(0) instanceof TextView) || phoneMetricsRows.getChildAt(0).getTag() != null) {
                     phoneMetricsRows.removeAllViews();
                     TextView emptyTv = new TextView(scrollView.getContext());
-                    emptyTv.setText("Không có dữ liệu điện thoại");
+                    emptyTv.setText(L10n.t("No phone data", "Không có dữ liệu điện thoại"));
                     emptyTv.setTextSize(13);
                     emptyTv.setTextColor(Color.rgb(139, 148, 158));
                     phoneMetricsRows.addView(emptyTv);
@@ -401,14 +402,14 @@ public class MonitorTabView implements TabContent {
             } else {
                 int phoneRowIndex = 0;
                 if (phone.battery != null && phone.battery.percent != null) {
-                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Pin",
+                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, L10n.t("Battery", "Pin"),
                             MetricsFormatter.formatBattery(phone.battery.percent, phone.battery.charging),
                             phone.battery.percent,
                             Double.valueOf(100.0 - phone.battery.percent.doubleValue()));
                 }
 
                 if (phone.battery != null && phone.battery.tempC != null) {
-                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Nhiệt pin",
+                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, L10n.t("Battery temp", "Nhiệt pin"),
                             MetricsFormatter.formatTemp(phone.battery.tempC), null);
                 }
 
@@ -435,7 +436,7 @@ public class MonitorTabView implements TabContent {
                     if (storagePct != null) {
                         val += " (" + MetricsFormatter.formatPercent(storagePct) + ")";
                     }
-                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Bộ nhớ", val, storagePct);
+                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, L10n.t("Storage", "Bộ nhớ"), val, storagePct);
                 }
 
                 if (phone.wifi != null && (phone.wifi.rssiDbm != null || phone.wifi.linkMbps != null)) {
@@ -444,17 +445,17 @@ public class MonitorTabView implements TabContent {
                 }
 
                 if (phone.net != null && (phone.net.downBps != null || phone.net.upBps != null)) {
-                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Mạng",
+                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, L10n.t("Network", "Mạng"),
                             MetricsFormatter.formatNetBoth(phone.net.downBps, phone.net.upBps), null);
                 }
 
                 if (phone.tailscale != null) {
                     setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Tailscale (host)",
-                            phone.tailscale ? "Đã kết nối" : "Chưa kết nối", null);
+                            phone.tailscale ? L10n.t("Connected", "Đã kết nối") : L10n.t("Not connected", "Chưa kết nối"), null);
                 }
 
                 if (phone.uptimeSec != null) {
-                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, "Thời gian hoạt động",
+                    setOrUpdateMetricRow(phoneMetricsRows, phoneRowIndex++, L10n.t("Uptime", "Thời gian hoạt động"),
                             MetricsFormatter.formatUptime(phone.uptimeSec), null);
                 }
 
@@ -480,9 +481,9 @@ public class MonitorTabView implements TabContent {
                 chartStatusView.setTextColor(Color.rgb(248, 81, 73));
                 if (error instanceof RemoteApiClient.UnsupportedRouteException
                         || (error.getMessage() != null && error.getMessage().contains("404"))) {
-                    chartStatusView.setText("Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host");
+                    chartStatusView.setText(RemoteApiClient.UnsupportedRouteException.hostNeedsUpdateMessage());
                 } else {
-                    chartStatusView.setText("Lỗi tải lịch sử: " + (error.getMessage() != null ? error.getMessage() : "Timeout"));
+                    chartStatusView.setText(L10n.t("Could not load history: ", "Lỗi tải lịch sử: ") + (error.getMessage() != null ? error.getMessage() : "Timeout"));
                 }
             }
             if (chartsContainer != null) {

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,39 +8,39 @@ public class DiagnosticsFormatter {
 
     public static String format(String rawJson) {
         if (rawJson == null || rawJson.trim().isEmpty()) {
-            return "Chưa có thông tin chẩn đoán (pcnet chưa khởi động).";
+            return L10n.t("No diagnostics yet (pcnet has not started).", "Chưa có thông tin chẩn đoán (pcnet chưa khởi động).");
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("=== CHẨN ĐOÁN KẾT NỐI MẠNG PCDASH ===\n");
+        sb.append(L10n.t("=== PCDASH NETWORK DIAGNOSTICS ===\n", "=== CHẨN ĐOÁN KẾT NỐI MẠNG PCDASH ===\n"));
 
         String backend = extractString(rawJson, "backendState");
         if (backend == null || backend.isEmpty()) {
             backend = extractString(rawJson, "state");
             if (backend == null || backend.isEmpty()) {
-                backend = "Không rõ";
+                backend = L10n.t("Unknown", "Không rõ");
             }
         }
         boolean selfOnline = extractBoolean(rawJson, "selfOnline");
-        sb.append("• Trạng thái tsnet: ").append(backend)
-          .append(selfOnline ? " (Self: Online)" : " (Self: Chưa kết nối)")
+        sb.append(L10n.t("• tsnet state: ", "• Trạng thái tsnet: ")).append(backend)
+          .append(selfOnline ? " (Self: Online)" : L10n.t(" (Self: not connected)", " (Self: Chưa kết nối)"))
           .append("\n");
 
         String tailnetState = extractString(rawJson, "state");
         if (tailnetState != null && !tailnetState.isEmpty()) {
             if ("needs_login".equalsIgnoreCase(tailnetState)) {
-                sb.append("• Đăng nhập: Cần đăng nhập Tailscale\n");
+                sb.append(L10n.t("• Sign-in: Tailscale sign-in needed\n", "• Đăng nhập: Cần đăng nhập Tailscale\n"));
             } else if ("running".equalsIgnoreCase(tailnetState)) {
-                sb.append("• Đăng nhập: Đã đăng nhập\n");
+                sb.append(L10n.t("• Sign-in: signed in\n", "• Đăng nhập: Đã đăng nhập\n"));
             }
         }
         List<String> tailnetIps = extractArrayStrings(rawJson, "tailnetIps");
         if (!tailnetIps.isEmpty()) {
-            sb.append("• IP Tailnet thiết bị: ").append(tailnetIps.toString()).append("\n");
+            sb.append(L10n.t("• This device's tailnet IP: ", "• IP Tailnet thiết bị: ")).append(tailnetIps.toString()).append("\n");
         }
         int localPort = extractInt(rawJson, "localPort", 0);
         if (localPort > 0) {
-            sb.append("• Cổng cục bộ: ").append(localPort).append("\n");
+            sb.append(L10n.t("• Local port: ", "• Cổng cục bộ: ")).append(localPort).append("\n");
         }
 
         // Peer host info
@@ -50,35 +51,35 @@ public class DiagnosticsFormatter {
             String relay = extractString(peerHostObj, "relay");
             String lastHandshake = extractString(peerHostObj, "lastHandshake");
 
-            sb.append("• Đường đi tới PC: ");
+            sb.append(L10n.t("• Path to the host: ", "• Đường đi tới PC: "));
             if (curAddr != null && !curAddr.isEmpty()) {
-                sb.append("Trực tiếp (Direct: ").append(curAddr).append(")");
+                sb.append(L10n.t("Direct (", "Trực tiếp (Direct: ")).append(curAddr).append(")");
             } else if (relay != null && !relay.isEmpty()) {
-                sb.append("Tiếp sóng DERP (Vùng ").append(relay).append(")");
+                sb.append(L10n.t("DERP relay (region ", "Tiếp sóng DERP (Vùng ")).append(relay).append(")");
             } else if (peerOnline) {
-                sb.append("Đã kết nối (đang dò đường)");
+                sb.append(L10n.t("Connected (finding a path)", "Đã kết nối (đang dò đường)"));
             } else {
-                sb.append("Chưa kết nối tới PC");
+                sb.append(L10n.t("Not connected to the host", "Chưa kết nối tới PC"));
             }
             if (lastHandshake != null && !lastHandshake.isEmpty()) {
-                sb.append("  [Bắt tay: ").append(lastHandshake).append("]");
+                sb.append(L10n.t("  [Handshake: ", "  [Bắt tay: ")).append(lastHandshake).append("]");
             }
             sb.append("\n");
         } else {
-            sb.append("• Đường đi tới PC: Chưa tìm thấy host trong tailnet\n");
+            sb.append(L10n.t("• Path to the host: host not found in the tailnet\n", "• Đường đi tới PC: Chưa tìm thấy host trong tailnet\n"));
         }
 
         // Preferred DERP & latency
         int preferredDerp = extractInt(rawJson, "preferredDERP", -1);
         int derpLat = extractDerpLatency(rawJson, preferredDerp);
-        sb.append("• DERP gần nhất: ");
+        sb.append(L10n.t("• Nearest DERP: ", "• DERP gần nhất: "));
         if (preferredDerp > 0) {
-            sb.append("Vùng ").append(preferredDerp);
+            sb.append(L10n.t("Region ", "Vùng ")).append(preferredDerp);
             if (derpLat >= 0) {
-                sb.append(" (Độ trễ: ").append(derpLat).append(" ms)");
+                sb.append(L10n.t(" (latency: ", " (Độ trễ: ")).append(derpLat).append(" ms)");
             }
         } else {
-            sb.append("Chưa xác định");
+            sb.append(L10n.t("Unknown", "Chưa xác định"));
         }
         sb.append("\n");
 
@@ -86,29 +87,29 @@ public class DiagnosticsFormatter {
         boolean udp = extractBoolean(rawJson, "udp");
         String netcheckObj = extractObject(rawJson, "netcheck");
         String globalV4 = netcheckObj != null ? extractString(netcheckObj, "globalV4") : null;
-        sb.append("• UDP STUN: ").append(udp ? "Có thông" : "Không thông (bị chặn/CGNAT)")
-          .append(globalV4 != null && !globalV4.isEmpty() ? " [IP ngoài: " + globalV4 + "]" : "")
+        sb.append("• UDP STUN: ").append(udp ? L10n.t("Open", "Có thông") : L10n.t("Blocked (firewall/CGNAT)", "Không thông (bị chặn/CGNAT)"))
+          .append(globalV4 != null && !globalV4.isEmpty() ? L10n.t(" [public IP: ", " [IP ngoài: ") + globalV4 + "]" : "")
           .append("\n");
 
         // Last dial error
         String dialErr = extractString(rawJson, "lastDialError");
         String dialTime = extractString(rawJson, "lastDialErrorTime");
-        sb.append("• Lỗi dial cuối: ");
+        sb.append(L10n.t("• Last dial error: ", "• Lỗi dial cuối: "));
         if (dialErr != null && !dialErr.isEmpty()) {
             sb.append(dialErr);
             if (dialTime != null && !dialTime.isEmpty()) {
                 sb.append(" (").append(dialTime).append(")");
             }
         } else {
-            sb.append("Không có lỗi");
+            sb.append(L10n.t("None", "Không có lỗi"));
         }
         sb.append("\n");
 
         // Interfaces
         List<String> ifaces = extractInterfaces(rawJson);
-        sb.append("• Giao diện mạng Android:\n");
+        sb.append(L10n.t("• Android network interfaces:\n", "• Giao diện mạng Android:\n"));
         if (ifaces.isEmpty()) {
-            sb.append("  (Không có giao diện nào)\n");
+            sb.append(L10n.t("  (none)\n", "  (Không có giao diện nào)\n"));
         } else {
             for (String iface : ifaces) {
                 sb.append("  - ").append(iface).append("\n");
@@ -118,7 +119,7 @@ public class DiagnosticsFormatter {
         // Health warnings
         List<String> warnings = extractArrayStrings(rawJson, "healthWarnings");
         if (!warnings.isEmpty()) {
-            sb.append("• Cảnh báo sức khỏe: ");
+            sb.append(L10n.t("• Health warnings: ", "• Cảnh báo sức khỏe: "));
             for (int i = 0; i < warnings.size(); i++) {
                 if (i > 0) sb.append("; ");
                 sb.append(warnings.get(i));

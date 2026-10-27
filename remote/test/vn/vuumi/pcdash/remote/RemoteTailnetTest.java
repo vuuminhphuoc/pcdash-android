@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -95,7 +96,7 @@ public class RemoteTailnetTest {
         assertTrue(tailnet.isNeedsLogin(), "isNeedsLogin must be true");
         assertTrue(!tailnet.isRunning(), "isRunning must be false");
         assertEquals(tailnet.authUrl(), "https://login.tailscale.com/a/xyz987", "authUrl must match");
-        assertTrue(tailnet.getVietnameseStatus().contains("Cần đăng nhập"), "Status must mention Cần đăng nhập");
+        assertTrue(tailnet.getStatusText().contains("Cần đăng nhập"), "Status must mention Cần đăng nhập");
         System.out.println("PASS: testStateNeedsLoginReportsAuthUrl");
     }
 
@@ -109,7 +110,7 @@ public class RemoteTailnetTest {
         assertTrue(tailnet.isRunning(), "isRunning must be true");
         assertTrue(!tailnet.isNeedsLogin(), "isNeedsLogin must be false");
         assertEquals(tailnet.tailnetIp(), "100.101.102.103", "tailnetIp must match");
-        assertTrue(tailnet.getVietnameseStatus().contains("100.101.102.103"), "Status must contain IP");
+        assertTrue(tailnet.getStatusText().contains("100.101.102.103"), "Status must contain IP");
         System.out.println("PASS: testStateRunningReportsTailnetIps");
     }
 
@@ -130,15 +131,16 @@ public class RemoteTailnetTest {
         RemoteTailnet tailnet = new RemoteTailnet(bridge, dir, "pcdash-remote-test");
 
         bridge.stateJson = "{\"state\":\"starting\",\"authUrl\":\"\",\"tailnetIps\":[],\"localPort\":0,\"error\":\"\"}";
-        assertTrue(tailnet.getVietnameseStatus().contains("khởi động"), "Starting must mention khởi động");
+        assertTrue(tailnet.getStatusText().contains("khởi động"), "Starting must mention khởi động");
 
         bridge.stateJson = "{\"state\":\"error\",\"authUrl\":\"\",\"tailnetIps\":[],\"localPort\":0,\"error\":\"Mạng không khả dụng\"}";
         assertTrue(tailnet.isError(), "isError must be true");
-        assertTrue(tailnet.getVietnameseStatus().contains("Lỗi kết nối Tailscale"), "Error must mention Lỗi kết nối Tailscale");
+        assertTrue(tailnet.getStatusText().contains("Lỗi kết nối Tailscale"), "Error must mention Lỗi kết nối Tailscale");
         System.out.println("PASS: testVietnameseStatusMessages");
     }
 
     public static void main(String[] args) {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running RemoteTailnetTest...");
         testBeginCallsBridgeWithCorrectParameters();
         testStateNeedsLoginReportsAuthUrl();

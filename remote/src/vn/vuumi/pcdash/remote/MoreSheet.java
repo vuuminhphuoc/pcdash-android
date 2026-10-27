@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -48,7 +49,7 @@ public class MoreSheet {
 
         // Header
         TextView title = new TextView(context);
-        title.setText("Cài đặt & Thêm");
+        title.setText(L10n.t("Settings & more", "Cài đặt & Thêm"));
         title.setTextSize(20);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
@@ -60,7 +61,7 @@ public class MoreSheet {
                 hostname = store.getOrCreateHostname();
             }
             TextView hostInfo = new TextView(context);
-            hostInfo.setText("Thiết bị Tailscale: " + hostname);
+            hostInfo.setText(L10n.t("Tailscale device: ", "Thiết bị Tailscale: ") + hostname);
             hostInfo.setTextSize(13);
             hostInfo.setTextColor(Color.rgb(139, 148, 158));
             hostInfo.setPadding(0, dpToPx(context, 4), 0, dpToPx(context, 8));
@@ -73,7 +74,7 @@ public class MoreSheet {
 
         // 1. Cài đặt xác thực
         CheckBox authSwitch = new CheckBox(context);
-        authSwitch.setText("Yêu cầu xác thực cho Tắt máy/Ngủ đông");
+        authSwitch.setText(L10n.t("Require unlock for Shut down/Hibernate", "Yêu cầu xác thực cho Tắt máy/Ngủ đông"));
         authSwitch.setTextColor(Color.rgb(201, 209, 217));
         authSwitch.setTextSize(13);
         boolean currentRequireAuth = true;
@@ -103,7 +104,7 @@ public class MoreSheet {
 
         // Đăng nhập lại Tailscale
         Button reloginBtn = new Button(context);
-        reloginBtn.setText("Đăng nhập lại Tailscale");
+        reloginBtn.setText(L10n.t("Sign in to Tailscale again", "Đăng nhập lại Tailscale"));
         reloginBtn.setTextColor(Color.rgb(88, 166, 255));
         reloginBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         reloginBtn.setTextSize(13);
@@ -122,7 +123,7 @@ public class MoreSheet {
 
         // 2. Chẩn đoán
         final Button diagBtn = new Button(context);
-        diagBtn.setText("Chẩn đoán kết nối Tailscale");
+        diagBtn.setText(L10n.t("Tailscale connection diagnostics", "Chẩn đoán kết nối Tailscale"));
         diagBtn.setTextColor(Color.rgb(88, 166, 255));
         diagBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         diagBtn.setTextSize(13);
@@ -141,7 +142,7 @@ public class MoreSheet {
         diagView.setBackgroundColor(Color.rgb(0, 0, 0));
         int diagPad = dpToPx(context, 12);
         diagView.setPadding(diagPad, diagPad, diagPad, diagPad);
-        diagView.setText("Đang tải dữ liệu chẩn đoán...");
+        diagView.setText(L10n.t("Loading diagnostics...", "Đang tải dữ liệu chẩn đoán..."));
         diagContainer.addView(diagView);
         content.addView(diagContainer);
 
@@ -152,8 +153,8 @@ public class MoreSheet {
                 isOpen = !isOpen;
                 if (isOpen) {
                     diagContainer.setVisibility(View.VISIBLE);
-                    diagBtn.setText("Đóng chẩn đoán");
-                    diagView.setText("Đang tải dữ liệu chẩn đoán...");
+                    diagBtn.setText(L10n.t("Close diagnostics", "Đóng chẩn đoán"));
+                    diagView.setText(L10n.t("Loading diagnostics...", "Đang tải dữ liệu chẩn đoán..."));
                     if (callback != null) {
                         callback.onDiagnosticsRequested(new DiagnosticsCallback() {
                             @Override
@@ -166,7 +167,7 @@ public class MoreSheet {
                     }
                 } else {
                     diagContainer.setVisibility(View.GONE);
-                    diagBtn.setText("Chẩn đoán kết nối Tailscale");
+                    diagBtn.setText(L10n.t("Tailscale connection diagnostics", "Chẩn đoán kết nối Tailscale"));
                 }
             }
         });
@@ -175,7 +176,7 @@ public class MoreSheet {
 
         // 3. Kiểm tra cập nhật
         Button checkUpdateBtn = new Button(context);
-        checkUpdateBtn.setText("Kiểm tra cập nhật");
+        checkUpdateBtn.setText(L10n.t("Check for updates", "Kiểm tra cập nhật"));
         checkUpdateBtn.setTextColor(Color.rgb(88, 166, 255));
         checkUpdateBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         checkUpdateBtn.setTextSize(13);
@@ -196,7 +197,7 @@ public class MoreSheet {
 
         // 4. Quên host này
         Button forgetBtn = new Button(context);
-        forgetBtn.setText("Quên host này");
+        forgetBtn.setText(L10n.t("Forget this host", "Quên host này"));
         forgetBtn.setTextColor(Color.rgb(248, 81, 73));
         forgetBtn.setBackgroundColor(Color.TRANSPARENT);
         forgetBtn.setTextSize(14);
@@ -213,7 +214,7 @@ public class MoreSheet {
 
         // 5. Phiên bản
         TextView versionFooter = new TextView(context);
-        versionFooter.setText("Phiên bản " + (versionName != null ? versionName : ""));
+        versionFooter.setText(L10n.t("Version ", "Phiên bản ") + (versionName != null ? versionName : ""));
         versionFooter.setTextSize(12);
         versionFooter.setTextColor(Color.rgb(110, 118, 129));
         versionFooter.setGravity(Gravity.CENTER);
@@ -222,7 +223,7 @@ public class MoreSheet {
 
         // 6. Đóng
         Button closeBtn = new Button(context);
-        closeBtn.setText("Đóng");
+        closeBtn.setText(L10n.t("Close", "Đóng"));
         closeBtn.setTextColor(Color.rgb(201, 209, 217));
         closeBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         closeBtn.setTextSize(13);

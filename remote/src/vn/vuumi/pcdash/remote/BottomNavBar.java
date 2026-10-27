@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -34,7 +35,15 @@ public class BottomNavBar extends LinearLayout {
     private static final int ROW_VERTICAL_DP = 6;
 
     private static final String[] TAB_ICONS = new String[]{"⚡", "📊", "📈", "📋", "☰"};
-    private static final String[] TAB_LABELS = new String[]{"Điều khiển", "Giám sát", "Quota", "Nhật ký", "Thêm"};
+    private static String[] tabLabels() {
+        return new String[]{
+                L10n.t("Control", "Điều khiển"),
+                L10n.t("Monitor", "Giám sát"),
+                "Quota",
+                L10n.t("Log", "Nhật ký"),
+                L10n.t("More", "Thêm")
+        };
+    }
 
     public BottomNavBar(Context context, final TabNavigator.Listener listener) {
         super(context);
@@ -48,6 +57,7 @@ public class BottomNavBar extends LinearLayout {
         applyInsets(0, 0);
 
         MainTab[] tabs = MainTab.values();
+        String[] labelTexts = tabLabels();
         for (int i = 0; i < tabs.length; i++) {
             final MainTab tab = tabs[i];
             LinearLayout itemLayout = new LinearLayout(context);
@@ -66,7 +76,7 @@ public class BottomNavBar extends LinearLayout {
             itemLayout.addView(iconTv);
 
             TextView labelTv = new TextView(context);
-            labelTv.setText(TAB_LABELS[i]);
+            labelTv.setText(labelTexts[i]);
             labelTv.setTextSize(10);
             labelTv.setGravity(Gravity.CENTER);
             labelTv.setSingleLine(true);

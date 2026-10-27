@@ -265,7 +265,7 @@ public class PairingProtocol {
 
     public static PairingMessages.PairingResult validateProtocolVersion(String version) {
         if (!PairingMessages.PROTOCOL_VERSION.equals(version)) {
-            return PairingMessages.PairingResult.error(PairingMessages.ERR_VERSION, PairingMessages.MSG_VERSION_MISMATCH);
+            return PairingMessages.PairingResult.error(PairingMessages.ERR_VERSION, PairingMessages.versionMismatchMessage());
         }
         return PairingMessages.PairingResult.ok();
     }

@@ -1,8 +1,11 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
+
 public class DiagnosticsFormatterTest {
 
     public static void main(String[] args) {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running DiagnosticsFormatterTest...");
         testFormatNullOrEmptyJson();
         testFormatFullDiagnostics();

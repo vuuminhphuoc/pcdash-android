@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -86,7 +87,7 @@ public class DashService extends Service implements RemoteActionExecutor {
         String channel = "pcdash";
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(channel, "PCDash", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("Dashboard quản lý PC");
+            ch.setDescription(L10n.t("PC control dashboard", "Dashboard quản lý PC"));
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(ch);
         }
@@ -95,14 +96,14 @@ public class DashService extends Service implements RemoteActionExecutor {
             n = new Notification.Builder(this, channel)
                     .setSmallIcon(android.R.drawable.ic_lock_power_off)
                     .setContentTitle("PCDash")
-                    .setContentText("Dashboard đang chạy tại port " + WebDashboard.PORT)
+                    .setContentText(L10n.t("Dashboard running on port ", "Dashboard đang chạy tại port ") + WebDashboard.PORT)
                     .setOngoing(true)
                     .build();
         } else {
             n = new Notification.Builder(this)
                     .setSmallIcon(android.R.drawable.ic_lock_power_off)
                     .setContentTitle("PCDash")
-                    .setContentText("Dashboard đang chạy tại port " + WebDashboard.PORT)
+                    .setContentText(L10n.t("Dashboard running on port ", "Dashboard đang chạy tại port ") + WebDashboard.PORT)
                     .setOngoing(true)
                     .build();
         }

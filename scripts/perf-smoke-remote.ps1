@@ -97,10 +97,12 @@ Invoke-Adb @("shell", "uiautomator dump /sdcard/u.xml") | Out-Null
 $xmlRaw = (Invoke-Adb @("shell", "cat /sdcard/u.xml")) -join "`n"
 
 $tabLabels = @("Điều khiển", "Giám sát", "Quota", "Nhật ký", "Thêm")
+# The same tabs when the phone runs PCDash Remote in English.
+$tabLabelsEn = @{ "Điều khiển" = "Control"; "Giám sát" = "Monitor"; "Quota" = "Quota"; "Nhật ký" = "Log"; "Thêm" = "More" }
 $tabCoords = @{}
 
 foreach ($lbl in $tabLabels) {
-    $nodePattern = '<node\b[^>]*?\btext="' + [regex]::Escape($lbl) + '"[^>]*?>'
+    $nodePattern = '<node\b[^>]*?\btext="(?:' + [regex]::Escape($lbl) + '|' + [regex]::Escape($tabLabelsEn[$lbl]) + ')"[^>]*?>'
     if ($xmlRaw -match $nodePattern) {
         $nodeStr = $Matches[0]
         if ($nodeStr -match 'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"') {

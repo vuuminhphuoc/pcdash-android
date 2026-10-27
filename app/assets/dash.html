@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -45,17 +45,17 @@
 <body>
 <div class="wrap">
   <h1>PCDash</h1>
-  <div class="sub">Quản lý PC — qua Tailscale từ xa</div>
+  <div class="sub" data-en="Control your PC, from anywhere over Tailscale">Quản lý PC — qua Tailscale từ xa</div>
 
   <div class="status">
     <div class="dot" id="dot"></div>
-    <div class="txt" id="state">Đang kiểm tra...</div>
+    <div class="txt" id="state" data-en="Checking...">Đang kiểm tra...</div>
     <div class="who" id="who"></div>
   </div>
 
   <div class="grid">
     <button class="wake" onclick="doAction('wake')">
-      <span class="ico">&#9889;</span>Bật / Đánh thức
+      <span class="ico">&#9889;</span><span data-en="Turn on / Wake">Bật / Đánh thức</span>
     </button>
     <button class="sleep" onclick="doAction('sleep', true)">
       <span class="ico">&#128164;</span>Sleep
@@ -66,15 +66,22 @@
     <button class="power" onclick="doAction('shutdown', true)">
       <span class="ico">&#9211;</span>Shutdown
     </button>
-    <button class="abort" onclick="doAction('abort')">Hủy lệnh tắt máy (shutdown /a)</button>
+    <button class="abort" onclick="doAction('abort')" data-en="Cancel shutdown (shutdown /a)">Hủy lệnh tắt máy (shutdown /a)</button>
   </div>
 
   <div class="log" id="log"></div>
-  <div class="note">Nút Bật hoạt động khi điện thoại đang trong LAN nhà (magic packet broadcast không đi qua Tailscale).</div>
+  <div class="note" data-en="Turn on works while the phone is on the home LAN (the magic packet broadcast does not cross Tailscale).">Nút Bật hoạt động khi điện thoại đang trong LAN nhà (magic packet broadcast không đi qua Tailscale).</div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+const VI = (navigator.language || '').toLowerCase().startsWith('vi');
+const T = (en, vi) => VI ? vi : en;
+if (VI) {
+  document.documentElement.lang = 'vi';
+} else {
+  document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });
+}
 
 function addLog(msg) {
   const t = new Date().toTimeString().slice(0, 8);
@@ -89,7 +96,7 @@ async function api(path, method = 'GET') {
   }
   let res = await fetch(path, { method, headers });
   if (res.status === 401 && method === 'POST') {
-    const code = window.prompt('Nhập mã truy cập Web Dashboard (X-PCDash-Token):');
+    const code = window.prompt(T('Enter the web dashboard access code (X-PCDash-Token):', 'Nhập mã truy cập Web Dashboard (X-PCDash-Token):'));
     if (code) {
       const trimmed = code.trim();
       localStorage.setItem('pcdash_token', trimmed);
@@ -105,28 +112,28 @@ async function refreshStatus() {
     const s = await api('/api/status');
     if (s.configured === false) {
       $('dot').className = 'dot';
-      $('state').textContent = 'Chưa cấu hình PC';
+      $('state').textContent = T('PC not set up', 'Chưa cấu hình PC');
       $('who').textContent = '';
     } else {
       $('dot').className = 'dot ' + (s.online ? 'on' : 'off');
-      $('state').textContent = s.online ? 'PC đang bật' : 'PC đang tắt / offline';
+      $('state').textContent = s.online ? T('PC is on', 'PC đang bật') : T('PC is off / offline', 'PC đang tắt / offline');
       $('who').textContent = s.online ? ('port ' + s.port + ' | ' + s.rtt_ms + 'ms') : '';
     }
   } catch (e) {
     $('dot').className = 'dot';
-    $('state').textContent = 'Không kết nối được dashboard';
+    $('state').textContent = T('Cannot reach the dashboard', 'Không kết nối được dashboard');
   }
 }
 
 async function doAction(name, confirmFirst) {
-  if (confirmFirst && !confirm('Xác nhận ' + name.toUpperCase() + ' PC?')) return;
-  addLog('Gửi lệnh: ' + name + ' ...');
+  if (confirmFirst && !confirm(T(name.toUpperCase() + ' the PC?', 'Xác nhận ' + name.toUpperCase() + ' PC?'))) return;
+  addLog(T('Sending: ', 'Gửi lệnh: ') + name + ' ...');
   document.querySelectorAll('button').forEach(b => b.disabled = true);
   try {
     const r = await api('/api/' + name, 'POST');
-    addLog((r.ok ? 'OK' : 'LỖI') + ': ' + name + ' ' + JSON.stringify(r.detail));
+    addLog((r.ok ? 'OK' : T('ERROR', 'LỖI')) + ': ' + name + ' ' + JSON.stringify(r.detail));
   } catch (e) {
-    addLog('LỖI kết nối: ' + e);
+    addLog(T('Connection error: ', 'LỖI kết nối: ') + e);
   } finally {
     document.querySelectorAll('button').forEach(b => b.disabled = false);
     setTimeout(refreshStatus, 1500);

@@ -53,6 +53,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "PcnetStateParseTest failed"
 }
 
+Write-Host "Executing L10nTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.i18n.L10nTest
+if ($LASTEXITCODE -ne 0) {
+    throw "L10nTest failed"
+}
+
 Write-Host "Executing RemoteTailnetTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.RemoteTailnetTest
 if ($LASTEXITCODE -ne 0) {

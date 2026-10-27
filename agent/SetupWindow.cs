@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -20,6 +21,12 @@ namespace PcAgent
         const int QrBoxPx = 360;
         const int AutoCloseMinutes = 10;
 
+        // English, or Vietnamese when Windows' display language is Vietnamese.
+        static string T(string en, string vi)
+        {
+            return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "vi" ? vi : en;
+        }
+
         class Candidate
         {
             public string Label;
@@ -37,14 +44,16 @@ namespace PcAgent
             string token = ReadToken();
             if (token == null)
             {
-                MessageBox.Show("Chưa có token truy cập agent.\nHãy chạy lại agent\\install.bat để tạo token rồi mở lại cửa sổ này.",
+                MessageBox.Show(T("No agent token yet.\nRun agent\\install.bat again to create one, then reopen this window.",
+                    "Chưa có token truy cập agent.\nHãy chạy lại agent\\install.bat để tạo token rồi mở lại cửa sổ này."),
                     "PCDash", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             List<Candidate> candidates = FindCandidates();
             if (candidates.Count == 0)
             {
-                MessageBox.Show("Không tìm thấy kết nối mạng LAN (Ethernet hoặc Wi-Fi có địa chỉ nội bộ).\nHãy kết nối mạng rồi mở lại cửa sổ này.",
+                MessageBox.Show(T("No LAN connection found (Ethernet or Wi-Fi with a private address).\nConnect to the network, then reopen this window.",
+                    "Không tìm thấy kết nối mạng LAN (Ethernet hoặc Wi-Fi có địa chỉ nội bộ).\nHãy kết nối mạng rồi mở lại cửa sổ này."),
                     "PCDash", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -73,7 +82,7 @@ namespace PcAgent
                 this.port = port;
                 this.token = token;
 
-                Text = "PCDash - Quét mã để cài đặt host";
+                Text = T("PCDash - Scan to set up the host", "PCDash - Quét mã để cài đặt host");
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
@@ -83,13 +92,14 @@ namespace PcAgent
                 Font = new Font("Segoe UI", 9.5f);
 
                 Label title = new Label();
-                title.Text = "Quét mã QR bằng điện thoại host";
+                title.Text = T("Scan this QR code with the host phone", "Quét mã QR bằng điện thoại host");
                 title.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
                 title.SetBounds(20, 16, 400, 30);
                 Controls.Add(title);
 
                 Label steps = new Label();
-                steps.Text = "Trên điện thoại host: mở PCDash > Cài đặt PC > Quét mã QR từ PC, rồi hướng camera vào mã bên dưới.";
+                steps.Text = T("On the host phone: open PCDash > PC settings > Scan QR code from PC, then point the camera at the code below.",
+                    "Trên điện thoại host: mở PCDash > Cài đặt PC > Quét mã QR từ PC, rồi hướng camera vào mã bên dưới.");
                 steps.SetBounds(20, 50, 400, 44);
                 Controls.Add(steps);
 
@@ -109,13 +119,14 @@ namespace PcAgent
                 Controls.Add(infoLabel);
 
                 Label warn = new Label();
-                warn.Text = "Mã này chứa token bí mật của agent. Đừng chụp màn hình hay chia sẻ. Cửa sổ tự đóng sau " + AutoCloseMinutes + " phút.";
+                warn.Text = T("This code holds the agent's secret token. Do not screenshot or share it. The window closes by itself after " + AutoCloseMinutes + " minutes.",
+                    "Mã này chứa token bí mật của agent. Đừng chụp màn hình hay chia sẻ. Cửa sổ tự đóng sau " + AutoCloseMinutes + " phút.");
                 warn.ForeColor = Color.FromArgb(180, 40, 30);
                 warn.SetBounds(20, 552, 400, 38);
                 Controls.Add(warn);
 
                 Button close = new Button();
-                close.Text = "Đóng";
+                close.Text = T("Close", "Đóng");
                 close.SetBounds(170, 592, 100, 28);
                 close.Click += delegate { Close(); };
                 Controls.Add(close);
@@ -137,7 +148,7 @@ namespace PcAgent
                 Image old = qrBox.Image;
                 qrBox.Image = Draw(modules);
                 if (old != null) old.Dispose();
-                infoLabel.Text = "IP: " + c.Ip + "    MAC: " + c.Mac + "    Cổng: " + port;
+                infoLabel.Text = "IP: " + c.Ip + "    MAC: " + c.Mac + "    " + T("Port: ", "Cổng: ") + port;
             }
 
             protected override void Dispose(bool disposing)
@@ -231,7 +242,7 @@ namespace PcAgent
                         c.Ip = u.Address.ToString();
                         c.Mac = mac;
                         c.Rank = wired ? 0 : 1;
-                        c.Label = nic.Name + (wired ? " (dây)" : " (không dây)") + " - " + c.Ip;
+                        c.Label = nic.Name + (wired ? T(" (wired)", " (dây)") : T(" (wireless)", " (không dây)")) + " - " + c.Ip;
                         list.Add(c);
                     }
                 }

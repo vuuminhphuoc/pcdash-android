@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.KeyguardManager;
@@ -163,7 +164,7 @@ public class RemoteMainActivity extends Activity {
             }
 
             if (status == PackageInstaller.STATUS_SUCCESS) {
-                Toast.makeText(RemoteMainActivity.this, "Cập nhật thành công!", Toast.LENGTH_LONG).show();
+                Toast.makeText(RemoteMainActivity.this, L10n.t("Update installed!", "Cập nhật thành công!"), Toast.LENGTH_LONG).show();
                 updateState = UpdateState.IDLE;
                 availableUpdate = null;
                 updateUpdateCardUI();
@@ -312,7 +313,7 @@ public class RemoteMainActivity extends Activity {
                 if (lastSnapshot != null) {
                     monitorTabView.updateMetrics(lastSnapshot, true);
                 } else {
-                    monitorTabView.updateMetricsError("Lỗi tải số liệu: " + (error.getMessage() != null ? error.getMessage() : "Timeout"));
+                    monitorTabView.updateMetricsError(L10n.t("Could not load metrics: ", "Lỗi tải số liệu: ") + (error.getMessage() != null ? error.getMessage() : "Timeout"));
                 }
             }
         } else {
@@ -362,11 +363,11 @@ public class RemoteMainActivity extends Activity {
                     @Override
                     public void run() {
                         if (isDestroyed) return;
-                        Toast.makeText(RemoteMainActivity.this, "Thiết bị đã bị xóa khỏi máy ở nhà. Hãy ghép đôi lại.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(RemoteMainActivity.this, L10n.t("This phone was removed on the home phone. Pair again.", "Thiết bị đã bị xóa khỏi máy ở nhà. Hãy ghép đôi lại."), Toast.LENGTH_LONG).show();
                         renderScreen();
                         startTailscaleBegin();
                         if (pairingStatusView != null) {
-                            pairingStatusView.setText("Thiết bị đã bị xóa khỏi máy ở nhà. Hãy ghép đôi lại.");
+                            pairingStatusView.setText(L10n.t("This phone was removed on the home phone. Pair again.", "Thiết bị đã bị xóa khỏi máy ở nhà. Hãy ghép đôi lại."));
                         }
                     }
                 });
@@ -888,7 +889,7 @@ public class RemoteMainActivity extends Activity {
                             ui.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(RemoteMainActivity.this, "Không thể lưu cài đặt: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(RemoteMainActivity.this, L10n.t("Could not save the setting: ", "Không thể lưu cài đặt: ") + e.getMessage(), Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }
@@ -921,10 +922,10 @@ public class RemoteMainActivity extends Activity {
                                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                                         startActivity(intent);
                                     } catch (Exception e) {
-                                        Toast.makeText(RemoteMainActivity.this, "Không thể mở trình duyệt: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(RemoteMainActivity.this, L10n.t("Cannot open the browser: ", "Không thể mở trình duyệt: ") + e.getMessage(), Toast.LENGTH_SHORT).show();
                                     }
                                 } else {
-                                    Toast.makeText(RemoteMainActivity.this, "Tailscale đang hoạt động bình thường", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(RemoteMainActivity.this, L10n.t("Tailscale is working", "Tailscale đang hoạt động bình thường"), Toast.LENGTH_SHORT).show();
                                 }
                             }
                         });
@@ -968,8 +969,8 @@ public class RemoteMainActivity extends Activity {
             pendingDangerousAction = action;
             pendingDangerousToast = toastMsg;
             Intent intent = km.createConfirmDeviceCredentialIntent(
-                    "shutdown".equals(action) ? "Xác nhận tắt máy PC" : "Xác nhận ngủ đông PC",
-                    "Vui lòng xác thực mã PIN/vân tay của thiết bị trước khi thực hiện thao tác này");
+                    "shutdown".equals(action) ? L10n.t("Confirm PC shutdown", "Xác nhận tắt máy PC") : L10n.t("Confirm PC hibernate", "Xác nhận ngủ đông PC"),
+                    L10n.t("Unlock with your PIN or fingerprint to continue", "Vui lòng xác thực mã PIN/vân tay của thiết bị trước khi thực hiện thao tác này"));
             if (intent != null) {
                 startActivityForResult(intent, REQUEST_CODE_DANGEROUS_AUTH);
                 return;
@@ -983,23 +984,23 @@ public class RemoteMainActivity extends Activity {
     }
 
     private void confirmActionDialog(final String action, final String toastMsg) {
-        String title = "shutdown".equals(action) ? "Xác nhận tắt máy" : "Xác nhận ngủ đông";
+        String title = "shutdown".equals(action) ? L10n.t("Confirm shutdown", "Xác nhận tắt máy") : L10n.t("Confirm hibernate", "Xác nhận ngủ đông");
         String msg = "shutdown".equals(action)
-                ? "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?"
-                : "Bạn có chắc chắn muốn đưa PC vào chế độ ngủ đông (Hibernate) không?";
+                ? L10n.t("Shut down the PC now?", "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?")
+                : L10n.t("Hibernate the PC now?", "Bạn có chắc chắn muốn đưa PC vào chế độ ngủ đông (Hibernate) không?");
         AlertDialog confirm = new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(msg)
-                .setPositiveButton("Thực hiện", new DialogInterface.OnClickListener() {
+                .setPositiveButton(L10n.t("Continue", "Thực hiện"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         executeAction(action, toastMsg);
                     }
                 })
-                .setNegativeButton("Hủy", new DialogInterface.OnClickListener() {
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        Toast.makeText(RemoteMainActivity.this, "Đã hủy", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RemoteMainActivity.this, L10n.t("Cancelled", "Đã hủy"), Toast.LENGTH_SHORT).show();
                     }
                 })
                 .create();
@@ -1014,7 +1015,7 @@ public class RemoteMainActivity extends Activity {
             if (resultCode == RESULT_OK && pendingDangerousAction != null) {
                 confirmActionDialog(pendingDangerousAction, pendingDangerousToast);
             } else {
-                Toast.makeText(this, "Xác thực không thành công", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, L10n.t("Authentication failed", "Xác thực không thành công"), Toast.LENGTH_SHORT).show();
             }
             pendingDangerousAction = null;
             pendingDangerousToast = null;
@@ -1024,7 +1025,7 @@ public class RemoteMainActivity extends Activity {
             if (resultCode == RESULT_OK) {
                 confirmForgetHost();
             } else {
-                Toast.makeText(this, "Xác thực không thành công", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, L10n.t("Authentication failed", "Xác thực không thành công"), Toast.LENGTH_SHORT).show();
             }
             return;
         }
@@ -1034,7 +1035,7 @@ public class RemoteMainActivity extends Activity {
         KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         boolean isDeviceSecure = km != null && km.isDeviceSecure();
         if (ActionGuard.checkForgetHostRequirement(isDeviceSecure) == ActionGuard.AuthRequirement.DEVICE_CREDENTIAL) {
-            Intent intent = km.createConfirmDeviceCredentialIntent("Xác thực để quên host", "Vui lòng xác thực mã PIN/vân tay của thiết bị để hủy ghép đôi");
+            Intent intent = km.createConfirmDeviceCredentialIntent(L10n.t("Authenticate to forget the host", "Xác thực để quên host"), L10n.t("Unlock with your PIN or fingerprint to unpair", "Vui lòng xác thực mã PIN/vân tay của thiết bị để hủy ghép đôi"));
             if (intent != null) {
                 startActivityForResult(intent, REQUEST_CODE_FORGET_AUTH);
                 return;
@@ -1045,9 +1046,9 @@ public class RemoteMainActivity extends Activity {
 
     private void confirmForgetHost() {
         AlertDialog forget = new AlertDialog.Builder(this)
-                .setTitle("Quên host")
-                .setMessage("Bạn có chắc muốn xóa ghép đôi với host này? Để kết nối lại, bạn sẽ cần ghép đôi lại trên mạng LAN.")
-                .setPositiveButton("Quên host", new DialogInterface.OnClickListener() {
+                .setTitle(L10n.t("Forget host", "Quên host"))
+                .setMessage(L10n.t("Remove the pairing with this host? To reconnect you will need to pair again on the home LAN.", "Bạn có chắc muốn xóa ghép đôi với host này? Để kết nối lại, bạn sẽ cần ghép đôi lại trên mạng LAN."))
+                .setPositiveButton(L10n.t("Forget host", "Quên host"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         isPolling = false;
@@ -1096,7 +1097,7 @@ public class RemoteMainActivity extends Activity {
                                     @Override
                                     public void run() {
                                         if (isDestroyed) return;
-                                        Toast.makeText(RemoteMainActivity.this, "Đã xóa dữ liệu host", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(RemoteMainActivity.this, L10n.t("Host data removed", "Đã xóa dữ liệu host"), Toast.LENGTH_SHORT).show();
                                         renderScreen();
                                         startTailscaleBegin();
                                     }
@@ -1105,7 +1106,7 @@ public class RemoteMainActivity extends Activity {
                         });
                     }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
                 .create();
         GlassKit.styleAlert(forget);
         forget.show();
@@ -1148,7 +1149,7 @@ public class RemoteMainActivity extends Activity {
                         RemoteMainActivity a = activityRef.get();
                         if (a == null || a.isStopped || a.isDestroyed) return;
                         a.isBusy = false;
-                        String msg = res.ok ? "Thành công: " + action : "Lỗi: " + res.detail;
+                        String msg = res.ok ? L10n.t("Done: ", "Thành công: ") + action : L10n.t("Error: ", "Lỗi: ") + res.detail;
                         Toast.makeText(a, msg, Toast.LENGTH_SHORT).show();
                         a.ui.postDelayed(a.pollStatusTask, 1500);
                     }
@@ -1175,7 +1176,7 @@ public class RemoteMainActivity extends Activity {
                         RemoteMainActivity a = activityRef.get();
                         if (a == null || a.isStopped || a.isDestroyed) return;
                         a.isBusy = false;
-                        Toast.makeText(a, "Lỗi gửi lệnh: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(a, L10n.t("Could not send the command: ", "Lỗi gửi lệnh: ") + e.getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -1200,14 +1201,14 @@ public class RemoteMainActivity extends Activity {
         contentContainer.addView(scroll);
 
         TextView title = new TextView(this);
-        title.setText("Ghép đôi thiết bị");
+        title.setText(L10n.t("Pair this phone", "Ghép đôi thiết bị"));
         title.setTextSize(26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
         rootContainer.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Đăng nhập Tailscale và kết nối với máy tính trên mạng LAN");
+        sub.setText(L10n.t("Sign in to Tailscale and connect to the home phone on the LAN", "Đăng nhập Tailscale và kết nối với máy tính trên mạng LAN"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dpToPx(4), 0, dpToPx(16));
@@ -1228,7 +1229,7 @@ public class RemoteMainActivity extends Activity {
                                 stateJson = controller.getBridge().stateJson();
                             }
                         } catch (Exception ignored) {}
-                        final String text = "Trạng thái: " + stateJson + "\n" + DiagnosticsFormatter.format(raw);
+                        final String text = L10n.t("State: ", "Trạng thái: ") + stateJson + "\n" + DiagnosticsFormatter.format(raw);
                         ui.post(new Runnable() {
                             @Override
                             public void run() {
@@ -1247,7 +1248,7 @@ public class RemoteMainActivity extends Activity {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
                         startActivity(intent);
                     } catch (Exception e) {
-                        Toast.makeText(RemoteMainActivity.this, "Không thể mở trình duyệt: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RemoteMainActivity.this, L10n.t("Cannot open the browser: ", "Không thể mở trình duyệt: ") + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -1258,7 +1259,7 @@ public class RemoteMainActivity extends Activity {
 
         // Bước 2: Ghép đôi qua LAN
         TextView pairSectionHeader = new TextView(this);
-        pairSectionHeader.setText("2. Ghép đôi thiết bị qua Wi-Fi");
+        pairSectionHeader.setText(L10n.t("2. Pair over Wi-Fi", "2. Ghép đôi thiết bị qua Wi-Fi"));
         pairSectionHeader.setTextSize(16);
         pairSectionHeader.setTypeface(Typeface.DEFAULT_BOLD);
         pairSectionHeader.setTextColor(Color.rgb(88, 166, 255));
@@ -1266,7 +1267,7 @@ public class RemoteMainActivity extends Activity {
         rootContainer.addView(pairSectionHeader);
 
         TextView nameLabel = new TextView(this);
-        nameLabel.setText("Tên thiết bị (hiển thị trên host):");
+        nameLabel.setText(L10n.t("Device name (shown on the host):", "Tên thiết bị (hiển thị trên host):"));
         nameLabel.setTextSize(12);
         nameLabel.setTextColor(Color.rgb(139, 148, 158));
         nameLabel.setPadding(0, 0, 0, dpToPx(4));
@@ -1285,7 +1286,7 @@ public class RemoteMainActivity extends Activity {
 
         // Discovery section
         TextView discHeader = new TextView(this);
-        discHeader.setText("Tìm host tự động:");
+        discHeader.setText(L10n.t("Find the host automatically:", "Tìm host tự động:"));
         discHeader.setTextSize(13);
         discHeader.setTextColor(Color.rgb(201, 209, 217));
         discHeader.setPadding(0, 0, 0, dpToPx(4));
@@ -1296,7 +1297,7 @@ public class RemoteMainActivity extends Activity {
         rootContainer.addView(discoveredHostsLayout);
 
         Button searchBtn = new Button(this);
-        searchBtn.setText("🔍 Tìm host tự động trên Wi-Fi");
+        searchBtn.setText(L10n.t("🔍 Find the host on this Wi-Fi", "🔍 Tìm host tự động trên Wi-Fi"));
         searchBtn.setTextColor(Color.rgb(230, 237, 243));
         searchBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         searchBtn.setOnClickListener(new View.OnClickListener() {
@@ -1311,20 +1312,20 @@ public class RemoteMainActivity extends Activity {
 
         // Manual IP section
         TextView ipHeader = new TextView(this);
-        ipHeader.setText("Hoặc nhập IP thủ công:");
+        ipHeader.setText(L10n.t("Or enter the IP:", "Hoặc nhập IP thủ công:"));
         ipHeader.setTextSize(13);
         ipHeader.setTextColor(Color.rgb(201, 209, 217));
         rootContainer.addView(ipHeader);
 
         TextView ipLabel = new TextView(this);
-        ipLabel.setText("Địa chỉ IP máy chạy PCDash (cùng mạng Wi-Fi)");
+        ipLabel.setText(L10n.t("IP address of the phone running PCDash host (same Wi-Fi)", "Địa chỉ IP máy chạy PCDash (cùng mạng Wi-Fi)"));
         ipLabel.setTextSize(12);
         ipLabel.setTextColor(Color.rgb(139, 148, 158));
         ipLabel.setPadding(0, 0, 0, dpToPx(4));
         rootContainer.addView(ipLabel);
 
         ipInputView = new EditText(this);
-        ipInputView.setHint("Ví dụ: 192.168.1.100");
+        ipInputView.setHint(L10n.t("Example: 192.168.1.100", "Ví dụ: 192.168.1.100"));
         ipInputView.setHintTextColor(Color.rgb(110, 118, 129));
         ipInputView.setTextColor(Color.rgb(230, 237, 243));
         ipInputView.setBackgroundColor(Color.rgb(16, 20, 26));
@@ -1336,14 +1337,14 @@ public class RemoteMainActivity extends Activity {
 
         // Code Section
         TextView codeHeader = new TextView(this);
-        codeHeader.setText("Mã ghép đôi 6 ký tự hiển thị trên PC:");
+        codeHeader.setText(L10n.t("6-character pairing code shown on the host:", "Mã ghép đôi 6 ký tự hiển thị trên PC:"));
         codeHeader.setTextSize(13);
         codeHeader.setTextColor(Color.rgb(201, 209, 217));
         codeHeader.setPadding(0, 0, 0, dpToPx(4));
         rootContainer.addView(codeHeader);
 
         codeInputView = new EditText(this);
-        codeInputView.setHint("ABCDEF (tối đa 6 ký tự)");
+        codeInputView.setHint(L10n.t("ABCDEF (6 characters)", "ABCDEF (tối đa 6 ký tự)"));
         codeInputView.setHintTextColor(Color.rgb(110, 118, 129));
         codeInputView.setTextColor(Color.rgb(230, 237, 243));
         codeInputView.setTextSize(22);
@@ -1375,7 +1376,7 @@ public class RemoteMainActivity extends Activity {
         addSpacing(rootContainer, dpToPx(24));
 
         Button pairBtn = new Button(this);
-        pairBtn.setText("BẮT ĐẦU GHÉP ĐÔI");
+        pairBtn.setText(L10n.t("START PAIRING", "BẮT ĐẦU GHÉP ĐÔI"));
         pairBtn.setTextColor(Color.rgb(255, 255, 255));
         pairBtn.setTextSize(15);
         pairBtn.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1405,7 +1406,7 @@ public class RemoteMainActivity extends Activity {
 
         addSpacing(rootContainer, dpToPx(24));
         TextView versionFooter = new TextView(this);
-        versionFooter.setText("Phiên bản " + getInstalledVersionName());
+        versionFooter.setText(L10n.t("Version ", "Phiên bản ") + getInstalledVersionName());
         versionFooter.setTextSize(12);
         versionFooter.setTextColor(Color.rgb(110, 118, 129));
         versionFooter.setGravity(Gravity.CENTER);
@@ -1430,7 +1431,7 @@ public class RemoteMainActivity extends Activity {
         if (discoveredHostsLayout == null || isStopped || isDestroyed) return;
         discoveredHostsLayout.removeAllViews();
         TextView searchingTxt = new TextView(this);
-        searchingTxt.setText("Đang tìm host PCDash trên mạng LAN...");
+        searchingTxt.setText(L10n.t("Looking for PCDash host on the LAN...", "Đang tìm host PCDash trên mạng LAN..."));
         searchingTxt.setTextSize(12);
         searchingTxt.setTextColor(Color.rgb(139, 148, 158));
         searchingTxt.setPadding(0, dpToPx(4), 0, dpToPx(6));
@@ -1472,7 +1473,7 @@ public class RemoteMainActivity extends Activity {
                     a.discoveredHostsLayout.removeAllViews();
                     if (hosts == null || hosts.isEmpty()) {
                         TextView emptyTxt = new TextView(a);
-                        emptyTxt.setText("Không tìm thấy host tự động. Bạn có thể nhập IP bên dưới.");
+                        emptyTxt.setText(L10n.t("No host found. You can enter its IP below.", "Không tìm thấy host tự động. Bạn có thể nhập IP bên dưới."));
                         emptyTxt.setTextSize(12);
                         emptyTxt.setTextColor(Color.rgb(210, 153, 34));
                         emptyTxt.setPadding(0, a.dpToPx(4), 0, a.dpToPx(6));
@@ -1481,7 +1482,7 @@ public class RemoteMainActivity extends Activity {
                         for (final InetAddress addr : hosts) {
                             final String ipStr = addr.getHostAddress();
                             Button hostBtn = new Button(a);
-                            hostBtn.setText("Chọn host: " + ipStr);
+                            hostBtn.setText(L10n.t("Use host: ", "Chọn host: ") + ipStr);
                             hostBtn.setTextColor(Color.rgb(230, 237, 243));
                             hostBtn.setBackgroundColor(Color.rgb(46, 160, 67));
                             hostBtn.setOnClickListener(new View.OnClickListener() {
@@ -1490,7 +1491,7 @@ public class RemoteMainActivity extends Activity {
                                     RemoteMainActivity act = activityRef.get();
                                     if (act != null) {
                                         act.setSelectedHostIp(ipStr);
-                                        Toast.makeText(act, "Đã chọn host " + ipStr, Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(act, L10n.t("Selected host ", "Đã chọn host ") + ipStr, Toast.LENGTH_SHORT).show();
                                     }
                                 }
                             });
@@ -1507,18 +1508,18 @@ public class RemoteMainActivity extends Activity {
         if (isBusy || isStopped || isDestroyed) return;
 
         if (loginPanel != null && !loginPanel.isTailscaleReady()) {
-            Toast.makeText(this, "Vui lòng đăng nhập Tailscale ở Bước 1 trước khi ghép đôi", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("Sign in to Tailscale in step 1 before pairing", "Vui lòng đăng nhập Tailscale ở Bước 1 trước khi ghép đôi"), Toast.LENGTH_LONG).show();
             if (pairingStatusView != null) {
-                pairingStatusView.setText("Vui lòng hoàn tất đăng nhập Tailscale ở Bước 1 trước.");
+                pairingStatusView.setText(L10n.t("Finish the Tailscale sign-in in step 1 first.", "Vui lòng hoàn tất đăng nhập Tailscale ở Bước 1 trước."));
             }
             return;
         }
         final String rawIp = ipInputView != null ? ipInputView.getText().toString().trim() : "";
         if (rawIp.isEmpty()) {
             if (pairingStatusView != null) {
-                pairingStatusView.setText("Vui lòng nhập hoặc chọn IPv4 host");
+                pairingStatusView.setText(L10n.t("Enter or pick the host's IPv4 address", "Vui lòng nhập hoặc chọn IPv4 host"));
             }
-            Toast.makeText(this, "Vui lòng nhập hoặc chọn IPv4 host", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Enter or pick the host's IPv4 address", "Vui lòng nhập hoặc chọn IPv4 host"), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -1526,18 +1527,18 @@ public class RemoteMainActivity extends Activity {
         try {
             hostAddr = InetAddress.getByName(rawIp);
         } catch (Exception e) {
-            Toast.makeText(this, "Địa chỉ IPv4 không hợp lệ", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Invalid IPv4 address", "Địa chỉ IPv4 không hợp lệ"), Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (!PairingClient.isRfc1918(hostAddr)) {
-            Toast.makeText(this, "Địa chỉ phải là IPv4 mạng LAN nội bộ (RFC1918: 192.168.x, 10.x, 172.16-31.x)", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("The address must be a private LAN IPv4 (RFC1918: 192.168.x, 10.x, 172.16-31.x)", "Địa chỉ phải là IPv4 mạng LAN nội bộ (RFC1918: 192.168.x, 10.x, 172.16-31.x)"), Toast.LENGTH_LONG).show();
             return;
         }
 
         final String code = codeInputView != null ? codeInputView.getText().toString().trim() : "";
         if (code.length() != RemoteController.CODE_LENGTH) {
-            Toast.makeText(this, "Mã ghép đôi phải đủ 6 ký tự", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("The pairing code must have 6 characters", "Mã ghép đôi phải đủ 6 ký tự"), Toast.LENGTH_SHORT).show();
             return;
         }
         final String deviceName = (deviceNameInputView != null && !deviceNameInputView.getText().toString().trim().isEmpty())
@@ -1546,7 +1547,7 @@ public class RemoteMainActivity extends Activity {
 
         isBusy = true;
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
-        if (pairingStatusView != null) pairingStatusView.setText("Đang kết nối và xác thực với host...");
+        if (pairingStatusView != null) pairingStatusView.setText(L10n.t("Connecting to the host...", "Đang kết nối và xác thực với host..."));
 
         if (pairingFuture != null) {
             pairingFuture.cancel(true);
@@ -1588,7 +1589,7 @@ public class RemoteMainActivity extends Activity {
                         if (a == null || a.isStopped || a.isDestroyed) return;
                         a.isBusy = false;
                         if (a.progressBar != null) a.progressBar.setVisibility(View.GONE);
-                        Toast.makeText(a, "Ghép đôi thành công!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(a, L10n.t("Paired!", "Ghép đôi thành công!"), Toast.LENGTH_SHORT).show();
                         a.renderScreen();
                         a.isPolling = true;
                         a.adjustPollersForTab(a.navigator.current());
@@ -1606,9 +1607,9 @@ public class RemoteMainActivity extends Activity {
                         a.isBusy = false;
                         if (a.progressBar != null) a.progressBar.setVisibility(View.GONE);
                         if (a.pairingStatusView != null) {
-                            a.pairingStatusView.setText("Lỗi ghép đôi: " + (e.getMessage() != null ? e.getMessage() : "Không xác định"));
+                            a.pairingStatusView.setText(L10n.t("Pairing failed: ", "Lỗi ghép đôi: ") + (e.getMessage() != null ? e.getMessage() : L10n.t("Unknown", "Không xác định")));
                         }
-                        Toast.makeText(a, "Lỗi: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(a, L10n.t("Error: ", "Lỗi: ") + e.getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -1690,11 +1691,11 @@ public class RemoteMainActivity extends Activity {
     private void startManualUpdateCheck() {
         if (controller == null || !controller.isPaired()) return;
         if (updateDownloadFuture != null && !updateDownloadFuture.isDone()) {
-            Toast.makeText(this, "Đang tải bản cập nhật", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Downloading the update", "Đang tải bản cập nhật"), Toast.LENGTH_SHORT).show();
             return;
         }
         manualUpdateCheck = true;
-        Toast.makeText(this, "Đang kiểm tra bản cập nhật...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, L10n.t("Checking for updates...", "Đang kiểm tra bản cập nhật..."), Toast.LENGTH_SHORT).show();
         triggerUpdateCheck();
     }
 
@@ -1716,14 +1717,14 @@ public class RemoteMainActivity extends Activity {
                 return;
             }
             if (manual) {
-                Toast.makeText(this, "Không kiểm tra được: máy ở nhà chưa phản hồi", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, L10n.t("Cannot check: the home phone is not answering", "Không kiểm tra được: máy ở nhà chưa phản hồi"), Toast.LENGTH_LONG).show();
             }
             return;
         }
 
         if (info == null) {
             if (manual) {
-                Toast.makeText(this, "Máy ở nhà chưa có bản cập nhật nào", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, L10n.t("The home phone has no update", "Máy ở nhà chưa có bản cập nhật nào"), Toast.LENGTH_LONG).show();
             }
             return;
         }
@@ -1731,8 +1732,8 @@ public class RemoteMainActivity extends Activity {
         int installedVersionCode = getInstalledVersionCode();
         boolean hasNew = UpdateChecker.isUpdateAvailable(info, installedVersionCode);
         if (manual) {
-            Toast.makeText(this, hasNew ? "Có bản mới v" + info.versionName
-                    : "Đang dùng bản mới nhất (v" + getInstalledVersionName() + ")", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, hasNew ? L10n.t("New version v", "Có bản mới v") + info.versionName
+                    : L10n.t("You have the latest version (v", "Đang dùng bản mới nhất (v") + getInstalledVersionName() + ")", Toast.LENGTH_LONG).show();
         }
         if (hasNew) {
             this.availableUpdate = info;
@@ -1758,7 +1759,7 @@ public class RemoteMainActivity extends Activity {
             updateState = UpdateState.INSTALL_PERMISSION;
             updateUpdateCardUI();
             inst.openInstallPermissionSettings();
-            Toast.makeText(this, "Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("Turn on Allow from this source, then come back and tap Update", "Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật"), Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -1789,7 +1790,7 @@ public class RemoteMainActivity extends Activity {
                             public void run() {
                                 updateState = UpdateState.INSTALL_PERMISSION;
                                 updateUpdateCardUI();
-                                Toast.makeText(RemoteMainActivity.this, "Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật", Toast.LENGTH_LONG).show();
+                                Toast.makeText(RemoteMainActivity.this, L10n.t("Turn on Allow from this source, then come back and tap Update", "Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật"), Toast.LENGTH_LONG).show();
                             }
                         });
                     }
@@ -1799,7 +1800,7 @@ public class RemoteMainActivity extends Activity {
                         ui.post(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(RemoteMainActivity.this, "Đang chuẩn bị cài đặt...", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(RemoteMainActivity.this, L10n.t("Preparing to install...", "Đang chuẩn bị cài đặt..."), Toast.LENGTH_SHORT).show();
                             }
                         });
                     }
@@ -1836,21 +1837,21 @@ public class RemoteMainActivity extends Activity {
                 handleDeviceRevoked();
                 return;
             }
-            String msg = "Lỗi mạng khi tải cập nhật";
+            String msg = L10n.t("Network error while downloading the update", "Lỗi mạng khi tải cập nhật");
             String m = error.getMessage();
             if (m != null) {
-                if (m.contains("Download cancelled") || m.contains("bị hủy")) {
+                if (m.contains("Download cancelled")) {
                     updateState = UpdateState.AVAILABLE;
                     updateUpdateCardUI();
                     return;
                 } else if (m.contains("SHA-256 mismatch")) {
-                    msg = "Lỗi kiểm tra tệp (SHA-256 không khớp)";
+                    msg = L10n.t("File check failed (SHA-256 mismatch)", "Lỗi kiểm tra tệp (SHA-256 không khớp)");
                 } else if (m.contains("Content-Length mismatch")) {
-                    msg = "Kích thước tệp từ máy chủ không khớp";
+                    msg = L10n.t("The file size from the server does not match", "Kích thước tệp từ máy chủ không khớp");
                 } else if (m.contains("ENOSPC") || m.contains("No space")) {
-                    msg = "Không đủ dung lượng bộ nhớ";
+                    msg = L10n.t("Not enough storage", "Không đủ dung lượng bộ nhớ");
                 } else {
-                    msg = "Lỗi tải cập nhật: " + m;
+                    msg = L10n.t("Could not download the update: ", "Lỗi tải cập nhật: ") + m;
                 }
             }
             updateErrorMessage = msg;

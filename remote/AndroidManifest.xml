@@ -13,6 +13,7 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="PCDash Remote"
+        android:localeConfig="@xml/locales_config"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:extractNativeLibs="true"

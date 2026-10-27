@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.util.Locale;
 
 public final class MetricsFormatter {
@@ -129,18 +130,18 @@ public final class MetricsFormatter {
 
         if (days > 0) {
             if (hours > 0) {
-                return days + " ngày " + hours + " giờ";
+                return days + L10n.t("d ", " ngày ") + hours + L10n.t("h", " giờ");
             } else {
-                return days + " ngày";
+                return days + L10n.t("d", " ngày");
             }
         } else if (hours > 0) {
             if (minutes > 0) {
-                return hours + " giờ " + minutes + " phút";
+                return hours + L10n.t("h ", " giờ ") + minutes + L10n.t("m", " phút");
             } else {
-                return hours + " giờ";
+                return hours + L10n.t("h", " giờ");
             }
         } else {
-            return minutes + " phút";
+            return minutes + L10n.t("m", " phút");
         }
     }
 
@@ -150,7 +151,7 @@ public final class MetricsFormatter {
         }
         String pctStr = formatPercent(percent);
         if (charging != null && charging) {
-            return pctStr + " (đang sạc)";
+            return pctStr + L10n.t(" (charging)", " (đang sạc)");
         }
         return pctStr;
     }

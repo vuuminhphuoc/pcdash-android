@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -50,12 +51,12 @@ public class UpdateInstaller implements ApkInstaller {
     @Override
     public void install(File apkFile) throws IOException {
         if (apkFile == null || !apkFile.exists() || apkFile.length() <= 0) {
-            throw new IOException("Tệp APK không tồn tại hoặc rỗng");
+            throw new IOException(L10n.t("The APK file is missing or empty", "Tệp APK không tồn tại hoặc rỗng"));
         }
 
         PackageManager pm = context.getPackageManager();
         if (pm == null) {
-            throw new IOException("PackageManager không khả dụng");
+            throw new IOException(L10n.t("PackageManager is not available", "PackageManager không khả dụng"));
         }
 
         PackageInstaller packageInstaller = pm.getPackageInstaller();
@@ -96,7 +97,7 @@ public class UpdateInstaller implements ApkInstaller {
             if (e instanceof IOException) {
                 throw (IOException) e;
             }
-            throw new IOException("Lỗi tạo phiên cài đặt: " + e.getMessage(), e);
+            throw new IOException(L10n.t("Could not create the install session: ", "Lỗi tạo phiên cài đặt: ") + e.getMessage(), e);
         } finally {
             if (session != null) {
                 try {

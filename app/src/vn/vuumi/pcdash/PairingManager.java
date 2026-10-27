@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -201,7 +202,7 @@ public class PairingManager {
     public synchronized PairingCode begin() throws PairingException {
         String tailnetIp = hostTailnet != null ? hostTailnet.tailnetIp() : null;
         if (tailnetIp == null || tailnetIp.trim().isEmpty()) {
-            throw new PairingException("Host chưa đăng nhập Tailscale, mở PCDash host và đăng nhập");
+            throw new PairingException(L10n.t("The host is not signed in to Tailscale. Open PCDash host and sign in", "Host chưa đăng nhập Tailscale, mở PCDash host và đăng nhập"));
         }
 
         StringBuilder sb = new StringBuilder(CODE_LENGTH);
@@ -614,7 +615,7 @@ public class PairingManager {
             ackPlaintext = PairingProtocol.open(aesKey, transcript, ackRecord);
         } catch (Exception e) {
             logW(TAG, "Không thể giải mã gói tin ACK từ client");
-            sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error("ACK_DECRYPT_FAILED", "Không thể giải mã ACK"));
+            sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error("ACK_DECRYPT_FAILED", L10n.t("Cannot decrypt the ACK", "Không thể giải mã ACK")));
             return;
         }
 
@@ -630,7 +631,7 @@ public class PairingManager {
         synchronized (this) {
             if (!isActive(clock.nowEpochMs()) || activeCode == null || activeCode.state != SessionState.RESERVED) {
                 logW(TAG, "Phiên ghép đôi không còn hợp lệ hoặc đã hết hạn trước khi lưu thiết bị");
-                sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error(PairingMessages.ERR_STORE_ERROR, "Phiên ghép đôi đã hết hạn"));
+                sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error(PairingMessages.ERR_STORE_ERROR, L10n.t("The pairing session expired", "Phiên ghép đôi đã hết hạn")));
                 return;
             }
             try {
@@ -638,7 +639,7 @@ public class PairingManager {
                 logI(TAG, "Kết quả complete/store: lưu thiết bị thành công (deviceName=" + deviceName + ", nodeId=" + nodeId + ")");
             } catch (Exception e) {
                 logE(TAG, "Kết quả complete/store: lưu thiết bị thất bại vào store: " + e.getMessage());
-                sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error(PairingMessages.ERR_STORE_ERROR, "Lỗi lưu store: " + e.getMessage()));
+                sendResultRecord(dos, aesKey, transcript, PairingMessages.PairingResult.error(PairingMessages.ERR_STORE_ERROR, L10n.t("Could not save the device: ", "Lỗi lưu store: ") + e.getMessage()));
                 return;
             }
         }

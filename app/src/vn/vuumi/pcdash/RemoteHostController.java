@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -95,7 +96,7 @@ public class RemoteHostController {
     public PairingManager.PairingCode beginPairing() throws PairingManager.PairingException {
         synchronized (lifecycleLock) {
             if (pairingManager == null) {
-                throw new PairingManager.PairingException("Dịch vụ ghép đôi chưa khởi tạo");
+                throw new PairingManager.PairingException(L10n.t("The pairing service is not started", "Dịch vụ ghép đôi chưa khởi tạo"));
             }
             return pairingManager.begin();
         }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,6 +57,7 @@ public class QuotaViewModelTest {
     }
 
     public static void main(String[] args) throws Exception {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running QuotaViewModelTest...");
         testEmptyProviders();
         testHasData();

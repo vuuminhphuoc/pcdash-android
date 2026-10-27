@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -279,7 +280,7 @@ public class HistoryChartView extends View {
 
         // 4. Nếu không có dữ liệu
         if (timestamps == null || timestamps.length == 0 || (series1 == null && series2 == null)) {
-            String emptyText = "Chưa có dữ liệu";
+            String emptyText = L10n.t("No data yet", "Chưa có dữ liệu");
             float tw = textPaint.measureText(emptyText);
             canvas.drawText(emptyText, chartLeft + (chartWidth - tw) / 2, chartTop + chartHeight / 2, textPaint);
             return;

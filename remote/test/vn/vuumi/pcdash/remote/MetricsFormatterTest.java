@@ -1,8 +1,11 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
+
 public class MetricsFormatterTest {
 
     public static void main(String[] args) {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running MetricsFormatterTest...");
         testFormatPercent();
         testFormatRam();
@@ -11,6 +14,7 @@ public class MetricsFormatterTest {
         testFormatCpuOrSysTemp();
         testFormatUptime();
         testFormatBattery();
+        testEnglishText();
         testFormatWifi();
         testAlertLevels();
         System.out.println("ALL MetricsFormatterTest assertions PASSED!");
@@ -108,6 +112,21 @@ public class MetricsFormatterTest {
         assertTrue("—".equals(MetricsFormatter.formatUptime(-1L)), "negative -> —");
 
         System.out.println("PASS: testFormatUptime");
+    }
+
+    public static void testEnglishText() {
+        L10n.setOverride(L10n.EN);
+        try {
+            assertTrue("2d 3h".equals(MetricsFormatter.formatUptime(183600L)), "2d 3h");
+            assertTrue("5h 12m".equals(MetricsFormatter.formatUptime(18720L)), "5h 12m");
+            assertTrue("25m".equals(MetricsFormatter.formatUptime(1500L)), "25m");
+            assertTrue("100% (charging)".equals(MetricsFormatter.formatBattery(100.0, true)), "100% (charging)");
+            assertTrue("resets in 1d 2h".equals(QuotaFormatter.resetText(1000L + 26 * 3600_000L, 1000L)), "resets in 1d 2h");
+            assertTrue(DiagnosticsFormatter.format(null).startsWith("No diagnostics yet"), "English diagnostics");
+        } finally {
+            L10n.setOverride(L10n.VI);
+        }
+        System.out.println("PASS: testEnglishText");
     }
 
     public static void testFormatBattery() {

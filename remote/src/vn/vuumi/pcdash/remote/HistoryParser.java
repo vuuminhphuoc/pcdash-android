@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.util.List;
 import java.util.Map;
 
@@ -45,24 +46,24 @@ public final class HistoryParser {
 
     public static HistoryData parse(String json) throws IllegalArgumentException {
         if (json == null || json.trim().isEmpty()) {
-            throw new IllegalArgumentException("JSON rỗng hoặc null");
+            throw new IllegalArgumentException(L10n.t("Empty or null JSON", "JSON rỗng hoặc null"));
         }
         if (json.length() > MAX_JSON_LEN) {
-            throw new IllegalArgumentException("Kích thước JSON vượt quá giới hạn " + MAX_JSON_LEN);
+            throw new IllegalArgumentException(L10n.t("JSON larger than the limit ", "Kích thước JSON vượt quá giới hạn ") + MAX_JSON_LEN);
         }
 
         Map<String, Object> map = MetricsParser.parseMap(json);
         if (map == null) {
-            throw new IllegalArgumentException("JSON không hợp lệ");
+            throw new IllegalArgumentException(L10n.t("Invalid JSON", "JSON không hợp lệ"));
         }
 
         Object intervalObj = map.get("intervalMs");
         if (!(intervalObj instanceof Number)) {
-            throw new IllegalArgumentException("intervalMs thiếu hoặc không phải số");
+            throw new IllegalArgumentException(L10n.t("intervalMs missing or not a number", "intervalMs thiếu hoặc không phải số"));
         }
         long intervalMs = ((Number) intervalObj).longValue();
         if (intervalMs <= 0) {
-            throw new IllegalArgumentException("intervalMs phải là số dương");
+            throw new IllegalArgumentException(L10n.t("intervalMs must be positive", "intervalMs phải là số dương"));
         }
 
         List<?> listTs = getList(map, "ts");
@@ -77,7 +78,7 @@ public final class HistoryParser {
 
         int len = listTs.size();
         if (len > MAX_SAMPLES) {
-            throw new IllegalArgumentException("Số lượng mẫu vượt quá giới hạn " + MAX_SAMPLES);
+            throw new IllegalArgumentException(L10n.t("More samples than the limit ", "Số lượng mẫu vượt quá giới hạn ") + MAX_SAMPLES);
         }
 
         // Kiểm tra độ dài các mảng: bắt buộc phải bằng nhau
@@ -85,7 +86,7 @@ public final class HistoryParser {
                 || listDown.size() != len || listUp.size() != len
                 || listCpuTemp.size() != len || listGpuTemp.size() != len
                 || listOnline.size() != len) {
-            throw new IllegalArgumentException("Mảng lệch độ dài: ts=" + len
+            throw new IllegalArgumentException(L10n.t("Array lengths differ: ts=", "Mảng lệch độ dài: ts=") + len
                     + ", cpu=" + listCpu.size() + ", gpu=" + listGpu.size()
                     + ", ram=" + listRam.size() + ", down=" + listDown.size()
                     + ", up=" + listUp.size() + ", cpuTemp=" + listCpuTemp.size()
@@ -107,14 +108,14 @@ public final class HistoryParser {
             // ts: bắt buộc số dương, tăng dần theo thời gian
             Object tObj = listTs.get(i);
             if (!(tObj instanceof Number)) {
-                throw new IllegalArgumentException("ts[" + i + "] không phải số");
+                throw new IllegalArgumentException("ts[" + i + L10n.t("] is not a number", "] không phải số"));
             }
             long curTs = ((Number) tObj).longValue();
             if (curTs <= 0) {
-                throw new IllegalArgumentException("ts[" + i + "] phải dương");
+                throw new IllegalArgumentException("ts[" + i + L10n.t("] must be positive", "] phải dương"));
             }
             if (i > 0 && curTs < prevTs) {
-                throw new IllegalArgumentException("ts không tăng dần theo thời gian tại chỉ mục " + i);
+                throw new IllegalArgumentException(L10n.t("ts is not increasing at index ", "ts không tăng dần theo thời gian tại chỉ mục ") + i);
             }
             prevTs = curTs;
             ts[i] = curTs;
@@ -146,7 +147,7 @@ public final class HistoryParser {
     private static List<?> getList(Map<String, Object> map, String key) {
         Object obj = map.get(key);
         if (!(obj instanceof List)) {
-            throw new IllegalArgumentException("Thiếu hoặc sai kiểu mảng: " + key);
+            throw new IllegalArgumentException(L10n.t("Missing or wrong array: ", "Thiếu hoặc sai kiểu mảng: ") + key);
         }
         return (List<?>) obj;
     }
@@ -156,7 +157,7 @@ public final class HistoryParser {
         if (obj instanceof Number) {
             return ((Number) obj).doubleValue();
         }
-        throw new IllegalArgumentException(key + "[" + idx + "] không phải số hoặc null");
+        throw new IllegalArgumentException(key + "[" + idx + L10n.t("] is not a number or null", "] không phải số hoặc null"));
     }
 
     private static Long parseLong(Object obj, String key, int idx) {
@@ -164,7 +165,7 @@ public final class HistoryParser {
         if (obj instanceof Number) {
             return ((Number) obj).longValue();
         }
-        throw new IllegalArgumentException(key + "[" + idx + "] không phải số hoặc null");
+        throw new IllegalArgumentException(key + "[" + idx + L10n.t("] is not a number or null", "] không phải số hoặc null"));
     }
 
     private static int parseOnline(Object obj, int idx) {
@@ -175,6 +176,6 @@ public final class HistoryParser {
         if (obj instanceof Boolean) {
             return ((Boolean) obj).booleanValue() ? 1 : 0;
         }
-        throw new IllegalArgumentException("online[" + idx + "] không phải số/boolean");
+        throw new IllegalArgumentException("online[" + idx + L10n.t("] is not a number/boolean", "] không phải số/boolean"));
     }
 }

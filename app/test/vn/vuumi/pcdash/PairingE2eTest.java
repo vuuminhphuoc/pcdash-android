@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -266,6 +267,7 @@ public class PairingE2eTest {
     }
 
     public static void main(String[] args) throws Exception {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("=== Starting Pairing E2E Integration Tests ===");
         testPairingWithCorrectCode();
         testPairingWithWrongCode();

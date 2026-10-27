@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 
 import java.io.BufferedInputStream;
@@ -108,7 +109,7 @@ public class WebDashboard {
             r.close();
             return sb.toString();
         } catch (IOException e) {
-            return "<h1>PCDash</h1><p>Lỗi đọc asset: " + e + "</p>";
+            return L10n.t("<h1>PCDash</h1><p>Cannot read asset: ", "<h1>PCDash</h1><p>Lỗi đọc asset: ") + e + "</p>";
         }
     }
 
@@ -161,6 +162,8 @@ public class WebDashboard {
                 int i = line.indexOf(':');
                 if (i > 0) headers.put(line.substring(0, i).trim().toLowerCase(), line.substring(i + 1).trim());
             }
+            // Action results go back in the browser's language.
+            L10n.setThreadLanguage(headers.get("accept-language"));
 
             if ("OPTIONS".equalsIgnoreCase(method)) {
                 send(s, 403, "application/json", "{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
@@ -211,12 +214,7 @@ public class WebDashboard {
                 boolean ok = true;
                 try {
                     rawDetail = PcConn.doAction(action);
-                    if (rawDetail != null) {
-                        String lower = rawDetail.toLowerCase();
-                        if (lower.startsWith("error") || lower.startsWith("lỗi") || lower.startsWith("agent từ chối") || lower.startsWith("agent pc chưa")) {
-                            ok = false;
-                        }
-                    }
+                    ok = !RemoteActionExecutor.isFailure(rawDetail);
                 } catch (Exception e) {
                     ok = false;
                     rawDetail = e.getMessage() != null ? e.getMessage() : e.toString();
@@ -237,6 +235,7 @@ public class WebDashboard {
             }
         } catch (IOException ignored) {
         } finally {
+            L10n.setThreadLanguage(null);
             try { s.close(); } catch (IOException ignored) {}
         }
     }
@@ -276,7 +275,7 @@ public class WebDashboard {
 
     public static String infoText(Context ctx, HostTailnet tailnet) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Web dashboard (cùng LAN / Tailscale):\n");
+        sb.append(L10n.t("Web dashboard (same LAN / Tailscale):\n", "Web dashboard (cùng LAN / Tailscale):\n"));
         try {
             java.util.Enumeration<java.net.NetworkInterface> en = java.net.NetworkInterface.getNetworkInterfaces();
             while (en.hasMoreElements()) {
@@ -298,7 +297,7 @@ public class WebDashboard {
                 sb.append("  tailscale: http://").append(tsIp).append(":").append(PORT).append("\n");
             }
         }
-        sb.append("Lưu ý: nút Wake cần điện thoại đang trong LAN nhà.");
+        sb.append(L10n.t("Note: Wake only works while this phone is on the home LAN.", "Lưu ý: nút Wake cần điện thoại đang trong LAN nhà."));
         return sb.toString();
     }
 }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -48,14 +49,14 @@ public class ControlTabView implements TabContent {
         UiKit.styleCard(statusCard);
 
         pcStatusView = new TextView(context);
-        pcStatusView.setText("Đang kiểm tra trạng thái PC...");
+        pcStatusView.setText(L10n.t("Checking the PC...", "Đang kiểm tra trạng thái PC..."));
         pcStatusView.setTextSize(18);
         pcStatusView.setTypeface(Typeface.DEFAULT_BOLD);
         pcStatusView.setTextColor(Color.rgb(210, 153, 34));
         statusCard.addView(pcStatusView);
 
         pcDetailView = new TextView(context);
-        pcDetailView.setText("Đang tải dữ liệu...");
+        pcDetailView.setText(L10n.t("Loading...", "Đang tải dữ liệu..."));
         pcDetailView.setTextSize(12);
         pcDetailView.setTextColor(Color.rgb(139, 148, 158));
         statusCard.addView(pcDetailView);
@@ -85,7 +86,7 @@ public class ControlTabView implements TabContent {
         permissionNoticeView = new TextView(context);
         permissionNoticeView.setTextSize(13);
         permissionNoticeView.setTextColor(Color.rgb(240, 136, 62));
-        permissionNoticeView.setText("Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật");
+        permissionNoticeView.setText(L10n.t("Turn on Allow from this source, then come back and tap Update", "Bật Cho phép từ nguồn này rồi quay lại bấm Cập nhật"));
         permissionNoticeView.setPadding(0, dpToPx(context, 4), 0, 0);
         updateCardContainer.addView(permissionNoticeView);
 
@@ -99,7 +100,7 @@ public class ControlTabView implements TabContent {
         updateActionRow.setPadding(0, dpToPx(context, 8), 0, 0);
 
         updateBtn = new Button(context);
-        updateBtn.setText("Cập nhật");
+        updateBtn.setText(L10n.t("Update", "Cập nhật"));
         updateBtn.setTextColor(Color.WHITE);
         updateBtn.setBackgroundColor(Color.rgb(27, 102, 42));
         updateBtn.setOnClickListener(new View.OnClickListener() {
@@ -111,7 +112,7 @@ public class ControlTabView implements TabContent {
         updateActionRow.addView(updateBtn);
 
         cancelUpdateBtn = new Button(context);
-        cancelUpdateBtn.setText("Hủy");
+        cancelUpdateBtn.setText(L10n.t("Cancel", "Hủy"));
         cancelUpdateBtn.setTextColor(Color.WHITE);
         cancelUpdateBtn.setBackgroundColor(Color.rgb(110, 118, 129));
         cancelUpdateBtn.setOnClickListener(new View.OnClickListener() {
@@ -123,7 +124,7 @@ public class ControlTabView implements TabContent {
         updateActionRow.addView(cancelUpdateBtn);
 
         retryUpdateBtn = new Button(context);
-        retryUpdateBtn.setText("Thử lại");
+        retryUpdateBtn.setText(L10n.t("Retry", "Thử lại"));
         retryUpdateBtn.setTextColor(Color.WHITE);
         retryUpdateBtn.setBackgroundColor(Color.rgb(26, 84, 176));
         retryUpdateBtn.setOnClickListener(new View.OnClickListener() {
@@ -138,21 +139,21 @@ public class ControlTabView implements TabContent {
         container.addView(updateCardContainer);
 
         // Control buttons
-        container.addView(UiKit.sectionLabel(context, "NGUỒN"));
-        container.addView(makeTile(context, IconDrawable.Type.WAKE, "Bật / Đánh thức PC",
-                Color.rgb(27, 102, 42), 0, Color.WHITE, 60, "wake", "Đang gửi tín hiệu bật PC...", callback));
+        container.addView(UiKit.sectionLabel(context, L10n.t("POWER", "NGUỒN")));
+        container.addView(makeTile(context, IconDrawable.Type.WAKE, L10n.t("Turn on / Wake PC", "Bật / Đánh thức PC"),
+                Color.rgb(27, 102, 42), 0, Color.WHITE, 60, "wake", L10n.t("Sending the wake signal...", "Đang gửi tín hiệu bật PC..."), callback));
         addSpacing(container, dpToPx(context, 10));
 
         LinearLayout sleepRow = new LinearLayout(context);
         sleepRow.setOrientation(LinearLayout.HORIZONTAL);
         View sleepTile = makeTile(context, IconDrawable.Type.SLEEP, "Sleep",
-                Color.rgb(26, 84, 176), 0, Color.WHITE, 56, "sleep", "Đang đưa PC vào chế độ Sleep...", callback);
+                Color.rgb(26, 84, 176), 0, Color.WHITE, 56, "sleep", L10n.t("Putting the PC to sleep...", "Đang đưa PC vào chế độ Sleep..."), callback);
         LinearLayout.LayoutParams sleepLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         sleepLp.rightMargin = dpToPx(context, 5);
         sleepTile.setLayoutParams(sleepLp);
         sleepRow.addView(sleepTile);
         View hibernateTile = makeTile(context, IconDrawable.Type.HIBERNATE, "Hibernate",
-                Color.rgb(100, 64, 168), 0, Color.WHITE, 56, "hibernate", "Đang đưa PC vào chế độ Hibernate...", callback);
+                Color.rgb(100, 64, 168), 0, Color.WHITE, 56, "hibernate", L10n.t("Hibernating the PC...", "Đang đưa PC vào chế độ Hibernate..."), callback);
         LinearLayout.LayoutParams hibLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         hibLp.leftMargin = dpToPx(context, 5);
         hibernateTile.setLayoutParams(hibLp);
@@ -160,13 +161,13 @@ public class ControlTabView implements TabContent {
         container.addView(sleepRow);
         addSpacing(container, dpToPx(context, 18));
 
-        container.addView(UiKit.sectionLabel(context, "VÙNG NGUY HIỂM"));
+        container.addView(UiKit.sectionLabel(context, L10n.t("DANGER ZONE", "VÙNG NGUY HIỂM")));
         int danger = Color.rgb(248, 81, 73);
-        container.addView(makeTile(context, IconDrawable.Type.SHUTDOWN, "Tắt máy (Shutdown)",
+        container.addView(makeTile(context, IconDrawable.Type.SHUTDOWN, L10n.t("Shut down", "Tắt máy (Shutdown)"),
                 Color.rgb(34, 20, 22), danger, danger, 56, "shutdown", null, callback));
         addSpacing(container, dpToPx(context, 10));
-        container.addView(makeTile(context, IconDrawable.Type.ABORT, "Hủy lệnh tắt máy",
-                UiKit.CARD, UiKit.BORDER, Color.rgb(201, 209, 217), 48, "abort", "Đang gửi lệnh hủy tắt máy...", callback));
+        container.addView(makeTile(context, IconDrawable.Type.ABORT, L10n.t("Cancel shutdown", "Hủy lệnh tắt máy"),
+                UiKit.CARD, UiKit.BORDER, Color.rgb(201, 209, 217), 48, "abort", L10n.t("Cancelling the shutdown...", "Đang gửi lệnh hủy tắt máy..."), callback));
     }
 
     private static View makeTile(Context ctx, IconDrawable.Type icon, String label, int fill, int stroke,
@@ -199,21 +200,21 @@ public class ControlTabView implements TabContent {
     public void updateStatus(RemoteApiClient.RemoteStatus status, Exception error) {
         if (status != null) {
             if (status.online) {
-                pcStatusView.setText("PC đang BẬT");
+                pcStatusView.setText(L10n.t("PC is ON", "PC đang BẬT"));
                 pcStatusView.setTextColor(Color.rgb(63, 185, 80));
-                String detail = "Cổng: " + (status.port != null ? status.port : 8799)
-                        + "  ·  Độ trễ: " + status.rttMs + " ms";
+                String detail = L10n.t("Port: ", "Cổng: ") + (status.port != null ? status.port : 8799)
+                        + L10n.t("  ·  Latency: ", "  ·  Độ trễ: ") + status.rttMs + " ms";
                 pcDetailView.setText(detail);
             } else {
-                pcStatusView.setText("PC đang TẮT / không phản hồi");
+                pcStatusView.setText(L10n.t("PC is OFF / not responding", "PC đang TẮT / không phản hồi"));
                 pcStatusView.setTextColor(Color.rgb(248, 81, 73));
-                pcDetailView.setText("Không thể kết nối đến PC");
+                pcDetailView.setText(L10n.t("Cannot reach the PC", "Không thể kết nối đến PC"));
             }
         } else if (error != null) {
-            pcStatusView.setText("Không kết nối được tới máy ở nhà");
+            pcStatusView.setText(L10n.t("Cannot reach the home phone", "Không kết nối được tới máy ở nhà"));
             pcStatusView.setTextColor(Color.rgb(248, 81, 73));
             String shortMsg = (error.getMessage() != null && !error.getMessage().isEmpty())
-                    ? error.getMessage() : "Hết thời gian chờ (timeout)";
+                    ? error.getMessage() : L10n.t("Timed out", "Hết thời gian chờ (timeout)");
             pcDetailView.setText(shortMsg);
         }
     }
@@ -234,7 +235,7 @@ public class ControlTabView implements TabContent {
                 String sizeMb = String.format(Locale.US, "%.1f", availableUpdate.size / (1024.0 * 1024.0));
                 updateCardContainer.setBackground(GlassKit.tintedCard(updateCardContainer.getContext(),
                         Color.rgb(13, 28, 19), Color.rgb(27, 102, 42)));
-                updateTitleView.setText("Có bản cập nhật v" + availableUpdate.versionName + " (" + sizeMb + " MB)");
+                updateTitleView.setText(L10n.t("Update available: v", "Có bản cập nhật v") + availableUpdate.versionName + " (" + sizeMb + " MB)");
                 updateTitleView.setTextColor(Color.rgb(230, 237, 243));
                 updateSubView.setVisibility(View.GONE);
                 permissionNoticeView.setVisibility(View.GONE);
@@ -247,14 +248,14 @@ public class ControlTabView implements TabContent {
                 updateCardContainer.setVisibility(View.VISIBLE);
                 updateCardContainer.setBackground(GlassKit.tintedCard(updateCardContainer.getContext(),
                         Color.rgb(13, 22, 36), Color.rgb(26, 84, 176)));
-                updateTitleView.setText("Đang tải bản cập nhật v" + (availableUpdate != null ? availableUpdate.versionName : "") + "...");
+                updateTitleView.setText(L10n.t("Downloading update v", "Đang tải bản cập nhật v") + (availableUpdate != null ? availableUpdate.versionName : "") + "...");
                 updateTitleView.setTextColor(Color.rgb(230, 237, 243));
                 permissionNoticeView.setVisibility(View.GONE);
                 updateProgressBar.setVisibility(View.VISIBLE);
                 updateProgressBar.setProgress(currentDownloadProgress);
                 double readMb = currentDownloadBytes / (1024.0 * 1024.0);
                 double totalMb = (availableUpdate != null && availableUpdate.size > 0) ? availableUpdate.size / (1024.0 * 1024.0) : 0;
-                updateSubView.setText(String.format(Locale.US, "Đang tải: %.1f / %.1f MB (%d%%)", readMb, totalMb, currentDownloadProgress));
+                updateSubView.setText(String.format(Locale.US, L10n.t("Downloading: %.1f / %.1f MB (%d%%)", "Đang tải: %.1f / %.1f MB (%d%%)"), readMb, totalMb, currentDownloadProgress));
                 updateSubView.setTextColor(Color.rgb(139, 148, 158));
                 updateSubView.setVisibility(View.VISIBLE);
                 updateBtn.setVisibility(View.GONE);
@@ -265,7 +266,7 @@ public class ControlTabView implements TabContent {
                 updateCardContainer.setVisibility(View.VISIBLE);
                 updateCardContainer.setBackground(GlassKit.tintedCard(updateCardContainer.getContext(),
                         Color.rgb(32, 23, 12), Color.rgb(120, 70, 30)));
-                updateTitleView.setText("Yêu cầu quyền cài đặt");
+                updateTitleView.setText(L10n.t("Install permission needed", "Yêu cầu quyền cài đặt"));
                 updateTitleView.setTextColor(Color.rgb(240, 136, 62));
                 permissionNoticeView.setVisibility(View.VISIBLE);
                 updateSubView.setVisibility(View.GONE);
@@ -278,10 +279,10 @@ public class ControlTabView implements TabContent {
                 updateCardContainer.setVisibility(View.VISIBLE);
                 updateCardContainer.setBackground(GlassKit.tintedCard(updateCardContainer.getContext(),
                         Color.rgb(34, 20, 22), Color.rgb(140, 50, 46)));
-                updateTitleView.setText("Cập nhật không thành công");
+                updateTitleView.setText(L10n.t("Update failed", "Cập nhật không thành công"));
                 updateTitleView.setTextColor(Color.rgb(248, 81, 73));
                 permissionNoticeView.setVisibility(View.GONE);
-                updateSubView.setText(updateErrorMessage != null ? updateErrorMessage : "Đã xảy ra lỗi");
+                updateSubView.setText(updateErrorMessage != null ? updateErrorMessage : L10n.t("Something went wrong", "Đã xảy ra lỗi"));
                 updateSubView.setTextColor(Color.rgb(248, 81, 73));
                 updateSubView.setVisibility(View.VISIBLE);
                 updateProgressBar.setVisibility(View.GONE);

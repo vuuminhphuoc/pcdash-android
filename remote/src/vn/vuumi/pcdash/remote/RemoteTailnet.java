@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -96,24 +97,24 @@ public class RemoteTailnet {
         return "";
     }
 
-    public String getVietnameseStatus() {
+    public String getStatusText() {
         PcnetState st = state();
         if (st == null || st.isStopped()) {
-            return "Đã dừng";
+            return L10n.t("Stopped", "Đã dừng");
         }
         if (st.isStarting()) {
-            return "Đang khởi động Tailscale...";
+            return L10n.t("Starting Tailscale...", "Đang khởi động Tailscale...");
         }
         if (st.isNeedsLogin()) {
-            return "Cần đăng nhập Tailscale";
+            return L10n.t("Tailscale sign-in needed", "Cần đăng nhập Tailscale");
         }
         if (st.isRunning()) {
             String ip = tailnetIp();
-            return "Đang chạy" + (ip != null ? " (" + ip + ")" : "");
+            return L10n.t("Running", "Đang chạy") + (ip != null ? " (" + ip + ")" : "");
         }
         if (st.isError()) {
             String err = lastError();
-            return "Lỗi kết nối Tailscale" + (!err.isEmpty() ? ": " + err : "");
+            return L10n.t("Tailscale connection error", "Lỗi kết nối Tailscale") + (!err.isEmpty() ? ": " + err : "");
         }
         return st.state;
     }

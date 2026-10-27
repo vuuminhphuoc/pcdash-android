@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.BufferedReader;
@@ -290,6 +291,7 @@ public class PcQuotaClientTest {
     }
 
     public static void main(String[] args) throws Exception {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running PcQuotaClientTest...");
         testRefreshAddsQuery();
         System.out.println("  PASS: testRefreshAddsQuery");

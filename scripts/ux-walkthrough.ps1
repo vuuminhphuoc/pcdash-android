@@ -22,7 +22,7 @@ if ((-not $SkipRemote -and -not $Remote) -or (-not $SkipHost -and -not $HostSeri
     throw "Pass -Remote and -HostSerial (adb serials) or set PCDASH_REMOTE_SERIAL and PCDASH_HOST_SERIAL. Use -SkipRemote or -SkipHost to review one phone."
 }
 
-$forbidden = 'Wake|Đánh thức|Sleep|Hibernate|Shutdown|Tắt máy|Hủy lệnh|Xóa|Quên host|Thêm thiết bị|Bắt đầu ghép đôi'
+$forbidden = 'Wake|Đánh thức|Turn on|Sleep|Hibernate|Shutdown|Shut down|Tắt máy|Hủy lệnh|Cancel shutdown|Xóa|Remove|Clear log|Quên host|Forget|Thêm thiết bị|Add device|Bắt đầu ghép đôi|Start pairing'
 
 function Invoke-Adb([string]$Serial, [string[]]$AdbArgs) {
     & adb.exe -s $Serial @AdbArgs
@@ -95,10 +95,10 @@ if (-not $SkipRemote) {
         }
     }
 
-    # Quota: expand the first "Chi tiết" card
+    # Quota: expand the first "Chi tiết" / "Details" card
     Invoke-Adb $Remote @('shell', 'input', 'tap', $tabX[2], $tabY) | Out-Null
     Start-Sleep -Seconds 2
-    if (Tap-Text $Remote '^Chi tiết') { Shot $Remote 'remote_quota_detail' }
+    if (Tap-Text $Remote '^(Chi tiết|Details)') { Shot $Remote 'remote_quota_detail' }
 
     # More sheet, close with back (never "Quên host này")
     Invoke-Adb $Remote @('shell', 'input', 'tap', $tabX[4], $tabY) | Out-Null
@@ -117,7 +117,7 @@ if (-not $SkipHost) {
     Shot $HostSerial 'host_main_2'
     Invoke-Adb $HostSerial @('shell', 'input', 'swipe', [int]($size.W / 2), [int]($size.H * 0.28), [int]($size.W / 2), [int]($size.H * 0.78), 300) | Out-Null
     Start-Sleep -Milliseconds 700
-    if (Tap-Text $HostSerial 'Thiết bị điều khiển từ xa') {
+    if (Tap-Text $HostSerial '^(Thiết bị điều khiển từ xa|Remote devices)$') {
         Shot $HostSerial 'host_devices_1'
         Swipe-Up $HostSerial $size
         Shot $HostSerial 'host_devices_2'

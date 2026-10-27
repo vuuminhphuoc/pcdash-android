@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Labels the system shows (manifest). Text inside the app lives in code, see L10n. -->
+<resources>
+    <string name="title_remote_devices">Remote devices</string>
+    <string name="title_pc_settings">PC settings</string>
+    <string name="title_qr_scan">Scan QR code from PC</string>
+</resources>

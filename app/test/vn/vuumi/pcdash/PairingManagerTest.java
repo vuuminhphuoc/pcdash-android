@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -747,6 +748,7 @@ public class PairingManagerTest {
     }
 
     public static void main(String[] args) throws Exception {
+        L10n.setOverride(L10n.VI); // the assertions below check the Vietnamese UI text
         System.out.println("Running PairingManagerTest...");
         testLetterFirstCodeExpirySingleUseAndFiveFailures();
         System.out.println("  PASS: testLetterFirstCodeExpirySingleUseAndFiveFailures");

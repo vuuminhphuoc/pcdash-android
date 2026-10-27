@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -114,12 +115,12 @@ public class PcQuotaClient {
 
             int code = conn.getResponseCode();
             if (code == 403) {
-                lastError = "Agent từ chối: sai mã token";
-                return "{\"error\":\"Agent từ chối: sai mã token\"}";
+                lastError = L10n.t("Agent refused: wrong token", "Agent từ chối: sai mã token");
+                return "{\"error\":\"" + lastError + "\"}";
             }
             if (code == 503) {
-                lastError = "Agent PC chưa cấu hình token";
-                return "{\"error\":\"Agent PC chưa cấu hình token\"}";
+                lastError = L10n.t("The PC agent has no token set", "Agent PC chưa cấu hình token");
+                return "{\"error\":\"" + lastError + "\"}";
             }
             if (code != 200) {
                 lastError = "HTTP " + code;

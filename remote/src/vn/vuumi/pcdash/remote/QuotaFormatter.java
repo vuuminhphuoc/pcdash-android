@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -26,12 +27,12 @@ public final class QuotaFormatter {
 
     public static String resetText(Long resetsAtMs, long nowMs) {
         if (resetsAtMs == null || resetsAtMs <= nowMs) {
-            return "đang hồi";
+            return L10n.t("resetting", "đang hồi");
         }
         long diffMs = resetsAtMs - nowMs;
         long totalMinutes = diffMs / 60000L;
         if (totalMinutes <= 0) {
-            return "đang hồi";
+            return L10n.t("resetting", "đang hồi");
         }
         long days = totalMinutes / (24 * 60);
         long hours = (totalMinutes % (24 * 60)) / 60;
@@ -39,18 +40,18 @@ public final class QuotaFormatter {
 
         if (days > 0) {
             if (hours > 0) {
-                return "hồi sau " + days + " ngày " + hours + " giờ";
+                return L10n.t("resets in ", "hồi sau ") + days + L10n.t("d ", " ngày ") + hours + L10n.t("h", " giờ");
             } else {
-                return "hồi sau " + days + " ngày";
+                return L10n.t("resets in ", "hồi sau ") + days + L10n.t("d", " ngày");
             }
         } else if (hours > 0) {
             if (minutes > 0) {
-                return "hồi sau " + hours + " giờ " + minutes + " phút";
+                return L10n.t("resets in ", "hồi sau ") + hours + L10n.t("h ", " giờ ") + minutes + L10n.t("m", " phút");
             } else {
-                return "hồi sau " + hours + " giờ";
+                return L10n.t("resets in ", "hồi sau ") + hours + L10n.t("h", " giờ");
             }
         } else {
-            return "hồi sau " + minutes + " phút";
+            return L10n.t("resets in ", "hồi sau ") + minutes + L10n.t("m", " phút");
         }
     }
 
@@ -59,6 +60,6 @@ public final class QuotaFormatter {
             return "";
         }
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-        return "Cập nhật lúc " + sdf.format(new Date(fetchedAtMs));
+        return L10n.t("Updated at ", "Cập nhật lúc ") + sdf.format(new Date(fetchedAtMs));
     }
 }

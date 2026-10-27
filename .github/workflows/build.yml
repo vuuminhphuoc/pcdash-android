@@ -67,7 +67,7 @@ jobs:
       - name: Tests
         run: |
           $tests = @(
-            'test-build-toolchain', 'lint-ui-thread',
+            'test-build-toolchain', 'lint-ui-thread', 'lint-l10n',
             'test-host-api', 'test-host-pairing', 'test-host-ui-model', 'test-host-update',
             'test-host-metrics', 'test-host-log-history', 'test-host-provisioning', 'test-host-quota',
             'test-remote-java', 'test-pairing-e2e', 'test-qr-roundtrip', 'test-agent-metrics'

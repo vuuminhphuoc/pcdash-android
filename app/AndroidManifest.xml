@@ -23,6 +23,7 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="PCDash"
+        android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:extractNativeLibs="true">
@@ -39,19 +40,19 @@
             android:name=".RemoteDevicesActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:label="Thiết bị điều khiển từ xa" />
+            android:label="@string/title_remote_devices" />
 
         <activity
             android:name=".PcSettingsActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:label="Cài đặt PC" />
+            android:label="@string/title_pc_settings" />
 
         <activity
             android:name=".QrScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:label="Quét mã QR từ PC" />
+            android:label="@string/title_qr_scan" />
 
         <service
             android:name=".DashService"

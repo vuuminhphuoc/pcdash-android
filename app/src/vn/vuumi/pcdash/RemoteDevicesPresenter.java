@@ -1,4 +1,5 @@
 package vn.vuumi.pcdash;
+import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 
 import java.io.IOException;
@@ -104,22 +105,29 @@ public class RemoteDevicesPresenter {
         public final List<DeviceRow> devices;
         public final boolean hasDevices;
         public final String tailscaleStatus;
+        public final boolean tailscaleRunning;
         public final boolean showLoginButton;
         public final String authUrl;
 
         public ViewState(boolean hasActiveCode, String pairingCode, String countdownText, long remainingMs, List<DeviceRow> devices) {
-            this(hasActiveCode, pairingCode, countdownText, remainingMs, devices, "Chưa kết nối", false, "");
+            this(hasActiveCode, pairingCode, countdownText, remainingMs, devices, null, false, "");
         }
 
         public ViewState(boolean hasActiveCode, String pairingCode, String countdownText, long remainingMs, List<DeviceRow> devices,
                          String tailscaleStatus, boolean showLoginButton, String authUrl) {
+            this(hasActiveCode, pairingCode, countdownText, remainingMs, devices, tailscaleStatus, false, showLoginButton, authUrl);
+        }
+
+        public ViewState(boolean hasActiveCode, String pairingCode, String countdownText, long remainingMs, List<DeviceRow> devices,
+                         String tailscaleStatus, boolean tailscaleRunning, boolean showLoginButton, String authUrl) {
             this.hasActiveCode = hasActiveCode;
             this.pairingCode = pairingCode;
             this.countdownText = countdownText;
             this.remainingMs = remainingMs;
             this.devices = devices != null ? devices : Collections.<DeviceRow>emptyList();
             this.hasDevices = !this.devices.isEmpty();
-            this.tailscaleStatus = tailscaleStatus != null ? tailscaleStatus : "Chưa kết nối";
+            this.tailscaleStatus = tailscaleStatus != null ? tailscaleStatus : notConnected();
+            this.tailscaleRunning = tailscaleRunning;
             this.showLoginButton = showLoginButton;
             this.authUrl = authUrl != null ? authUrl : "";
         }
@@ -221,29 +229,35 @@ public class RemoteDevicesPresenter {
         }
 
         String tsStatus;
+        boolean tsRunning = false;
         boolean showLogin = false;
         String aUrl = "";
         if (tailnetState == null) {
-            tsStatus = "Chưa kết nối";
+            tsStatus = notConnected();
         } else if (tailnetState.isRunning()) {
+            tsRunning = true;
             String ip = (tailnetState.tailnetIps != null && !tailnetState.tailnetIps.isEmpty())
                     ? tailnetState.tailnetIps.get(0)
                     : "";
-            tsStatus = "Đang chạy" + (!ip.isEmpty() ? " (" + ip + ")" : "");
+            tsStatus = L10n.t("Running", "Đang chạy") + (!ip.isEmpty() ? " (" + ip + ")" : "");
         } else if (tailnetState.isNeedsLogin()) {
-            tsStatus = "Cần đăng nhập Tailscale";
+            tsStatus = L10n.t("Tailscale sign-in needed", "Cần đăng nhập Tailscale");
             showLogin = true;
             aUrl = tailnetState.authUrl != null ? tailnetState.authUrl : "";
         } else if (tailnetState.isStarting()) {
-            tsStatus = "Đang khởi động...";
+            tsStatus = L10n.t("Starting...", "Đang khởi động...");
         } else if (tailnetState.isError()) {
-            tsStatus = "Lỗi: " + (tailnetState.error != null ? tailnetState.error : "");
+            tsStatus = L10n.t("Error: ", "Lỗi: ") + (tailnetState.error != null ? tailnetState.error : "");
         } else if (tailnetState.isStopped()) {
-            tsStatus = "Đã dừng";
+            tsStatus = L10n.t("Stopped", "Đã dừng");
         } else {
-            tsStatus = tailnetState.state != null ? tailnetState.state : "Chưa kết nối";
+            tsStatus = tailnetState.state != null ? tailnetState.state : notConnected();
         }
 
-        return new ViewState(active, pCode, cText, remMs, Collections.unmodifiableList(rows), tsStatus, showLogin, aUrl);
+        return new ViewState(active, pCode, cText, remMs, Collections.unmodifiableList(rows), tsStatus, tsRunning, showLogin, aUrl);
+    }
+
+    static String notConnected() {
+        return L10n.t("Not connected", "Chưa kết nối");
     }
 }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -244,11 +245,11 @@ public class PairingClient {
                 socket.connect(new InetSocketAddress(host, targetPairingPort), SOCKET_TIMEOUT_MS);
                 socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             } catch (SocketTimeoutException ste) {
-                throw new PairingException(Stage.CONNECT, "Không kết nối được tới host (hết thời gian chờ, kiểm tra IP và Wi-Fi)", ste);
+                throw new PairingException(Stage.CONNECT, L10n.t("Cannot reach the host (timed out, check the IP and Wi-Fi)", "Không kết nối được tới host (hết thời gian chờ, kiểm tra IP và Wi-Fi)"), ste);
             } catch (ConnectException ce) {
-                throw new PairingException(Stage.CONNECT, "Không kết nối được tới host (kết nối bị từ chối, kiểm tra IP và Wi-Fi)", ce);
+                throw new PairingException(Stage.CONNECT, L10n.t("Cannot reach the host (connection refused, check the IP and Wi-Fi)", "Không kết nối được tới host (kết nối bị từ chối, kiểm tra IP và Wi-Fi)"), ce);
             } catch (IOException ioe) {
-                throw new PairingException(Stage.CONNECT, "Không kết nối được tới host (kiểm tra IP và Wi-Fi)", ioe);
+                throw new PairingException(Stage.CONNECT, L10n.t("Cannot reach the host (check the IP and Wi-Fi)", "Không kết nối được tới host (kiểm tra IP và Wi-Fi)"), ioe);
             }
             logI(TAG, "[CONNECT] Đã kết nối TCP tới host thành công");
 
@@ -279,15 +280,15 @@ public class PairingClient {
                 dos.flush();
                 serverHello = PairingMessages.ServerHello.read(dis);
             } catch (EOFException eof) {
-                throw new PairingException(Stage.HELLO, "Host trả lời không hợp lệ (ngắt kết nối khi bắt tay Hello)", eof);
+                throw new PairingException(Stage.HELLO, L10n.t("Invalid reply from the host (disconnected during Hello)", "Host trả lời không hợp lệ (ngắt kết nối khi bắt tay Hello)"), eof);
             } catch (SocketTimeoutException ste) {
-                throw new PairingException(Stage.HELLO, "Host phản hồi quá chậm khi trao đổi Hello", ste);
+                throw new PairingException(Stage.HELLO, L10n.t("The host answered too slowly during Hello", "Host phản hồi quá chậm khi trao đổi Hello"), ste);
             } catch (Exception e) {
-                throw new PairingException(Stage.HELLO, "Host trả lời không hợp lệ", e);
+                throw new PairingException(Stage.HELLO, L10n.t("Invalid reply from the host", "Host trả lời không hợp lệ"), e);
             }
 
             if (!PairingMessages.PROTOCOL_VERSION.equals(serverHello.version)) {
-                throw new PairingException(Stage.HELLO, "Host trả lời không hợp lệ (phiên bản giao thức không khớp)");
+                throw new PairingException(Stage.HELLO, L10n.t("Invalid reply from the host (protocol version mismatch)", "Host trả lời không hợp lệ (phiên bản giao thức không khớp)"));
             }
             byte[] salt = serverHello.salt;
             BigInteger serverB;
@@ -295,7 +296,7 @@ public class PairingClient {
                 serverB = PairingProtocol.fromBytes(serverHello.serverB);
                 PairingProtocol.validateB(serverB, N);
             } catch (Exception e) {
-                throw new PairingException(Stage.HELLO, "Host trả lời không hợp lệ", e);
+                throw new PairingException(Stage.HELLO, L10n.t("Invalid reply from the host", "Host trả lời không hợp lệ"), e);
             }
             logI(TAG, "[HELLO] Trao đổi Hello thành công");
 
@@ -315,7 +316,7 @@ public class PairingClient {
                 dos.write(clientM1);
                 dos.flush();
             } catch (Exception e) {
-                throw new PairingException(Stage.PROOF_REJECTED, "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới", e);
+                throw new PairingException(Stage.PROOF_REJECTED, L10n.t("The host refused: wrong or expired code. Tap Add device on the host for a new code", "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới"), e);
             }
 
             // 5. Read M2
@@ -323,16 +324,16 @@ public class PairingClient {
             try {
                 dis.readFully(receivedM2);
             } catch (EOFException eof) {
-                throw new PairingException(Stage.PROOF_REJECTED, "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới", eof);
+                throw new PairingException(Stage.PROOF_REJECTED, L10n.t("The host refused: wrong or expired code. Tap Add device on the host for a new code", "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới"), eof);
             } catch (SocketTimeoutException ste) {
-                throw new PairingException(Stage.PROOF_REJECTED, "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới", ste);
+                throw new PairingException(Stage.PROOF_REJECTED, L10n.t("The host refused: wrong or expired code. Tap Add device on the host for a new code", "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới"), ste);
             } catch (IOException ioe) {
-                throw new PairingException(Stage.PROOF_REJECTED, "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới", ioe);
+                throw new PairingException(Stage.PROOF_REJECTED, L10n.t("The host refused: wrong or expired code. Tap Add device on the host for a new code", "Host từ chối: mã sai hoặc đã hết hạn — bấm Thêm thiết bị để lấy mã mới"), ioe);
             }
 
             byte[] expectedM2 = PairingProtocol.computeM2(hash, N, clientA, clientM1, sessionKeyK);
             if (!MessageDigest.isEqual(receivedM2, expectedM2)) {
-                throw new PairingException(Stage.SERVER_PROOF_INVALID, "Host trả lời không hợp lệ (xác thực máy chủ thất bại)");
+                throw new PairingException(Stage.SERVER_PROOF_INVALID, L10n.t("Invalid reply from the host (server proof failed)", "Host trả lời không hợp lệ (xác thực máy chủ thất bại)"));
             }
             logI(TAG, "[PROOF] Xác thực máy chủ thành công");
 
@@ -359,7 +360,7 @@ public class PairingClient {
                 try {
                     credentials = PairingMessages.Credentials.fromJson(credsJson);
                 } catch (IllegalArgumentException iae) {
-                    throw new PairingException(Stage.CREDENTIALS, "Host trả lời không hợp lệ: " + iae.getMessage(), iae);
+                    throw new PairingException(Stage.CREDENTIALS, L10n.t("Invalid reply from the host: ", "Host trả lời không hợp lệ: ") + iae.getMessage(), iae);
                 }
                 deviceToken = credentials.deviceToken;
                 hostTailnetIp = credentials.hostTailnetIp;
@@ -367,7 +368,7 @@ public class PairingClient {
             } catch (PairingException pe) {
                 throw pe;
             } catch (Exception e) {
-                throw new PairingException(Stage.CREDENTIALS, "Host trả lời không hợp lệ (lỗi nhận thông tin xác thực)", e);
+                throw new PairingException(Stage.CREDENTIALS, L10n.t("Invalid reply from the host (could not read the credentials)", "Host trả lời không hợp lệ (lỗi nhận thông tin xác thực)"), e);
             }
             logI(TAG, "[CREDENTIALS] Nhận và giải mã thông tin kết nối thành công");
 
@@ -375,7 +376,7 @@ public class PairingClient {
             logI(TAG, "[NODE_ID] Lấy thông tin Tailscale node ID");
             String nodeId = bridge != null ? bridge.nodeId() : null;
             if (nodeId == null || nodeId.trim().isEmpty()) {
-                throw new PairingException(Stage.TSNET_LOGIN, "Đăng nhập Tailscale thất bại: Không nhận được Tailscale node ID");
+                throw new PairingException(Stage.TSNET_LOGIN, L10n.t("Tailscale sign-in failed: no Tailscale node ID", "Đăng nhập Tailscale thất bại: Không nhận được Tailscale node ID"));
             }
             nodeId = nodeId.trim();
             // 8. Send ACK record containing nodeId
@@ -390,7 +391,7 @@ public class PairingClient {
                 ackRecord.write(dos);
                 dos.flush();
             } catch (Exception e) {
-                throw new PairingException(Stage.ACK, "Host ngắt kết nối khi hoàn tất bắt tay (lỗi gửi ACK)", e);
+                throw new PairingException(Stage.ACK, L10n.t("The host disconnected while finishing the handshake (ACK not sent)", "Host ngắt kết nối khi hoàn tất bắt tay (lỗi gửi ACK)"), e);
             }
 
             // 9. Receive final result record from host
@@ -399,23 +400,23 @@ public class PairingClient {
             try {
                 resultRecord = PairingMessages.EncryptedRecord.read(dis);
             } catch (Exception e) {
-                throw new PairingException(Stage.ACK, "Host không phản hồi kết quả sau ACK: " + e.getMessage(), e);
+                throw new PairingException(Stage.ACK, L10n.t("No result from the host after the ACK: ", "Host không phản hồi kết quả sau ACK: ") + e.getMessage(), e);
             }
 
             byte[] resultPlaintext;
             try {
                 resultPlaintext = PairingProtocol.open(aesKey, transcript, resultRecord);
             } catch (Exception e) {
-                throw new PairingException(Stage.ACK, "Không thể giải mã bản ghi kết quả từ host", e);
+                throw new PairingException(Stage.ACK, L10n.t("Cannot decrypt the result from the host", "Không thể giải mã bản ghi kết quả từ host"), e);
             }
 
             String resultJson = new String(resultPlaintext, StandardCharsets.UTF_8);
             PairingMessages.PairingResult result = PairingMessages.PairingResult.fromJson(resultJson);
             if (!result.isOk()) {
                 String codeStr = result.code != null ? result.code : "UNKNOWN";
-                String vnMsg = getVietnameseErrorMessage(codeStr, result.message);
-                logE(TAG, "[ACK] Host từ chối ghép đôi: mã=" + codeStr + ", thông điệp=" + vnMsg);
-                throw new PairingException(Stage.ACK, codeStr, vnMsg);
+                String hostMsgText = hostErrorMessage(codeStr, result.message);
+                logE(TAG, "[ACK] Host từ chối ghép đôi: mã=" + codeStr + ", thông điệp=" + hostMsgText);
+                throw new PairingException(Stage.ACK, codeStr, hostMsgText);
             }
 
             logI(TAG, "[ACK] Xác nhận ACK hoàn tất, host xác nhận status: ok, ghép đôi thành công");
@@ -424,7 +425,7 @@ public class PairingClient {
             logE(TAG, "[" + pe.getStage().name() + "] " + pe.getClass().getSimpleName() + ": " + sanitizeSecret(pe.getMessage(), code));
             throw pe;
         } catch (Exception e) {
-            PairingException pe = new PairingException(Stage.CONNECT, "Không kết nối được tới host (kiểm tra IP và Wi-Fi)", e);
+            PairingException pe = new PairingException(Stage.CONNECT, L10n.t("Cannot reach the host (check the IP and Wi-Fi)", "Không kết nối được tới host (kiểm tra IP và Wi-Fi)"), e);
             logE(TAG, "[" + pe.getStage().name() + "] " + pe.getClass().getSimpleName() + ": " + sanitizeSecret(pe.getMessage(), code));
             throw pe;
         } finally {
@@ -434,23 +435,23 @@ public class PairingClient {
         }
     }
 
-    static String getVietnameseErrorMessage(String code, String hostMsg) {
+    static String hostErrorMessage(String code, String hostMsg) {
         if (PairingMessages.ERR_ACK_NODE_ID_MISSING.equals(code)) {
-            return "Ghép đôi thất bại: Host không nhận được thông tin Tailscale node ID từ thiết bị (ACK_NODE_ID_MISSING).";
+            return L10n.t("Pairing failed: the host did not get this device's Tailscale node ID (ACK_NODE_ID_MISSING).", "Ghép đôi thất bại: Host không nhận được thông tin Tailscale node ID từ thiết bị (ACK_NODE_ID_MISSING).");
         }
         if (PairingMessages.ERR_NODE_NOT_FOUND.equals(code)) {
-            return "Ghép đôi thất bại: Host không tìm thấy node thiết bị trên mạng tailnet (NODE_NOT_FOUND).";
+            return L10n.t("Pairing failed: the host cannot find this device in the tailnet (NODE_NOT_FOUND).", "Ghép đôi thất bại: Host không tìm thấy node thiết bị trên mạng tailnet (NODE_NOT_FOUND).");
         }
         if (PairingMessages.ERR_NODE_TAG_MISMATCH.equals(code)) {
-            return "Ghép đôi thất bại: Node thiết bị không có tag quyền điều khiển hợp lệ (thiếu tag:pcdash-controller).";
+            return L10n.t("Pairing failed: this device has no valid controller tag (tag:pcdash-controller missing).", "Ghép đôi thất bại: Node thiết bị không có tag quyền điều khiển hợp lệ (thiếu tag:pcdash-controller).");
         }
         if (PairingMessages.ERR_API_ERROR.equals(code)) {
-            return "Ghép đôi thất bại: Host gặp lỗi khi gọi API Tailscale để xác thực thiết bị (API_ERROR).";
+            return L10n.t("Pairing failed: the host got an error from the Tailscale API while checking this device (API_ERROR).", "Ghép đôi thất bại: Host gặp lỗi khi gọi API Tailscale để xác thực thiết bị (API_ERROR).");
         }
         if (PairingMessages.ERR_STORE_ERROR.equals(code)) {
-            return "Ghép đôi thất bại: Host không thể lưu thông tin thiết bị (STORE_ERROR).";
+            return L10n.t("Pairing failed: the host could not save this device (STORE_ERROR).", "Ghép đôi thất bại: Host không thể lưu thông tin thiết bị (STORE_ERROR).");
         }
-        return "Ghép đôi thất bại từ phía host: " + (code != null ? code : "Lỗi không xác định")
+        return L10n.t("Pairing failed on the host: ", "Ghép đôi thất bại từ phía host: ") + (code != null ? code : L10n.t("Unknown error", "Lỗi không xác định"))
                 + (hostMsg != null && !hostMsg.isEmpty() ? " (" + hostMsg + ")" : "");
     }
 

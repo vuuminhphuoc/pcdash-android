@@ -340,10 +340,10 @@ public class RemoteController {
                 }
             });
         } catch (RemoteApiClient.UnsupportedRouteException e) {
-            throw new IOException("Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host", e);
+            throw new RemoteApiClient.UnsupportedRouteException(RemoteApiClient.UnsupportedRouteException.hostNeedsUpdateMessage(), e);
         } catch (IOException e) {
             if (e.getMessage() != null && e.getMessage().contains("404")) {
-                throw new IOException("Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host", e);
+                throw new RemoteApiClient.UnsupportedRouteException(RemoteApiClient.UnsupportedRouteException.hostNeedsUpdateMessage(), e);
             }
             throw e;
         }

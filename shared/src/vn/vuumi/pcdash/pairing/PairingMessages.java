@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.pairing;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -21,7 +22,9 @@ public class PairingMessages {
     public static final String ERR_API_ERROR = "API_ERROR";
     public static final String ERR_STORE_ERROR = "STORE_ERROR";
     public static final String ERR_VERSION = "version";
-    public static final String MSG_VERSION_MISMATCH = "Cần cập nhật PCDash host/remote";
+    public static String versionMismatchMessage() {
+        return L10n.t("Update PCDash host/remote", "Cần cập nhật PCDash host/remote");
+    }
 
     public static class PairingResult {
         public final String status;

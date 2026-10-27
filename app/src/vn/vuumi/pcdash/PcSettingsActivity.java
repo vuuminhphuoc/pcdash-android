@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
@@ -114,7 +115,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
         if (getActionBar() != null) {
             getActionBar().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
-            getActionBar().setTitle("Cài đặt PC");
+            getActionBar().setTitle(L10n.t("PC settings", "Cài đặt PC"));
         }
 
         ScrollView scroll = new ScrollView(this);
@@ -125,14 +126,14 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         scroll.addView(root);
 
         TextView title = new TextView(this);
-        title.setText("Cài đặt PC");
+        title.setText(L10n.t("PC settings", "Cài đặt PC"));
         title.setTextSize(22);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
         root.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Cấu hình kết nối tới PC và khóa bảo vệ");
+        sub.setText(L10n.t("Connection to the PC and access keys", "Cấu hình kết nối tới PC và khóa bảo vệ"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dp(4), 0, dp(16));
@@ -149,7 +150,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         connCard.setLayoutParams(ccLp);
 
         TextView connTitle = new TextView(this);
-        connTitle.setText("KẾT NỐI PC & AGENT");
+        connTitle.setText(L10n.t("PC & AGENT CONNECTION", "KẾT NỐI PC & AGENT"));
         connTitle.setTextSize(13);
         connTitle.setTypeface(Typeface.DEFAULT_BOLD);
         connTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -157,34 +158,34 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         connCard.addView(connTitle);
 
         TextView scanHint = new TextView(this);
-        scanHint.setText("Trên PC mở lối tắt \"PCDash - Ma QR cai dat\" (Start menu) hoặc chạy agent\\show-qr.bat, rồi quét mã QR một lần. Các ô bên dưới sẽ tự điền.");
+        scanHint.setText(L10n.t("On the PC open the \"PCDash - Ma QR cai dat\" shortcut (Start menu) or run agent\\show-qr.bat, then scan the QR code once. The fields below fill in by themselves.", "Trên PC mở lối tắt \"PCDash - Ma QR cai dat\" (Start menu) hoặc chạy agent\\show-qr.bat, rồi quét mã QR một lần. Các ô bên dưới sẽ tự điền."));
         scanHint.setTextSize(12);
         scanHint.setTextColor(Color.rgb(139, 148, 158));
         scanHint.setPadding(0, 0, 0, dp(10));
         connCard.addView(scanHint);
 
-        scanBtn = makeStyledButton("Quét mã QR từ PC", Color.rgb(31, 111, 235), 0, Color.WHITE, 48);
+        scanBtn = makeStyledButton(L10n.t("Scan QR code from PC", "Quét mã QR từ PC"), Color.rgb(31, 111, 235), 0, Color.WHITE, 48);
         scanBtn.setOnClickListener(this);
         connCard.addView(scanBtn);
 
-        connCard.addView(makeFieldLabel("Địa chỉ IPv4 PC (RFC1918 nội bộ):"));
-        ipInput = makeStyledInput("Ví dụ: 192.168.1.50", InputType.TYPE_CLASS_TEXT);
+        connCard.addView(makeFieldLabel(L10n.t("PC IPv4 address (private, RFC1918):", "Địa chỉ IPv4 PC (RFC1918 nội bộ):")));
+        ipInput = makeStyledInput(L10n.t("Example: 192.168.1.50", "Ví dụ: 192.168.1.50"), InputType.TYPE_CLASS_TEXT);
         connCard.addView(ipInput);
 
-        connCard.addView(makeFieldLabel("Địa chỉ MAC PC (dành cho WOL):"));
-        macInput = makeStyledInput("Ví dụ: 00:11:22:33:44:55", InputType.TYPE_CLASS_TEXT);
+        connCard.addView(makeFieldLabel(L10n.t("PC MAC address (for Wake-on-LAN):", "Địa chỉ MAC PC (dành cho WOL):")));
+        macInput = makeStyledInput(L10n.t("Example: 00:11:22:33:44:55", "Ví dụ: 00:11:22:33:44:55"), InputType.TYPE_CLASS_TEXT);
         connCard.addView(macInput);
 
-        connCard.addView(makeFieldLabel("Cổng Agent PC (mặc định 8799):"));
+        connCard.addView(makeFieldLabel(L10n.t("PC agent port (default 8799):", "Cổng Agent PC (mặc định 8799):")));
         portInput = makeStyledInput("8799", InputType.TYPE_CLASS_NUMBER);
         connCard.addView(portInput);
 
-        connCard.addView(makeFieldLabel("Mã Token Agent (X-PcAgent-Token):"));
-        tokenInput = makeStyledInput("Mã token bí mật của Agent PC",
+        connCard.addView(makeFieldLabel(L10n.t("Agent token (X-PcAgent-Token):", "Mã Token Agent (X-PcAgent-Token):")));
+        tokenInput = makeStyledInput(L10n.t("Secret token of the PC agent", "Mã token bí mật của Agent PC"),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         connCard.addView(tokenInput);
 
-        saveBtn = makeStyledButton("Lưu cài đặt", Color.rgb(27, 102, 42), 0, Color.WHITE, 48);
+        saveBtn = makeStyledButton(L10n.t("Save settings", "Lưu cài đặt"), Color.rgb(27, 102, 42), 0, Color.WHITE, 48);
         LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         sbLp.setMargins(0, dp(16), 0, 0);
@@ -205,7 +206,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         webCard.setLayoutParams(wcLp);
 
         TextView webTitle = new TextView(this);
-        webTitle.setText("MÃ TRUY CẬP WEB DASHBOARD");
+        webTitle.setText(L10n.t("WEB DASHBOARD ACCESS CODE", "MÃ TRUY CẬP WEB DASHBOARD"));
         webTitle.setTextSize(13);
         webTitle.setTypeface(Typeface.DEFAULT_BOLD);
         webTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -213,7 +214,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         webCard.addView(webTitle);
 
         TextView webSub = new TextView(this);
-        webSub.setText("Dùng để xác thực khi điều khiển PC từ trình duyệt Web (X-PCDash-Token):");
+        webSub.setText(L10n.t("Used to authorize PC control from a web browser (X-PCDash-Token):", "Dùng để xác thực khi điều khiển PC từ trình duyệt Web (X-PCDash-Token):"));
         webSub.setTextSize(12);
         webSub.setTextColor(Color.rgb(139, 148, 158));
         webSub.setPadding(0, 0, 0, dp(10));
@@ -239,14 +240,14 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         brLp.setMargins(0, dp(12), 0, 0);
         btnRow.setLayoutParams(brLp);
 
-        copyWebTokenBtn = makeStyledButton("Sao chép", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 42);
+        copyWebTokenBtn = makeStyledButton(L10n.t("Copy", "Sao chép"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 42);
         LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         copyLp.rightMargin = dp(6);
         copyWebTokenBtn.setLayoutParams(copyLp);
         copyWebTokenBtn.setOnClickListener(this);
         btnRow.addView(copyWebTokenBtn);
 
-        regenWebTokenBtn = makeStyledButton("Tạo mã mới", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(248, 81, 73), 42);
+        regenWebTokenBtn = makeStyledButton(L10n.t("New code", "Tạo mã mới"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(248, 81, 73), 42);
         LinearLayout.LayoutParams regenLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         regenLp.leftMargin = dp(6);
         regenWebTokenBtn.setLayoutParams(regenLp);
@@ -305,7 +306,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         if (requestCode != REQ_SCAN_QR || resultCode != RESULT_OK || data == null) return;
         PcProvisioning setup = PcProvisioning.parse(data.getStringExtra(QrScanActivity.EXTRA_TEXT));
         if (setup == null) {
-            Toast.makeText(this, "Mã QR không hợp lệ", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Invalid QR code", "Mã QR không hợp lệ"), Toast.LENGTH_SHORT).show();
             return;
         }
         ipInput.setText(setup.ip);
@@ -313,7 +314,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         portInput.setText(String.valueOf(setup.port));
         tokenInput.setText(setup.token);
         saveBtn.requestFocus();
-        Toast.makeText(this, "Đã quét xong. Kiểm tra rồi bấm Lưu cài đặt", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, L10n.t("Scanned. Check the values, then tap Save settings", "Đã quét xong. Kiểm tra rồi bấm Lưu cài đặt"), Toast.LENGTH_LONG).show();
     }
 
     private void handleSave() {
@@ -323,22 +324,22 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         final String agentToken = tokenInput.getText() != null ? tokenInput.getText().toString().trim() : "";
 
         if (!PcSettings.isValidRfc1918Ip(ip)) {
-            Toast.makeText(this, "Địa chỉ IP phải là IPv4 nội bộ hợp lệ (RFC1918: 10.x, 172.16-31.x, 192.168.x)", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("The IP must be a private IPv4 address (RFC1918: 10.x, 172.16-31.x, 192.168.x)", "Địa chỉ IP phải là IPv4 nội bộ hợp lệ (RFC1918: 10.x, 172.16-31.x, 192.168.x)"), Toast.LENGTH_LONG).show();
             return;
         }
         if (!mac.isEmpty() && !PcSettings.isValidMac(mac)) {
-            Toast.makeText(this, "Địa chỉ MAC không đúng định dạng (XX:XX:XX:XX:XX:XX hoặc XX-XX-XX-XX-XX-XX)", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("Invalid MAC address format (XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX)", "Địa chỉ MAC không đúng định dạng (XX:XX:XX:XX:XX:XX hoặc XX-XX-XX-XX-XX-XX)"), Toast.LENGTH_LONG).show();
             return;
         }
         int port = PcSettings.DEFAULT_AGENT_PORT;
         try {
             port = Integer.parseInt(portStr);
             if (port < 1 || port > 65535) {
-                Toast.makeText(this, "Cổng Agent phải từ 1 đến 65535", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, L10n.t("The agent port must be between 1 and 65535", "Cổng Agent phải từ 1 đến 65535"), Toast.LENGTH_SHORT).show();
                 return;
             }
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Cổng Agent không hợp lệ", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Invalid agent port", "Cổng Agent không hợp lệ"), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -352,7 +353,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(PcSettingsActivity.this, "Đã lưu cài đặt PC thành công", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PcSettingsActivity.this, L10n.t("PC settings saved", "Đã lưu cài đặt PC thành công"), Toast.LENGTH_SHORT).show();
                         finish();
                     }
                 });
@@ -367,15 +368,15 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         if (cm != null) {
             ClipData clip = ClipData.newPlainText("PCDash Web Token", text);
             cm.setPrimaryClip(clip);
-            Toast.makeText(this, "Đã sao chép mã truy cập", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Access code copied", "Đã sao chép mã truy cập"), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void handleRegenWebToken() {
         new AlertDialog.Builder(this)
-                .setTitle("Tạo mã mới")
-                .setMessage("Tạo mã truy cập mới cho Web Dashboard? Các phiên đang kết nối sẽ cần nhập lại mã mới.")
-                .setPositiveButton("Tạo mã mới", new DialogInterface.OnClickListener() {
+                .setTitle(L10n.t("New code", "Tạo mã mới"))
+                .setMessage(L10n.t("Create a new web dashboard access code? Open browser sessions will need the new code.", "Tạo mã truy cập mới cho Web Dashboard? Các phiên đang kết nối sẽ cần nhập lại mã mới."))
+                .setPositiveButton(L10n.t("New code", "Tạo mã mới"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         new Thread(new Runnable() {
@@ -388,14 +389,14 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
                                     @Override
                                     public void run() {
                                         webTokenView.setText(newToken);
-                                        Toast.makeText(PcSettingsActivity.this, "Đã tạo mã truy cập mới", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(PcSettingsActivity.this, L10n.t("New access code created", "Đã tạo mã truy cập mới"), Toast.LENGTH_SHORT).show();
                                     }
                                 });
                             }
                         }, "pcdash-settings-regen").start();
                     }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
                 .show();
     }
 }

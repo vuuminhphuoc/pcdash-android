@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 
 public final class UpdateFlow {
@@ -15,7 +16,7 @@ public final class UpdateFlow {
     public static void startInstall(ApkInstaller installer, File apkFile, FlowCallback callback) {
         if (installer == null) {
             if (callback != null) {
-                callback.onError("Trình cài đặt không khả dụng");
+                callback.onError(L10n.t("The installer is not available", "Trình cài đặt không khả dụng"));
             }
             return;
         }
@@ -36,7 +37,7 @@ public final class UpdateFlow {
         } catch (Exception e) {
             if (callback != null) {
                 String msg = (e.getMessage() != null && !e.getMessage().isEmpty())
-                        ? e.getMessage() : "Lỗi cài đặt bản cập nhật";
+                        ? e.getMessage() : L10n.t("Could not install the update", "Lỗi cài đặt bản cập nhật");
                 callback.onError(msg);
             }
         }

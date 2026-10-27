@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -148,6 +149,43 @@ public class HostApiTest {
             HttpResponse resp5 = sendRequest(port, "POST", "/v1/wake", "Bearer " + rawToken);
             assertEquals(resp5.code, 401, "Action with revoked token should return 401");
             assertEquals(executor.actionCalls, 0, "FakeExecutor must not be invoked on action with revoked token");
+        } finally {
+            server.close();
+            temp.delete();
+        }
+    }
+
+    public static void testFailedActionReportsNotOkInCallerLanguage() throws Exception {
+        File temp = File.createTempFile("dev-store-test-fail-", ".json");
+        temp.deleteOnExit();
+        RemoteDeviceStore store = new RemoteDeviceStore(temp);
+        FakeExecutor executor = new FakeExecutor() {
+            @Override
+            public String doAction(String action) {
+                actionCalls++;
+                return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
+            }
+        };
+        RemoteApiServer server = new RemoteApiServer(store, executor);
+        server.start(0);
+        int port = server.getPort();
+        try {
+            String rawToken = "failing-action-token-abcdef1234567890";
+            store.add("Controller", rawToken, "node-fail");
+            String auth = "Bearer " + rawToken;
+
+            HttpResponse vi = sendRequest(port, "POST", "/v1/sleep", auth, "Accept-Language", "vi-VN,vi;q=0.9");
+            assertEquals(vi.code, 200, "Failed action still answers 200");
+            assertTrue(vi.body.contains("\"ok\":false"), "Failed action must report ok:false: " + vi.body);
+            assertTrue(vi.body.contains("Lỗi: Chưa cấu hình PC"), "Detail follows Accept-Language vi: " + vi.body);
+
+            HttpResponse en = sendRequest(port, "POST", "/v1/sleep", auth, "Accept-Language", "en-US");
+            assertTrue(en.body.contains("\"ok\":false"), "Failed action must report ok:false: " + en.body);
+            assertTrue(en.body.contains("Error: PC not set up"), "Detail follows Accept-Language en: " + en.body);
+
+            assertTrue(RemoteActionExecutor.isFailure("Agent từ chối: sai mã token"), "Vietnamese agent refusal is a failure");
+            assertTrue(RemoteActionExecutor.isFailure("Cannot reach the PC agent: timeout"), "Unreachable agent is a failure");
+            assertTrue(!RemoteActionExecutor.isFailure("Agent[200]: {\"ok\":true}"), "Agent success is not a failure");
         } finally {
             server.close();
             temp.delete();
@@ -937,6 +975,8 @@ public class HostApiTest {
             System.out.println("  PASS: testMissingWrongAndRevokedBearerNeverInvokesAction");
             testValidBearerRoutesStatusAndFiveActions();
             System.out.println("  PASS: testValidBearerRoutesStatusAndFiveActions");
+            testFailedActionReportsNotOkInCallerLanguage();
+            System.out.println("  PASS: testFailedActionReportsNotOkInCallerLanguage");
             testStorePersistsNameNodeIdAndOnlyTokenHash();
             System.out.println("  PASS: testStorePersistsNameNodeIdAndOnlyTokenHash");
             testStoreLastUsedTimestampsAndBackwardCompatibility();

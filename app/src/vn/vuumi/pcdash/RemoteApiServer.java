@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -245,6 +246,9 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                 }
             }
 
+            // Messages produced for this request (action results, errors) follow the remote's language.
+            L10n.setThreadLanguage(headers.get("accept-language"));
+
             // Body POST check & bounded read
             int contentLength = 0;
             String clHeader = headers.get("content-length");
@@ -474,12 +478,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                     boolean ok = true;
                     try {
                         detail = actions.doAction(action);
-                        if (detail != null) {
-                            String lower = detail.toLowerCase();
-                            if (lower.startsWith("error") || lower.startsWith("lỗi")) {
-                                ok = false;
-                            }
-                        }
+                        ok = !RemoteActionExecutor.isFailure(detail);
                     } catch (Exception e) {
                         ok = false;
                         detail = e.getMessage() != null ? e.getMessage() : e.toString();
@@ -492,7 +491,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                     }
 
                     String safeDetail = detail != null ? detail.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") : "";
-                    String body = "{\"ok\":true,\"action\":\"" + action + "\",\"detail\":\"" + safeDetail + "\"}";
+                    String body = "{\"ok\":" + ok + ",\"action\":\"" + action + "\",\"detail\":\"" + safeDetail + "\"}";
                     sendResponse(socket, 200, "application/json; charset=utf-8",
                             body.getBytes(StandardCharsets.UTF_8));
                     return;
@@ -503,6 +502,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                     "{\"error\":\"not_found\"}".getBytes(StandardCharsets.UTF_8));
         } catch (IOException ignored) {
         } finally {
+            L10n.setThreadLanguage(null);
             try {
                 socket.close();
             } catch (IOException ignored) {}

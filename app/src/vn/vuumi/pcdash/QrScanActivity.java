@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
@@ -47,7 +48,9 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
     private static final int REQ_CAMERA = 71;
     private static final long DECODE_INTERVAL_MS = 120;
     private static final long NOT_PCDASH_HINT_MS = 2500;
-    private static final String HINT_DEFAULT = "Hướng camera vào mã QR đang hiện trên màn hình PC";
+    private static String hintDefault() {
+        return L10n.t("Point the camera at the QR code on the PC screen", "Hướng camera vào mã QR đang hiện trên màn hình PC");
+    }
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final Object cameraLock = new Object();
@@ -99,11 +102,11 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         frameBg.setStroke(dp(3), Color.argb(230, 88, 166, 255));
         frameBg.setCornerRadius(dp(20));
         frame.setBackground(frameBg);
-        frame.setContentDescription("Khung quét mã QR");
+        frame.setContentDescription(L10n.t("QR code scan frame", "Khung quét mã QR"));
         root.addView(frame, new FrameLayout.LayoutParams(dp(260), dp(260), Gravity.CENTER));
 
         hintView = new TextView(this);
-        hintView.setText(HINT_DEFAULT);
+        hintView.setText(hintDefault());
         hintView.setTextColor(Color.WHITE);
         hintView.setTextSize(15);
         hintView.setGravity(Gravity.CENTER);
@@ -119,7 +122,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         root.addView(hintView, hintLp);
 
         Button cancel = new Button(this);
-        cancel.setText("Hủy");
+        cancel.setText(L10n.t("Cancel", "Hủy"));
         cancel.setTextColor(Color.WHITE);
         cancel.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable cancelBg = new GradientDrawable();
@@ -175,7 +178,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                 openCamera();
             }
         } else {
-            Toast.makeText(this, "Cần quyền camera để quét mã QR. Có thể nhập tay trong Cài đặt PC.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("Camera permission is needed to scan the QR code. You can type the values in PC settings instead.", "Cần quyền camera để quét mã QR. Có thể nhập tay trong Cài đặt PC."), Toast.LENGTH_LONG).show();
             setResult(RESULT_CANCELED);
             finish();
         }
@@ -197,18 +200,18 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             CameraManager cm = (CameraManager) getSystemService(CAMERA_SERVICE);
             String id = pickBackCamera(cm);
             if (id == null) {
-                fail("Máy này không có camera sau");
+                fail(L10n.t("This phone has no rear camera", "Máy này không có camera sau"));
                 return;
             }
             CameraCharacteristics cc = cm.getCameraCharacteristics(id);
             StreamConfigurationMap map = cc.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             if (map == null) {
-                fail("Không đọc được cấu hình camera");
+                fail(L10n.t("Cannot read the camera configuration", "Không đọc được cấu hình camera"));
                 return;
             }
             previewSize = chooseSize(map.getOutputSizes(SurfaceTexture.class), map.getOutputSizes(ImageFormat.YUV_420_888));
             if (previewSize == null) {
-                fail("Camera không hỗ trợ độ phân giải phù hợp");
+                fail(L10n.t("The camera has no suitable resolution", "Camera không hỗ trợ độ phân giải phù hợp"));
                 return;
             }
             Integer orientation = cc.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -224,11 +227,11 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             }, cameraHandler);
             cm.openCamera(id, stateCallback, cameraHandler);
         } catch (SecurityException e) {
-            fail("Chưa được cấp quyền camera");
+            fail(L10n.t("Camera permission not granted", "Chưa được cấp quyền camera"));
         } catch (CameraAccessException e) {
-            fail("Không mở được camera");
+            fail(L10n.t("Cannot open the camera", "Không mở được camera"));
         } catch (RuntimeException e) {
-            fail("Không mở được camera");
+            fail(L10n.t("Cannot open the camera", "Không mở được camera"));
         }
     }
 
@@ -320,7 +323,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                 opening = false;
                 if (camera == device) camera = null;
             }
-            fail("Camera gặp lỗi (" + error + ")");
+            fail(L10n.t("Camera error (", "Camera gặp lỗi (") + error + ")");
         }
     };
 
@@ -349,7 +352,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                             try {
                                 s.setRepeatingRequest(b.build(), null, cameraHandler);
                             } catch (CameraAccessException e) {
-                                fail("Không bật được xem trước camera");
+                                fail(L10n.t("Cannot start the camera preview", "Không bật được xem trước camera"));
                             } catch (IllegalStateException e) {
                                 // session closed while pausing
                             }
@@ -357,13 +360,13 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
 
                         @Override
                         public void onConfigureFailed(CameraCaptureSession s) {
-                            fail("Không bật được xem trước camera");
+                            fail(L10n.t("Cannot start the camera preview", "Không bật được xem trước camera"));
                         }
                     }, cameraHandler);
         } catch (CameraAccessException e) {
-            fail("Không bật được xem trước camera");
+            fail(L10n.t("Cannot start the camera preview", "Không bật được xem trước camera"));
         } catch (RuntimeException e) {
-            fail("Không bật được xem trước camera");
+            fail(L10n.t("Cannot start the camera preview", "Không bật được xem trước camera"));
         }
     }
 
@@ -399,7 +402,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                 deliver(text);
             } else if (now - lastNotPcdashAt > NOT_PCDASH_HINT_MS) {
                 lastNotPcdashAt = now;
-                showHint("Mã QR này không phải mã cài đặt của PCDash");
+                showHint(L10n.t("This is not a PCDash setup QR code", "Mã QR này không phải mã cài đặt của PCDash"));
             }
         } catch (IllegalStateException e) {
             // reader closed while pausing
@@ -433,7 +436,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         ui.postDelayed(new Runnable() {
             @Override
             public void run() {
-                hintView.setText(HINT_DEFAULT);
+                hintView.setText(hintDefault());
             }
         }, NOT_PCDASH_HINT_MS);
     }
@@ -446,7 +449,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             @Override
             public void run() {
                 if (isFinishing()) return;
-                Toast.makeText(QrScanActivity.this, message + ". Có thể nhập tay trong Cài đặt PC.", Toast.LENGTH_LONG).show();
+                Toast.makeText(QrScanActivity.this, message + L10n.t(". You can type the values in PC settings instead.", ". Có thể nhập tay trong Cài đặt PC."), Toast.LENGTH_LONG).show();
                 setResult(RESULT_CANCELED);
                 finish();
             }

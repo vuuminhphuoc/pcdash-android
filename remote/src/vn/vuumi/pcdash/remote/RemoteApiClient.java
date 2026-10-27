@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,16 @@ public class RemoteApiClient {
     public static class UnsupportedRouteException extends IOException {
         public UnsupportedRouteException(String message) {
             super(message);
+        }
+
+        public UnsupportedRouteException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        /** What the user sees when the host is too old for a route. */
+        public static String hostNeedsUpdateMessage() {
+            return L10n.t("The home phone does not support this yet. Update PCDash host",
+                    "Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host");
         }
     }
 
@@ -190,6 +201,8 @@ public class RemoteApiClient {
             conn.setReadTimeout(DEFAULT_READ_TIMEOUT_MS);
             conn.setUseCaches(false);
             conn.setRequestProperty("Connection", "close");
+            // The host words action results and errors in this language.
+            conn.setRequestProperty("Accept-Language", L10n.language());
             if (token != null && !token.isEmpty()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
             }

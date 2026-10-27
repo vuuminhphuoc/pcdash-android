@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_remote_devices">Thiết bị điều khiển từ xa</string>
+    <string name="title_pc_settings">Cài đặt PC</string>
+    <string name="title_qr_scan">Quét mã QR từ PC</string>
+</resources>

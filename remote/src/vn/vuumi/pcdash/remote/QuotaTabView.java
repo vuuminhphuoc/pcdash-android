@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -79,7 +80,7 @@ public class QuotaTabView implements TabContent {
         headerRow.addView(title);
 
         Button refreshBtn = new Button(context);
-        refreshBtn.setText("Làm mới");
+        refreshBtn.setText(L10n.t("Refresh", "Làm mới"));
         refreshBtn.setTextColor(Color.rgb(88, 166, 255));
         refreshBtn.setBackground(UiKit.withRipple(UiKit.roundedFill(context, Color.rgb(33, 38, 45), 10)));
         refreshBtn.setTextSize(13);
@@ -97,7 +98,7 @@ public class QuotaTabView implements TabContent {
         container.addView(headerRow);
 
         TextView sub = new TextView(context);
-        sub.setText("Hạn mức còn lại của các dịch vụ AI");
+        sub.setText(L10n.t("Remaining quota of your AI services", "Hạn mức còn lại của các dịch vụ AI"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dpToPx(context, 4), 0, dpToPx(context, 10));
@@ -111,7 +112,7 @@ public class QuotaTabView implements TabContent {
         container.addView(updateTimeView);
 
         staleBannerView = new TextView(context);
-        staleBannerView.setText("PC đang tắt, hiển thị số cũ");
+        staleBannerView.setText(L10n.t("The PC is off, showing older numbers", "PC đang tắt, hiển thị số cũ"));
         staleBannerView.setTextSize(12);
         staleBannerView.setTypeface(Typeface.DEFAULT_BOLD);
         staleBannerView.setTextColor(Color.rgb(240, 136, 62));
@@ -137,7 +138,7 @@ public class QuotaTabView implements TabContent {
         container.addView(errorBannerView);
 
         statusView = new TextView(context);
-        statusView.setText("Đang lấy dữ liệu...");
+        statusView.setText(L10n.t("Fetching...", "Đang lấy dữ liệu..."));
         statusView.setTextSize(14);
         statusView.setTextColor(Color.rgb(139, 148, 158));
         statusView.setPadding(0, dpToPx(context, 16), 0, dpToPx(context, 16));
@@ -178,7 +179,7 @@ public class QuotaTabView implements TabContent {
             return;
         }
         if (lastSnapshot == null) {
-            statusView.setText("Đang lấy dữ liệu...");
+            statusView.setText(L10n.t("Fetching...", "Đang lấy dữ liệu..."));
             statusView.setTextColor(Color.rgb(139, 148, 158));
             statusView.setVisibility(View.VISIBLE);
         }
@@ -202,7 +203,7 @@ public class QuotaTabView implements TabContent {
 
                 if (snapshot == null) {
                     if (lastSnapshot == null) {
-                        statusView.setText("Chưa có dữ liệu quota");
+                        statusView.setText(L10n.t("No quota data yet", "Chưa có dữ liệu quota"));
                         statusView.setTextColor(Color.rgb(139, 148, 158));
                         statusView.setVisibility(View.VISIBLE);
                         cardsContainer.removeAllViews();
@@ -219,11 +220,10 @@ public class QuotaTabView implements TabContent {
     private void handleError(Exception error) {
         String msg;
         if (error instanceof RemoteApiClient.UnsupportedRouteException
-                || (error.getMessage() != null && error.getMessage().contains("Máy ở nhà chưa hỗ trợ"))
                 || (error.getMessage() != null && error.getMessage().contains("404"))) {
-            msg = "Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host";
+            msg = RemoteApiClient.UnsupportedRouteException.hostNeedsUpdateMessage();
         } else {
-            msg = "Lỗi: " + (error.getMessage() != null ? error.getMessage() : "Không thể kết nối tới PC");
+            msg = L10n.t("Error: ", "Lỗi: ") + (error.getMessage() != null ? error.getMessage() : L10n.t("Cannot reach the PC", "Không thể kết nối tới PC"));
         }
 
         if (lastSnapshot != null) {
@@ -244,7 +244,7 @@ public class QuotaTabView implements TabContent {
         lastRenderedSnapshot = snapshot;
         errorBannerView.setVisibility(View.GONE);
         if (snapshot.stale && !snapshot.loading && snapshot.providers != null && !snapshot.providers.isEmpty()) {
-            staleBannerView.setText("PC đang tắt, hiển thị số cũ");
+            staleBannerView.setText(L10n.t("The PC is off, showing older numbers", "PC đang tắt, hiển thị số cũ"));
             staleBannerView.setVisibility(View.VISIBLE);
         } else {
             staleBannerView.setVisibility(View.GONE);
@@ -260,9 +260,9 @@ public class QuotaTabView implements TabContent {
         if (snapshot.error != null && !snapshot.error.isEmpty()) {
             String errorMsg;
             if ("omp_unavailable".equals(snapshot.error)) {
-                errorMsg = "Không thể lấy dữ liệu: omp không khả dụng trên PC";
+                errorMsg = L10n.t("No data: omp is not available on the PC", "Không thể lấy dữ liệu: omp không khả dụng trên PC");
             } else {
-                errorMsg = "Lỗi: " + snapshot.error;
+                errorMsg = L10n.t("Error: ", "Lỗi: ") + snapshot.error;
             }
             if (snapshot.providers != null && !snapshot.providers.isEmpty()) {
                 errorBannerView.setText(errorMsg);
@@ -277,7 +277,7 @@ public class QuotaTabView implements TabContent {
         }
 
         if (snapshot.loading && (snapshot.providers == null || snapshot.providers.isEmpty())) {
-            statusView.setText("Đang lấy dữ liệu...");
+            statusView.setText(L10n.t("Fetching...", "Đang lấy dữ liệu..."));
             statusView.setTextColor(Color.rgb(139, 148, 158));
             statusView.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.VISIBLE);
@@ -289,7 +289,7 @@ public class QuotaTabView implements TabContent {
         List<QuotaViewModel.ProviderCard> cards = QuotaViewModel.build(snapshot, nowMs);
 
         if (!QuotaViewModel.hasData(cards)) {
-            statusView.setText("Chưa có dữ liệu quota");
+            statusView.setText(L10n.t("No quota data yet", "Chưa có dữ liệu quota"));
             statusView.setTextColor(Color.rgb(139, 148, 158));
             statusView.setVisibility(View.VISIBLE);
             cardsContainer.removeAllViews();
@@ -371,7 +371,7 @@ public class QuotaTabView implements TabContent {
             detailsContainer.addView(divider);
 
             TextView detailsHeader = new TextView(context);
-            detailsHeader.setText("Chi tiết các cửa sổ & tài khoản");
+            detailsHeader.setText(L10n.t("Windows & accounts", "Chi tiết các cửa sổ & tài khoản"));
             detailsHeader.setTextSize(13);
             detailsHeader.setTypeface(Typeface.DEFAULT_BOLD);
             detailsHeader.setTextColor(Color.rgb(139, 148, 158));
@@ -381,7 +381,7 @@ public class QuotaTabView implements TabContent {
             for (QuotaViewModel.DetailBlock block : card.details) {
                 if (block.group != null && !block.group.isEmpty() && card.details.size() > 1) {
                     TextView blockTitle = new TextView(context);
-                    blockTitle.setText("Nhóm: " + block.group);
+                    blockTitle.setText(L10n.t("Group: ", "Nhóm: ") + block.group);
                     blockTitle.setTextSize(13);
                     blockTitle.setTypeface(Typeface.DEFAULT_BOLD);
                     blockTitle.setTextColor(Color.rgb(201, 209, 217));
@@ -389,8 +389,8 @@ public class QuotaTabView implements TabContent {
                     detailsContainer.addView(blockTitle);
                 }
                 for (QuotaViewModel.WindowDetail win : block.windows) {
-                    String winLabel = (win.label != null && !win.label.isEmpty()) ? win.label : "Cửa sổ";
-                    QuotaViewModel.Bar pooledBar = new QuotaViewModel.Bar(win.bar.pct, win.bar.tier, win.bar.resetText, winLabel + " (gộp)");
+                    String winLabel = (win.label != null && !win.label.isEmpty()) ? win.label : L10n.t("Window", "Cửa sổ");
+                    QuotaViewModel.Bar pooledBar = new QuotaViewModel.Bar(win.bar.pct, win.bar.tier, win.bar.resetText, winLabel + L10n.t(" (pooled)", " (gộp)"));
                     detailsContainer.addView(createBarView(context, pooledBar, false));
 
                     if (win.accounts != null && !win.accounts.isEmpty()) {
@@ -409,7 +409,7 @@ public class QuotaTabView implements TabContent {
                         }
                         if (fullCount > 0) {
                             TextView fullView = new TextView(context);
-                            fullView.setText(fullCount + " tài khoản còn đầy 100%");
+                            fullView.setText(fullCount + L10n.t(" accounts still at 100%", " tài khoản còn đầy 100%"));
                             fullView.setTextSize(11);
                             fullView.setTextColor(Color.rgb(139, 148, 158));
                             fullView.setPadding(dpToPx(context, 16), dpToPx(context, 2), 0, dpToPx(context, 8));
@@ -422,7 +422,7 @@ public class QuotaTabView implements TabContent {
 
             boolean expanded = expandedCardIds.contains(cardKey);
             detailsContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
-            indicatorView.setText(expanded ? "Thu gọn ▲" : "Chi tiết ▼");
+            indicatorView.setText(expanded ? L10n.t("Less ▲", "Thu gọn ▲") : L10n.t("Details ▼", "Chi tiết ▼"));
 
             cardLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -430,11 +430,11 @@ public class QuotaTabView implements TabContent {
                     boolean wasExpanded = detailsContainer.getVisibility() == View.VISIBLE;
                     if (wasExpanded) {
                         detailsContainer.setVisibility(View.GONE);
-                        indicatorView.setText("Chi tiết ▼");
+                        indicatorView.setText(L10n.t("Details ▼", "Chi tiết ▼"));
                         expandedCardIds.remove(cardKey);
                     } else {
                         detailsContainer.setVisibility(View.VISIBLE);
-                        indicatorView.setText("Thu gọn ▲");
+                        indicatorView.setText(L10n.t("Less ▲", "Thu gọn ▲"));
                         expandedCardIds.add(cardKey);
                     }
                 }
@@ -470,7 +470,7 @@ public class QuotaTabView implements TabContent {
         textRow.addView(labelView);
 
         TextView pctView = new TextView(context);
-        pctView.setText(small ? bar.pct + "%" : "còn " + bar.pct + "%");
+        pctView.setText(small ? bar.pct + "%" : L10n.t(bar.pct + "% left", "còn " + bar.pct + "%"));
         pctView.setTextSize(small ? 11 : 13);
         pctView.setTypeface(Typeface.DEFAULT_BOLD);
         pctView.setTextColor(getTierColor(bar.tier));

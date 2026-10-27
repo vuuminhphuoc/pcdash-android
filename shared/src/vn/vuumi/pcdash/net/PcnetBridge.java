@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.net;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.File;
 import java.io.IOException;
 
@@ -8,7 +9,9 @@ public class PcnetBridge {
     public static final int MODE_REMOTE_DIAL = 0;
     public static final int MODE_HOST_LISTEN = 1;
 
-    public static final String NATIVE_UNAVAILABLE_MSG = "Thiếu thư viện native (ABI không hỗ trợ?)";
+    public static String nativeUnavailableMessage() {
+        return L10n.t("Native library missing (unsupported ABI?)", "Thiếu thư viện native (ABI không hỗ trợ?)");
+    }
     private static final boolean nativeAvailable;
 
     static {
@@ -37,7 +40,7 @@ public class PcnetBridge {
 
     protected void ensureNativeAvailable() {
         if (!isNativeAvailable()) {
-            throw new IllegalStateException(NATIVE_UNAVAILABLE_MSG);
+            throw new IllegalStateException(nativeUnavailableMessage());
         }
     }
 
@@ -53,7 +56,7 @@ public class PcnetBridge {
     public String stateJson() {
         if (!isNativeAvailable()) {
             return "{\"state\":\"error\",\"authUrl\":\"\",\"tailnetIps\":[],\"localPort\":0,\"error\":\""
-                    + NATIVE_UNAVAILABLE_MSG + "\"}";
+                    + nativeUnavailableMessage() + "\"}";
         }
         return nativeStateJson();
     }

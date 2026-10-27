@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 import android.Manifest;
 import android.app.Activity;
@@ -67,11 +68,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    final String line = PcConn.statusLine();
+                    final PcConn.PcStatus status = PcConn.status();
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            updateStatus(line);
+                            updateStatus(status);
                         }
                     });
                 }
@@ -100,19 +101,16 @@ public class MainActivity extends Activity implements View.OnClickListener {
         statusDot.setBackground(dot);
     }
 
-    private void updateStatus(String line) {
-        if (statusView == null) return;
-        if (line == null || line.isEmpty()) {
-            line = "Đang kiểm tra...";
-        }
-        statusView.setText(line);
-        if (line.contains("Chưa cấu hình")) {
+    private void updateStatus(PcConn.PcStatus status) {
+        if (statusView == null || status == null) return;
+        statusView.setText(status.line);
+        if (status.state == PcConn.PcStatus.NOT_CONFIGURED) {
             updateStatusDot(Color.rgb(210, 153, 34));
             statusView.setTextColor(Color.rgb(210, 153, 34));
-        } else if (line.contains("BẬT")) {
+        } else if (status.state == PcConn.PcStatus.ON) {
             updateStatusDot(Color.rgb(46, 160, 67));
             statusView.setTextColor(Color.rgb(230, 237, 243));
-        } else if (line.contains("TẮT")) {
+        } else if (status.state == PcConn.PcStatus.OFF) {
             updateStatusDot(Color.rgb(248, 81, 73));
             statusView.setTextColor(Color.rgb(201, 209, 217));
         } else {
@@ -160,7 +158,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         root.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Điều khiển PC từ xa");
+        sub.setText(L10n.t("Remote control for your PC", "Điều khiển PC từ xa"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dp(4), 0, dp(18));
@@ -185,7 +183,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         statusCard.addView(statusDot);
 
         statusView = new TextView(this);
-        statusView.setText("Đang kiểm tra...");
+        statusView.setText(L10n.t("Checking...", "Đang kiểm tra..."));
         statusView.setTextSize(15);
         statusView.setTypeface(Typeface.DEFAULT_BOLD);
         statusView.setTextColor(Color.rgb(230, 237, 243));
@@ -194,7 +192,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         // Power buttons
         // 1. Wake (full width green)
-        Button wakeBtn = makeStyledButton("Bật / Đánh thức PC", Color.rgb(27, 102, 42), 0, Color.WHITE, 54, "wake");
+        Button wakeBtn = makeStyledButton(L10n.t("Turn on / Wake PC", "Bật / Đánh thức PC"), Color.rgb(27, 102, 42), 0, Color.WHITE, 54, "wake");
         LinearLayout.LayoutParams wakeLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         wakeLp.setMargins(0, 0, 0, dp(10));
@@ -225,7 +223,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         // 3. Danger zone caption
         TextView dangerCaption = new TextView(this);
-        dangerCaption.setText("VÙNG NGUY HIỂM");
+        dangerCaption.setText(L10n.t("DANGER ZONE", "VÙNG NGUY HIỂM"));
         dangerCaption.setTextSize(12);
         dangerCaption.setTypeface(Typeface.DEFAULT_BOLD);
         dangerCaption.setTextColor(Color.rgb(139, 148, 158));
@@ -233,7 +231,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         root.addView(dangerCaption);
 
         // 4. Shutdown button (outlined / darker red)
-        Button shutdownBtn = makeStyledButton("Tắt máy (Shutdown)", Color.rgb(34, 20, 22), Color.rgb(248, 81, 73), Color.rgb(248, 81, 73), 50, "shutdown");
+        Button shutdownBtn = makeStyledButton(L10n.t("Shut down", "Tắt máy (Shutdown)"), Color.rgb(34, 20, 22), Color.rgb(248, 81, 73), Color.rgb(248, 81, 73), 50, "shutdown");
         LinearLayout.LayoutParams shutLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         shutLp.setMargins(0, 0, 0, dp(8));
@@ -241,7 +239,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         root.addView(shutdownBtn);
 
         // 5. Abort button (smaller secondary button)
-        Button abortBtn = makeStyledButton("Hủy lệnh tắt máy", Color.rgb(16, 20, 26), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 42, "abort");
+        Button abortBtn = makeStyledButton(L10n.t("Cancel shutdown", "Hủy lệnh tắt máy"), Color.rgb(16, 20, 26), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 42, "abort");
         LinearLayout.LayoutParams abortLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         abortLp.setMargins(0, 0, 0, dp(14));
@@ -249,14 +247,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
         root.addView(abortBtn);
 
         // 6. Remote devices button
-        Button remoteDevBtn = makeStyledButton("Thiết bị điều khiển từ xa", Color.rgb(26, 84, 176), 0, Color.WHITE, 48, "remote_devices");
+        Button remoteDevBtn = makeStyledButton(L10n.t("Remote devices", "Thiết bị điều khiển từ xa"), Color.rgb(26, 84, 176), 0, Color.WHITE, 48, "remote_devices");
         LinearLayout.LayoutParams rdLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         rdLp.setMargins(0, 0, 0, dp(14));
         remoteDevBtn.setLayoutParams(rdLp);
         root.addView(remoteDevBtn);
 
-        Button pcSettingsBtn = makeStyledButton("Cài đặt PC", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "pc_settings");
+        Button pcSettingsBtn = makeStyledButton(L10n.t("PC settings", "Cài đặt PC"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "pc_settings");
         LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         psLp.setMargins(0, 0, 0, dp(14));
@@ -282,13 +280,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         tailscaleCard.addView(tsTitle);
 
         tailscaleStatusView = new TextView(this);
-        tailscaleStatusView.setText("Trạng thái: Đang kiểm tra...");
+        tailscaleStatusView.setText(L10n.t("Status: checking...", "Trạng thái: Đang kiểm tra..."));
         tailscaleStatusView.setTextSize(13);
         tailscaleStatusView.setTextColor(Color.rgb(139, 148, 158));
         tailscaleStatusView.setPadding(0, 0, 0, dp(8));
         tailscaleCard.addView(tailscaleStatusView);
 
-        tailscaleLoginBtn = makeStyledButton("Đăng nhập Tailscale", Color.rgb(26, 84, 176), 0, Color.WHITE, 42, "tailscale_login");
+        tailscaleLoginBtn = makeStyledButton(L10n.t("Sign in to Tailscale", "Đăng nhập Tailscale"), Color.rgb(26, 84, 176), 0, Color.WHITE, 42, "tailscale_login");
         tailscaleLoginBtn.setVisibility(View.GONE);
         tailscaleCard.addView(tailscaleLoginBtn);
         root.addView(tailscaleCard);
@@ -304,7 +302,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         healthCard.setLayoutParams(healthLp);
 
         TextView healthTitle = new TextView(this);
-        healthTitle.setText("SỨC KHỎE HOST");
+        healthTitle.setText(L10n.t("HOST HEALTH", "SỨC KHỎE HOST"));
         healthTitle.setTextSize(13);
         healthTitle.setTypeface(Typeface.DEFAULT_BOLD);
         healthTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -326,10 +324,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
         healthBatteryView.setPadding(0, dp(2), 0, dp(8));
         healthCard.addView(healthBatteryView);
 
-        btnBattery = makeStyledButton("Yêu cầu bỏ tối ưu pin", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "battery_opt");
+        btnBattery = makeStyledButton(L10n.t("Turn off battery optimization", "Yêu cầu bỏ tối ưu pin"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "battery_opt");
         healthCard.addView(btnBattery);
 
-        healthCard.addView(makeStyledButton("Cài đặt tự khởi chạy (Xiaomi / MIUI)", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "xiaomi_autostart"));
+        healthCard.addView(makeStyledButton(L10n.t("Autostart settings (Xiaomi / MIUI)", "Cài đặt tự khởi chạy (Xiaomi / MIUI)"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "xiaomi_autostart"));
 
         root.addView(healthCard);
 
@@ -365,11 +363,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String line = PcConn.statusLine();
+                final PcConn.PcStatus status = PcConn.status();
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        updateStatus(line);
+                        updateStatus(status);
                     }
                 });
             }
@@ -466,18 +464,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void updateHealthState() {
         boolean running = DashService.isServiceRunning();
         if (healthServiceView != null) {
-            healthServiceView.setText("Dịch vụ host: " + (running ? "Đang chạy" : "Đã dừng"));
+            healthServiceView.setText(L10n.t("Host service: ", "Dịch vụ host: ") + (running ? L10n.t("Running", "Đang chạy") : L10n.t("Stopped", "Đã dừng")));
             healthServiceView.setTextColor(running ? Color.rgb(46, 160, 67) : Color.rgb(248, 81, 73));
         }
         boolean listening8091 = DashService.isPort8091Listening();
         if (healthPortView != null) {
-            healthPortView.setText("Cổng :8091: " + (listening8091 ? "Đang lắng nghe" : "Chưa sẵn sàng"));
+            healthPortView.setText(L10n.t("Port :8091: ", "Cổng :8091: ") + (listening8091 ? L10n.t("Listening", "Đang lắng nghe") : L10n.t("Not ready", "Chưa sẵn sàng")));
             healthPortView.setTextColor(listening8091 ? Color.rgb(46, 160, 67) : Color.rgb(219, 109, 40));
         }
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         boolean ignoring = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
         if (healthBatteryView != null) {
-            healthBatteryView.setText("Tối ưu pin: " + (ignoring ? "Đã loại trừ" : "Chưa loại trừ"));
+            healthBatteryView.setText(L10n.t("Battery optimization: ", "Tối ưu pin: ") + (ignoring ? L10n.t("Off for PCDash", "Đã loại trừ") : L10n.t("On (may stop PCDash)", "Chưa loại trừ")));
             healthBatteryView.setTextColor(ignoring ? Color.rgb(46, 160, 67) : Color.rgb(219, 109, 40));
         }
         if (btnBattery != null) {
@@ -488,33 +486,33 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void updateTailscaleCard(PcnetState s) {
         if (tailscaleStatusView == null) return;
         if (s == null) {
-            tailscaleStatusView.setText("Trạng thái: Chưa sẵn sàng");
+            tailscaleStatusView.setText(L10n.t("Status: not ready", "Trạng thái: Chưa sẵn sàng"));
             tailscaleStatusView.setTextColor(Color.rgb(139, 148, 158));
             if (tailscaleLoginBtn != null) tailscaleLoginBtn.setVisibility(View.GONE);
             return;
         }
         if (s.isRunning()) {
             String ip = (s.tailnetIps != null && !s.tailnetIps.isEmpty()) ? s.tailnetIps.get(0) : "";
-            tailscaleStatusView.setText("Trạng thái: Đang chạy" + (!ip.isEmpty() ? " (" + ip + ")" : ""));
+            tailscaleStatusView.setText(L10n.t("Status: running", "Trạng thái: Đang chạy") + (!ip.isEmpty() ? " (" + ip + ")" : ""));
             tailscaleStatusView.setTextColor(Color.rgb(46, 160, 67));
             if (tailscaleLoginBtn != null) tailscaleLoginBtn.setVisibility(View.GONE);
         } else if (s.isNeedsLogin()) {
-            tailscaleStatusView.setText("Trạng thái: Cần đăng nhập Tailscale");
+            tailscaleStatusView.setText(L10n.t("Status: Tailscale sign-in needed", "Trạng thái: Cần đăng nhập Tailscale"));
             tailscaleStatusView.setTextColor(Color.rgb(219, 109, 40));
             currentTailscaleAuthUrl = s.authUrl != null ? s.authUrl : "";
             if (tailscaleLoginBtn != null) {
                 tailscaleLoginBtn.setVisibility(!currentTailscaleAuthUrl.isEmpty() ? View.VISIBLE : View.GONE);
             }
         } else if (s.isStarting()) {
-            tailscaleStatusView.setText("Trạng thái: Đang khởi động...");
+            tailscaleStatusView.setText(L10n.t("Status: starting...", "Trạng thái: Đang khởi động..."));
             tailscaleStatusView.setTextColor(Color.rgb(139, 148, 158));
             if (tailscaleLoginBtn != null) tailscaleLoginBtn.setVisibility(View.GONE);
         } else if (s.isError()) {
-            tailscaleStatusView.setText("Trạng thái: Lỗi (" + (s.error != null ? s.error : "") + ")");
+            tailscaleStatusView.setText(L10n.t("Status: error (", "Trạng thái: Lỗi (") + (s.error != null ? s.error : "") + ")");
             tailscaleStatusView.setTextColor(Color.rgb(248, 81, 73));
             if (tailscaleLoginBtn != null) tailscaleLoginBtn.setVisibility(View.GONE);
         } else {
-            tailscaleStatusView.setText("Trạng thái: Đã dừng");
+            tailscaleStatusView.setText(L10n.t("Status: stopped", "Trạng thái: Đã dừng"));
             tailscaleStatusView.setTextColor(Color.rgb(139, 148, 158));
             if (tailscaleLoginBtn != null) tailscaleLoginBtn.setVisibility(View.GONE);
         }
@@ -522,20 +520,20 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private void act(final String action) {
         if (!PcConn.isConfigured()) {
-            Toast.makeText(this, "Chưa cấu hình PC. Vui lòng vào Cài đặt PC", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("PC not set up. Open PC settings first", "Chưa cấu hình PC. Vui lòng vào Cài đặt PC"), Toast.LENGTH_LONG).show();
             return;
         }
-        Toast.makeText(this, "Đang gửi: " + action, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, L10n.t("Sending: ", "Đang gửi: ") + action, Toast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 final String r = PcConn.doAction(action);
-                final String line = PcConn.statusLine();
+                final PcConn.PcStatus status = PcConn.status();
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
                         Toast.makeText(MainActivity.this, r, Toast.LENGTH_LONG).show();
-                        updateStatus(line);
+                        updateStatus(status);
                     }
                 });
             }

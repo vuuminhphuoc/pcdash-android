@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -47,7 +48,7 @@ public class LogTabView implements TabContent {
         headerRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(context);
-        title.setText("Nhật ký lệnh");
+        title.setText(L10n.t("Command log", "Nhật ký lệnh"));
         title.setTextSize(26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
@@ -56,7 +57,7 @@ public class LogTabView implements TabContent {
         headerRow.addView(title);
 
         Button refreshBtn = new Button(context);
-        refreshBtn.setText("Làm mới");
+        refreshBtn.setText(L10n.t("Refresh", "Làm mới"));
         refreshBtn.setTextColor(Color.rgb(88, 166, 255));
         refreshBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         refreshBtn.setTextSize(13);
@@ -70,14 +71,14 @@ public class LogTabView implements TabContent {
         container.addView(headerRow);
 
         TextView sub = new TextView(context);
-        sub.setText("Lịch sử các lệnh điều khiển gửi tới host");
+        sub.setText(L10n.t("Commands sent to the host", "Lịch sử các lệnh điều khiển gửi tới host"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dpToPx(context, 4), 0, dpToPx(context, 16));
         container.addView(sub);
 
         statusView = new TextView(context);
-        statusView.setText("Đang tải nhật ký lệnh...");
+        statusView.setText(L10n.t("Loading the command log...", "Đang tải nhật ký lệnh..."));
         statusView.setTextSize(13);
         statusView.setTextColor(Color.rgb(139, 148, 158));
         statusView.setPadding(0, dpToPx(context, 8), 0, dpToPx(context, 8));
@@ -110,7 +111,7 @@ public class LogTabView implements TabContent {
     public void loadLogs() {
         statusView.setVisibility(View.VISIBLE);
         statusView.setTextColor(Color.rgb(139, 148, 158));
-        statusView.setText("Đang tải nhật ký lệnh...");
+        statusView.setText(L10n.t("Loading the command log...", "Đang tải nhật ký lệnh..."));
         progressBar.setVisibility(View.VISIBLE);
         listContainer.removeAllViews();
 
@@ -126,9 +127,9 @@ public class LogTabView implements TabContent {
                         statusView.setTextColor(Color.rgb(248, 81, 73));
                         if (error instanceof RemoteApiClient.UnsupportedRouteException
                                 || (error.getMessage() != null && error.getMessage().contains("404"))) {
-                            statusView.setText("Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host");
+                            statusView.setText(RemoteApiClient.UnsupportedRouteException.hostNeedsUpdateMessage());
                         } else {
-                            statusView.setText("Lỗi: " + (error.getMessage() != null ? error.getMessage() : "Timeout"));
+                            statusView.setText(L10n.t("Error: ", "Lỗi: ") + (error.getMessage() != null ? error.getMessage() : "Timeout"));
                         }
                         return;
                     }
@@ -136,7 +137,7 @@ public class LogTabView implements TabContent {
                     if (response == null || response.entries == null || response.entries.isEmpty()) {
                         statusView.setVisibility(View.VISIBLE);
                         statusView.setTextColor(Color.rgb(139, 148, 158));
-                        statusView.setText("Chưa có lệnh nào được ghi nhận.");
+                        statusView.setText(L10n.t("No commands recorded yet.", "Chưa có lệnh nào được ghi nhận."));
                         return;
                     }
 
@@ -153,7 +154,7 @@ public class LogTabView implements TabContent {
                         TextView line1 = new TextView(ctx);
                         line1.setTextSize(13);
                         line1.setTypeface(Typeface.DEFAULT_BOLD);
-                        String statusMark = entry.ok ? "✓ Thành công" : "✗ Thất bại";
+                        String statusMark = entry.ok ? L10n.t("✓ Succeeded", "✓ Thành công") : L10n.t("✗ Failed", "✗ Thất bại");
                         line1.setText(entry.action.toUpperCase(Locale.ROOT) + "  ·  " + statusMark);
                         if (entry.ok) {
                             line1.setTextColor(Color.rgb(63, 185, 80));
@@ -165,7 +166,7 @@ public class LogTabView implements TabContent {
                         TextView line2 = new TextView(ctx);
                         line2.setTextSize(11);
                         line2.setTextColor(Color.rgb(139, 148, 158));
-                        line2.setText(sdf.format(new Date(entry.ts)) + "  ·  Thiết bị: " + entry.device + " (" + entry.source + ")");
+                        line2.setText(sdf.format(new Date(entry.ts)) + L10n.t("  ·  Device: ", "  ·  Thiết bị: ") + entry.device + " (" + entry.source + ")");
                         row.addView(line2);
 
                         View divider = new View(ctx);

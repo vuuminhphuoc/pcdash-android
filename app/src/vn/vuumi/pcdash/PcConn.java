@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -35,16 +36,37 @@ public class PcConn {
         return s != null && s.isConfigured();
     }
 
+    /** PC power state for the host screen, with the line to show. */
+    public static final class PcStatus {
+        public static final int NOT_CONFIGURED = 0;
+        public static final int ON = 1;
+        public static final int OFF = 2;
+
+        public final int state;
+        public final String line;
+
+        PcStatus(int state, String line) {
+            this.state = state;
+            this.line = line;
+        }
+    }
+
     public static String statusLine() {
+        return status().line;
+    }
+
+    public static PcStatus status() {
         PcSettingsSource s = settings;
         if (s == null || !s.isConfigured()) {
-            return "Chưa cấu hình PC";
+            return new PcStatus(PcStatus.NOT_CONFIGURED, L10n.t("PC not set up", "Chưa cấu hình PC"));
         }
         String ip = s.getPcIp();
         for (int p : STATUS_PORTS) {
-            if (tcpOpen(ip, p, STATUS_TIMEOUT)) return "PC đang BẬT (port " + p + ")";
+            if (tcpOpen(ip, p, STATUS_TIMEOUT)) {
+                return new PcStatus(PcStatus.ON, L10n.t("PC is ON (port ", "PC đang BẬT (port ") + p + ")");
+            }
         }
-        return "PC đang TẮT / không phản hồi";
+        return new PcStatus(PcStatus.OFF, L10n.t("PC is OFF / not responding", "PC đang TẮT / không phản hồi"));
     }
 
     public static String statusJson() {
@@ -83,7 +105,7 @@ public class PcConn {
     public static String doAction(String action) {
         PcSettingsSource s = settings;
         if (s == null || !s.isConfigured()) {
-            return "Lỗi: Chưa cấu hình PC";
+            return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }
         if ("wake".equals(action)) return wol();
         return agentExec(action);
@@ -92,18 +114,18 @@ public class PcConn {
     public static String wol() {
         PcSettingsSource s = settings;
         if (s == null || !s.isConfigured()) {
-            return "Lỗi: Chưa cấu hình PC";
+            return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }
         String macStr = s.getPcMac();
         if (macStr == null || macStr.trim().isEmpty()) {
-            return "Lỗi WOL: Chưa cấu hình địa chỉ MAC của PC";
+            return L10n.t("WOL error: the PC's MAC address is not set", "Lỗi WOL: Chưa cấu hình địa chỉ MAC của PC");
         }
         macStr = macStr.trim();
         String pcIp = s.getPcIp();
         try {
             String[] parts = macStr.split("[:-]");
             if (parts.length != 6) {
-                return "Lỗi WOL: Địa chỉ MAC không hợp lệ";
+                return L10n.t("WOL error: invalid MAC address", "Lỗi WOL: Địa chỉ MAC không hợp lệ");
             }
             byte[] mac = new byte[6];
             for (int i = 0; i < 6; i++) mac[i] = (byte) Integer.parseInt(parts[i], 16);
@@ -136,16 +158,16 @@ public class PcConn {
                 }
             }
             sock.close();
-            return "Đã gửi magic packet (WOL) tới " + macStr;
+            return L10n.t("Sent the magic packet (WOL) to ", "Đã gửi magic packet (WOL) tới ") + macStr;
         } catch (Exception e) {
-            return "Lỗi WOL: " + e;
+            return L10n.t("WOL error: ", "Lỗi WOL: ") + e;
         }
     }
 
     static String agentExec(String action) {
         PcSettingsSource s = settings;
         if (s == null || !s.isConfigured()) {
-            return "Lỗi: Chưa cấu hình PC";
+            return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }
         String ip = s.getPcIp();
         int port = s.getAgentPort() > 0 ? s.getAgentPort() : DEFAULT_AGENT_PORT;
@@ -167,10 +189,10 @@ public class PcConn {
             os.close();
             int code = c.getResponseCode();
             if (code == 403) {
-                return "Agent từ chối: sai mã token";
+                return L10n.t("Agent refused: wrong token", "Agent từ chối: sai mã token");
             }
             if (code == 503) {
-                return "Agent PC chưa cấu hình token";
+                return L10n.t("The PC agent has no token set", "Agent PC chưa cấu hình token");
             }
             InputStream is = code >= 400 ? c.getErrorStream() : c.getInputStream();
             StringBuilder sb = new StringBuilder();
@@ -182,7 +204,7 @@ public class PcConn {
             }
             return "Agent[" + code + "]: " + sb;
         } catch (Exception e) {
-            return "Không kết nối được agent PC: " + e;
+            return L10n.t("Cannot reach the PC agent: ", "Không kết nối được agent PC: ") + e;
         } finally {
             if (c != null) c.disconnect();
         }

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
@@ -84,8 +85,8 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             DashService.LocalBinder binder = (DashService.LocalBinder) service;
             remoteController = binder.getRemoteHostController();
             statusHeaderView.setText(remoteController != null
-                    ? "Dịch vụ host sẵn sàng"
-                    : "Dịch vụ host không khả dụng");
+                    ? L10n.t("Host service ready", "Dịch vụ host sẵn sàng")
+                    : L10n.t("Host service unavailable", "Dịch vụ host không khả dụng"));
             updateViewState();
         }
     }
@@ -93,7 +94,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
     @Override
     public void onServiceDisconnected(ComponentName name) {
         remoteController = null;
-        statusHeaderView.setText("Mất kết nối với DashService");
+        statusHeaderView.setText(L10n.t("Lost connection to DashService", "Mất kết nối với DashService"));
     }
 
     @Override
@@ -132,27 +133,27 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         scroll.addView(root);
 
         TextView title = new TextView(this);
-        title.setText("Thiết bị điều khiển từ xa");
+        title.setText(L10n.t("Remote devices", "Thiết bị điều khiển từ xa"));
         title.setTextSize(22);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.rgb(230, 237, 243));
         root.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Quản lý thiết bị đã ghép đôi và thêm thiết bị mới");
+        sub.setText(L10n.t("Manage paired phones and add new ones", "Quản lý thiết bị đã ghép đôi và thêm thiết bị mới"));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
         sub.setPadding(0, dp(4), 0, dp(12));
         root.addView(sub);
 
         statusHeaderView = new TextView(this);
-        statusHeaderView.setText("Đang kết nối dịch vụ host...");
+        statusHeaderView.setText(L10n.t("Connecting to the host service...", "Đang kết nối dịch vụ host..."));
         statusHeaderView.setTextSize(12);
         statusHeaderView.setTextColor(Color.rgb(110, 118, 129));
         statusHeaderView.setPadding(0, 0, 0, dp(16));
         root.addView(statusHeaderView);
 
-        addDeviceButton = makeStyledButton("Thêm thiết bị", Color.rgb(27, 102, 42), 0, Color.WHITE);
+        addDeviceButton = makeStyledButton(L10n.t("Add device", "Thêm thiết bị"), Color.rgb(27, 102, 42), 0, Color.WHITE);
         root.addView(addDeviceButton);
 
         LinearLayout tailscaleCard = new LinearLayout(this);
@@ -165,7 +166,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         tailscaleCard.setLayoutParams(tsLp);
 
         TextView tsTitle = new TextView(this);
-        tsTitle.setText("TRẠNG THÁI TAILSCALE");
+        tsTitle.setText(L10n.t("TAILSCALE STATUS", "TRẠNG THÁI TAILSCALE"));
         tsTitle.setTextSize(13);
         tsTitle.setTypeface(Typeface.DEFAULT_BOLD);
         tsTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -173,18 +174,18 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         tailscaleCard.addView(tsTitle);
 
         tailscaleStatusView = new TextView(this);
-        tailscaleStatusView.setText("Đang kiểm tra...");
+        tailscaleStatusView.setText(L10n.t("Checking...", "Đang kiểm tra..."));
         tailscaleStatusView.setTextSize(13);
         tailscaleStatusView.setTextColor(Color.rgb(139, 148, 158));
         tailscaleCard.addView(tailscaleStatusView);
 
-        tailscaleLoginBtn = makeStyledButton("Đăng nhập Tailscale", Color.rgb(26, 84, 176), 0, Color.WHITE);
+        tailscaleLoginBtn = makeStyledButton(L10n.t("Sign in to Tailscale", "Đăng nhập Tailscale"), Color.rgb(26, 84, 176), 0, Color.WHITE);
         tailscaleLoginBtn.setVisibility(View.GONE);
         tailscaleCard.addView(tailscaleLoginBtn);
 
         root.addView(tailscaleCard);
 
-        // Pairing code box (hidden until "Thêm thiết bị" is pressed)
+        // Pairing code box (hidden until L10n.t("Add device", "Thêm thiết bị") is pressed)
         pairingCodeCard = new LinearLayout(this);
         pairingCodeCard.setOrientation(LinearLayout.VERTICAL);
         pairingCodeCard.setPadding(dp(20), dp(20), dp(20), dp(20));
@@ -196,7 +197,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         pairingCodeCard.setVisibility(View.GONE);
 
         TextView cardTitle = new TextView(this);
-        cardTitle.setText("MÃ GHÉP ĐÔI (MỞ TRONG 5 PHÚT)");
+        cardTitle.setText(L10n.t("PAIRING CODE (OPEN FOR 5 MINUTES)", "MÃ GHÉP ĐÔI (MỞ TRONG 5 PHÚT)"));
         cardTitle.setTextSize(12);
         cardTitle.setTextColor(Color.rgb(139, 148, 158));
         cardTitle.setGravity(Gravity.CENTER);
@@ -218,20 +219,20 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         pairingCodeCard.addView(countdownView);
 
         TextView guide = new TextView(this);
-        guide.setText("Mở APK PCDash Remote trên máy điều khiển (cùng Wi-Fi) và nhập mã trên");
+        guide.setText(L10n.t("Open PCDash Remote on the other phone (same Wi-Fi) and enter this code", "Mở APK PCDash Remote trên máy điều khiển (cùng Wi-Fi) và nhập mã trên"));
         guide.setTextSize(12);
         guide.setTextColor(Color.rgb(110, 118, 129));
         guide.setGravity(Gravity.CENTER);
         guide.setPadding(0, 0, 0, dp(12));
         pairingCodeCard.addView(guide);
 
-        cancelPairingBtn = makeStyledButton("Hủy mã ghép đôi", Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217));
+        cancelPairingBtn = makeStyledButton(L10n.t("Cancel pairing code", "Hủy mã ghép đôi"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217));
         pairingCodeCard.addView(cancelPairingBtn);
 
         root.addView(pairingCodeCard);
 
         TextView sectionTitle = new TextView(this);
-        sectionTitle.setText("Danh sách thiết bị đã ghép");
+        sectionTitle.setText(L10n.t("Paired devices", "Danh sách thiết bị đã ghép"));
         sectionTitle.setTextSize(17);
         sectionTitle.setTypeface(Typeface.DEFAULT_BOLD);
         sectionTitle.setTextColor(Color.rgb(230, 237, 243));
@@ -243,14 +244,14 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         root.addView(deviceListContainer);
 
         TextView logSectionTitle = new TextView(this);
-        logSectionTitle.setText("Nhật ký lệnh");
+        logSectionTitle.setText(L10n.t("Command log", "Nhật ký lệnh"));
         logSectionTitle.setTextSize(17);
         logSectionTitle.setTypeface(Typeface.DEFAULT_BOLD);
         logSectionTitle.setTextColor(Color.rgb(230, 237, 243));
         logSectionTitle.setPadding(0, dp(20), 0, dp(10));
         root.addView(logSectionTitle);
 
-        clearLogButton = makeDestructiveButton("Xóa nhật ký");
+        clearLogButton = makeDestructiveButton(L10n.t("Clear log", "Xóa nhật ký"));
         root.addView(clearLogButton);
 
         commandLogContainer = new LinearLayout(this);
@@ -303,7 +304,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
     private void startPairing() {
         if (remoteController == null) {
-            Toast.makeText(this, "Dịch vụ host chưa sẵn sàng", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Host service is not ready", "Dịch vụ host chưa sẵn sàng"), Toast.LENGTH_SHORT).show();
             return;
         }
         addDeviceButton.setEnabled(false);
@@ -322,21 +323,21 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                         }
                     });
                 } catch (final PairingManager.PairingException e) {
-                    final String msg = e.getMessage() != null ? e.getMessage() : "Lỗi ghép đôi";
+                    final String msg = e.getMessage() != null ? e.getMessage() : L10n.t("Pairing error", "Lỗi ghép đôi");
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
                             addDeviceButton.setEnabled(true);
                             Toast.makeText(RemoteDevicesActivity.this, msg, Toast.LENGTH_LONG).show();
                             new AlertDialog.Builder(RemoteDevicesActivity.this)
-                                    .setTitle("Thông báo ghép đôi")
+                                    .setTitle(L10n.t("Pairing", "Thông báo ghép đôi"))
                                     .setMessage(msg)
-                                    .setPositiveButton("Đóng", null)
+                                    .setPositiveButton(L10n.t("Close", "Đóng"), null)
                                     .show();
                         }
                     });
                 } catch (final Exception e) {
-                    final String msg = e.getMessage() != null ? e.getMessage() : "Lỗi hệ thống";
+                    final String msg = e.getMessage() != null ? e.getMessage() : L10n.t("System error", "Lỗi hệ thống");
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
@@ -356,7 +357,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         activeCode = null;
         ui.removeCallbacks(ticker);
         updateViewState();
-        Toast.makeText(this, "Đã hủy phiên ghép đôi", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, L10n.t("Pairing session cancelled", "Đã hủy phiên ghép đôi"), Toast.LENGTH_SHORT).show();
     }
 
     private void updateViewState() {
@@ -387,7 +388,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
         if (tailscaleStatusView != null) {
             tailscaleStatusView.setText(vs.tailscaleStatus);
-            if (vs.tailscaleStatus != null && vs.tailscaleStatus.startsWith("Đang chạy")) {
+            if (vs.tailscaleRunning) {
                 tailscaleStatusView.setTextColor(Color.rgb(46, 160, 67));
             } else if (vs.showLoginButton) {
                 tailscaleStatusView.setTextColor(Color.rgb(219, 109, 40));
@@ -407,7 +408,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         if (vs.hasActiveCode) {
             pairingCodeCard.setVisibility(View.VISIBLE);
             codeView.setText(vs.pairingCode);
-            countdownView.setText("Hết hạn sau: " + vs.countdownText);
+            countdownView.setText(L10n.t("Expires in: ", "Hết hạn sau: ") + vs.countdownText);
         } else {
             if (activeCode != null) {
                 activeCode = null;
@@ -420,15 +421,15 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
     private void confirmClearCommandLog() {
         new AlertDialog.Builder(this)
-                .setTitle("Xác nhận xóa")
-                .setMessage("Xóa toàn bộ nhật ký lệnh?")
-                .setPositiveButton("Xóa", new DialogInterface.OnClickListener() {
+                .setTitle(L10n.t("Confirm delete", "Xác nhận xóa"))
+                .setMessage(L10n.t("Clear the whole command log?", "Xóa toàn bộ nhật ký lệnh?"))
+                .setPositiveButton(L10n.t("Delete", "Xóa"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         clearCommandLog();
                     }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
                 .show();
     }
 
@@ -442,7 +443,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                     @Override
                     public void run() {
                         renderCommandLog();
-                        Toast.makeText(RemoteDevicesActivity.this, "Đã xóa nhật ký lệnh", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RemoteDevicesActivity.this, L10n.t("Command log cleared", "Đã xóa nhật ký lệnh"), Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -458,7 +459,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
         if (entries == null || entries.isEmpty()) {
             TextView emptyView = new TextView(this);
-            emptyView.setText("Chưa có nhật ký lệnh nào.");
+            emptyView.setText(L10n.t("No commands yet.", "Chưa có nhật ký lệnh nào."));
             emptyView.setTextSize(14);
             emptyView.setTextColor(Color.rgb(139, 148, 158));
             emptyView.setPadding(0, dp(8), 0, dp(24));
@@ -480,8 +481,8 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             TextView textInfo = new TextView(this);
             LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
             textInfo.setLayoutParams(textLp);
-            String devDisplay = entry.device != null && !entry.device.isEmpty() ? entry.device : "(không tên)";
-            textInfo.setText(sdf.format(new Date(entry.ts)) + "  " + devDisplay + "\nLệnh: " + entry.action);
+            String devDisplay = entry.device != null && !entry.device.isEmpty() ? entry.device : L10n.t("(no name)", "(không tên)");
+            textInfo.setText(sdf.format(new Date(entry.ts)) + "  " + devDisplay + L10n.t("\nCommand: ", "\nLệnh: ") + entry.action);
             textInfo.setTextSize(13);
             textInfo.setTextColor(Color.rgb(201, 209, 217));
             row.addView(textInfo);
@@ -503,7 +504,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
         if (devices == null || devices.isEmpty()) {
             TextView emptyView = new TextView(this);
-            emptyView.setText("Chưa có thiết bị nào được ghép đôi.");
+            emptyView.setText(L10n.t("No paired devices yet.", "Chưa có thiết bị nào được ghép đôi."));
             emptyView.setTextSize(14);
             emptyView.setTextColor(Color.rgb(139, 148, 158));
             emptyView.setPadding(0, dp(8), 0, dp(24));
@@ -513,7 +514,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
         Map<String, Integer> nameCounts = new HashMap<String, Integer>();
         for (RemoteDevicesPresenter.DeviceRow row : devices) {
-            String n = (row.name != null && !row.name.trim().isEmpty()) ? row.name.trim() : "(Thiết bị không tên)";
+            String n = (row.name != null && !row.name.trim().isEmpty()) ? row.name.trim() : L10n.t("(Unnamed device)", "(Thiết bị không tên)");
             Integer c = nameCounts.get(n);
             nameCounts.put(n, c == null ? 1 : c + 1);
         }
@@ -530,7 +531,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             lp.setMargins(0, dp(6), 0, dp(12));
             item.setLayoutParams(lp);
 
-            String baseName = (row.name != null && !row.name.trim().isEmpty()) ? row.name.trim() : "(Thiết bị không tên)";
+            String baseName = (row.name != null && !row.name.trim().isEmpty()) ? row.name.trim() : L10n.t("(Unnamed device)", "(Thiết bị không tên)");
             Integer count = nameCounts.get(baseName);
             final String displayName;
             if (count != null && count > 1) {
@@ -555,23 +556,23 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             item.addView(nameText);
 
             TextView nodeText = new TextView(this);
-            String nodeDisplay = (row.nodeId != null && !row.nodeId.trim().isEmpty()) ? row.nodeId.trim() : "(Chưa có Node ID)";
+            String nodeDisplay = (row.nodeId != null && !row.nodeId.trim().isEmpty()) ? row.nodeId.trim() : L10n.t("(No node ID yet)", "(Chưa có Node ID)");
             nodeText.setText("Node ID: " + nodeDisplay);
             nodeText.setTextSize(12);
             nodeText.setTextColor(Color.rgb(139, 148, 158));
             nodeText.setPadding(0, dp(2), 0, dp(4));
             item.addView(nodeText);
 
-            String pairedStr = row.createdAt > 0L ? sdf.format(new Date(row.createdAt)) : "Không rõ";
-            String lastUsedStr = row.lastUsedAt > 0L ? sdf.format(new Date(row.lastUsedAt)) : "Không rõ";
+            String pairedStr = row.createdAt > 0L ? sdf.format(new Date(row.createdAt)) : L10n.t("Unknown", "Không rõ");
+            String lastUsedStr = row.lastUsedAt > 0L ? sdf.format(new Date(row.lastUsedAt)) : L10n.t("Unknown", "Không rõ");
             TextView timeText = new TextView(this);
-            timeText.setText("Ghép đôi: " + pairedStr + " · Dùng lần cuối: " + lastUsedStr);
+            timeText.setText(L10n.t("Paired: ", "Ghép đôi: ") + pairedStr + L10n.t(" · Last used: ", " · Dùng lần cuối: ") + lastUsedStr);
             timeText.setTextSize(12);
             timeText.setTextColor(Color.rgb(110, 118, 129));
             timeText.setPadding(0, 0, 0, dp(10));
             item.addView(timeText);
 
-            Button delBtn = makeDestructiveButton("Xóa thiết bị");
+            Button delBtn = makeDestructiveButton(L10n.t("Remove device", "Xóa thiết bị"));
             delBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -586,21 +587,21 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
     private void confirmDelete(final RemoteDevicesPresenter.DeviceRow row, final String displayName) {
         new AlertDialog.Builder(this)
-                .setTitle("Xác nhận xóa")
-                .setMessage("Xóa thiết bị " + displayName + "? Thiết bị sẽ mất quyền điều khiển ngay.")
-                .setPositiveButton("Xóa", new DialogInterface.OnClickListener() {
+                .setTitle(L10n.t("Confirm delete", "Xác nhận xóa"))
+                .setMessage(L10n.t("Remove device ", "Xóa thiết bị ") + displayName + L10n.t("? It loses control access right away.", "? Thiết bị sẽ mất quyền điều khiển ngay."))
+                .setPositiveButton(L10n.t("Delete", "Xóa"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         performDelete(row);
                     }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null)
                 .show();
     }
 
     private void performDelete(final RemoteDevicesPresenter.DeviceRow row) {
         if (remoteController == null) {
-            Toast.makeText(this, "Dịch vụ host chưa sẵn sàng", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, L10n.t("Host service is not ready", "Dịch vụ host chưa sẵn sàng"), Toast.LENGTH_SHORT).show();
             return;
         }
         new Thread(new Runnable() {
@@ -612,7 +613,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(RemoteDevicesActivity.this, "Đã xóa thiết bị: " + row.name, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(RemoteDevicesActivity.this, L10n.t("Removed device: ", "Đã xóa thiết bị: ") + row.name, Toast.LENGTH_SHORT).show();
                             updateViewState();
                         }
                     });
@@ -620,7 +621,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(RemoteDevicesActivity.this, "Lỗi khi xóa thiết bị: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            Toast.makeText(RemoteDevicesActivity.this, L10n.t("Could not remove device: ", "Lỗi khi xóa thiết bị: ") + e.getMessage(), Toast.LENGTH_LONG).show();
                             updateViewState();
                         }
                     });
