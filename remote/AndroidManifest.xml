@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Host alerts (off unless turned on in More). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Scanning the pairing QR code on the home phone (asked only when the scan button is used). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -35,6 +38,12 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name="vn.vuumi.pcdash.qr.QrScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="@string/title_qr_scan" />
 
         <!-- Launcher shortcuts and the Quick Settings tile go through here; see QuickActions. -->
         <activity

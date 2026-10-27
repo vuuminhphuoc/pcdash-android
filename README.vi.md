@@ -127,7 +127,7 @@ Mở app host, bấm **Cài đặt PC** rồi **Quét mã QR từ PC** và hư�
 
 1. **Host:** cài APK host, mở app, bấm **Đăng nhập Tailscale** (mở trình duyệt, xác nhận kết nối thiết bị). Thẻ Tailscale chuyển thành "Đang chạy (100.x.x.x)". Host nhúng tsnet riêng nên không cần app Tailscale.
 2. **Remote:** cài APK remote, mở app, bước 1 bấm **Đăng nhập Tailscale** (cùng tài khoản), đợi "✓ Đã đăng nhập".
-3. Đặt hai điện thoại trong cùng Wi-Fi nhà. Trên host mở **Thiết bị điều khiển từ xa → Thêm thiết bị** để lấy mã 6 ký tự (5 phút). Trên remote nhập mã (host thường được tìm tự động, hoặc nhập IP LAN) rồi **Bắt đầu ghép đôi**. Mã dùng một lần, tối đa 5 lần nhập sai; chỉ IP LAN riêng được ghép.
+3. Đặt hai điện thoại trong cùng Wi-Fi nhà. Trên host mở **Thiết bị điều khiển từ xa → Thêm thiết bị**: màn hình hiện mã QR và mã 6 ký tự (5 phút). Trên remote bấm **📷 Quét mã QR trên máy ở nhà** (cần quyền camera) là ghép đôi luôn; hoặc nhập mã (host thường được tìm tự động, hoặc nhập IP LAN hiện dưới mã) rồi **Bắt đầu ghép đôi**. Mã dùng một lần, tối đa 5 lần nhập sai; chỉ IP LAN riêng được ghép.
 
 Sau đó điều khiển được từ bất kỳ đâu, kể cả 5G, không cần mở VPN. Trên host, xóa thiết bị sẽ thu hồi token ngay (node còn trong trang Machines của Tailscale đến khi bạn xóa tay). **Quên host** trên Remote xóa cấu hình, trạng thái đăng nhập và cần xác thực màn hình khóa. Khóa node Tailscale hết hạn thì app báo "Cần đăng nhập" kèm nút đăng nhập lại; có thể tắt hết hạn khóa trong trang Machines.
 

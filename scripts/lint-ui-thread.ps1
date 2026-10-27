@@ -7,7 +7,8 @@ $repoRoot = if ($scriptDir) { Split-Path $scriptDir -Parent } else { (Get-Locati
 
 $targetDirs = @(
     (Join-Path $repoRoot "remote\src"),
-    (Join-Path $repoRoot "app\src")
+    (Join-Path $repoRoot "app\src"),
+    (Join-Path $repoRoot "shared\src")
 )
 $targetFiles = Get-ChildItem -Path $targetDirs -Recurse -Filter *.java | Where-Object {
     $_.Name -match 'Activity\.java$|TabView\.java$|^MoreSheet\.java$|^BottomNavBar\.java$|^WatchdogReceiver\.java$|^BootReceiver\.java$|^LoginPanel\.java$|^PairingScreen\.java$'

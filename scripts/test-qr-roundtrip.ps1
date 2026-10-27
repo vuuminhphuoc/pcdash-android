@@ -45,7 +45,7 @@ $sources = @(
     (Join-Path $app 'src\vn\vuumi\pcdash\PcSettingsSource.java'),
     (Join-Path $app 'src\vn\vuumi\pcdash\PcSettings.java'),
     (Join-Path $app 'src\vn\vuumi\pcdash\PcProvisioning.java'),
-    (Join-Path $app 'src\vn\vuumi\pcdash\QrDecoder.java'),
+    (Join-Path $repoRoot 'shared\src\vn\vuumi\pcdash\qr\QrDecoder.java'),
     (Join-Path $app 'test\vn\vuumi\pcdash\QrRoundTripTest.java')
 )
 

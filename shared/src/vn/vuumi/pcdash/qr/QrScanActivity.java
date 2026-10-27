@@ -1,4 +1,4 @@
-package vn.vuumi.pcdash;
+package vn.vuumi.pcdash.qr;
 
 import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
@@ -6,6 +6,7 @@ import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -42,18 +43,40 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
- * Scans the setup QR code that PcAgent shows on the PC. Returns the raw text in {@link #EXTRA_TEXT}
- * once a valid PCDash payload is seen. Camera2 + ZXing, no extra scanner app needed.
+ * Scans a PCDash QR code with Camera2 + ZXing (no scanner app needed): the PC setup code PcAgent shows
+ * (host app) or the pairing code the home phone shows (remote app). Returns the raw text in
+ * {@link #EXTRA_TEXT} once a code starting with the caller's prefix is seen; the caller validates it.
  */
 public class QrScanActivity extends Activity implements TextureView.SurfaceTextureListener {
     private AppLockGate lockGate;
     public static final String EXTRA_TEXT = "text";
+    private static final String EXTRA_PREFIX = "prefix";
+    private static final String EXTRA_HINT = "hint";
+    private static final String EXTRA_MANUAL = "manual";
 
     private static final int REQ_CAMERA = 71;
     private static final long DECODE_INTERVAL_MS = 120;
     private static final long NOT_PCDASH_HINT_MS = 2500;
-    private static String hintDefault() {
-        return L10n.t("Point the camera at the QR code on the PC screen", "Hướng camera vào mã QR đang hiện trên màn hình PC");
+
+    private String acceptPrefix = "pcdash://";
+    private String hint = "";
+    // How to go on without the camera, added to failure messages ("You can type the values in ...").
+    private String manualHint = "";
+
+    /**
+     * @param acceptPrefix only codes starting with this are returned
+     * @param hint         what to point the camera at
+     * @param manualHint   how to go on without the camera
+     */
+    public static Intent intent(Context context, String acceptPrefix, String hint, String manualHint) {
+        return new Intent(context, QrScanActivity.class)
+                .putExtra(EXTRA_PREFIX, acceptPrefix)
+                .putExtra(EXTRA_HINT, hint)
+                .putExtra(EXTRA_MANUAL, manualHint);
+    }
+
+    private String hintDefault() {
+        return hint;
     }
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -85,6 +108,15 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Intent in = getIntent();
+        if (in != null) {
+            if (in.getStringExtra(EXTRA_PREFIX) != null) acceptPrefix = in.getStringExtra(EXTRA_PREFIX);
+            if (in.getStringExtra(EXTRA_HINT) != null) hint = in.getStringExtra(EXTRA_HINT);
+            if (in.getStringExtra(EXTRA_MANUAL) != null) manualHint = in.getStringExtra(EXTRA_MANUAL);
+        }
+        if (hint.isEmpty()) {
+            hint = L10n.t("Point the camera at the PCDash QR code", "Hướng camera vào mã QR của PCDash");
+        }
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLACK));
@@ -196,7 +228,8 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                 openCamera();
             }
         } else {
-            Toast.makeText(this, L10n.t("Camera permission is needed to scan the QR code. You can type the values in PC settings instead.", "Cần quyền camera để quét mã QR. Có thể nhập tay trong Cài đặt PC."), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, L10n.t("Camera permission is needed to scan the QR code.", "Cần quyền camera để quét mã QR.")
+                    + (manualHint.isEmpty() ? "" : " " + manualHint), Toast.LENGTH_LONG).show();
             setResult(RESULT_CANCELED);
             finish();
         }
@@ -416,11 +449,11 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             QrDecoder d = decoder;
             String text = d != null ? d.decodeLuma(lumaBuf, w, h) : null;
             if (text == null) return;
-            if (PcProvisioning.parse(text) != null) {
-                deliver(text);
+            if (text.trim().startsWith(acceptPrefix)) {
+                deliver(text.trim());
             } else if (now - lastNotPcdashAt > NOT_PCDASH_HINT_MS) {
                 lastNotPcdashAt = now;
-                showHint(L10n.t("This is not a PCDash setup QR code", "Mã QR này không phải mã cài đặt của PCDash"));
+                showHint(L10n.t("This is not the PCDash QR code expected here", "Đây không phải mã QR PCDash cần quét ở đây"));
             }
         } catch (IllegalStateException e) {
             // reader closed while pausing
@@ -467,7 +500,8 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             @Override
             public void run() {
                 if (isFinishing()) return;
-                Toast.makeText(QrScanActivity.this, message + L10n.t(". You can type the values in PC settings instead.", ". Có thể nhập tay trong Cài đặt PC."), Toast.LENGTH_LONG).show();
+                Toast.makeText(QrScanActivity.this, message + (manualHint.isEmpty() ? "" : ". " + manualHint),
+                        Toast.LENGTH_LONG).show();
                 setResult(RESULT_CANCELED);
                 finish();
             }

@@ -4,6 +4,8 @@ import vn.vuumi.pcdash.ui.Tap;
 import android.Manifest;
 import vn.vuumi.pcdash.lock.AppLockSettings;
 import vn.vuumi.pcdash.lock.AppLockGate;
+import vn.vuumi.pcdash.pairing.PairingQr;
+import vn.vuumi.pcdash.qr.QrScanActivity;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
@@ -70,6 +72,10 @@ public class RemoteMainActivity extends Activity {
     private static final int REQUEST_CODE_DANGEROUS_AUTH = 1002;
     private static final int REQUEST_CODE_NOTIFICATIONS = 1004;
     private static final int REQUEST_CODE_FORGET_AUTH = 1003;
+    private static final int REQUEST_CODE_SCAN_PAIRING = 1005;
+    // A scanned pairing QR code waiting for the pairing screen to be drawn again.
+    private PairingQr pendingPairingQr;
+    private String pendingDeviceName;
     private String pendingDangerousAction = null;
 
     private boolean isBusy = false;
@@ -736,6 +742,7 @@ public class RemoteMainActivity extends Activity {
                         }
                         sessionReady = true;
                         runPendingQuickAction();
+                        applyPendingPairingQr();
                     }
                 });
             }
@@ -1269,6 +1276,12 @@ public class RemoteMainActivity extends Activity {
             pendingDangerousAction = null;
             return;
         }
+        if (requestCode == REQUEST_CODE_SCAN_PAIRING) {
+            if (resultCode == RESULT_OK && data != null) {
+                onPairingQrScanned(PairingQr.parse(data.getStringExtra(QrScanActivity.EXTRA_TEXT)));
+            }
+            return;
+        }
         if (requestCode == REQUEST_CODE_FORGET_AUTH) {
             if (resultCode == RESULT_OK) {
                 lockGate.runWhenUnlocked(new Runnable() {
@@ -1529,6 +1542,16 @@ public class RemoteMainActivity extends Activity {
             }
 
             @Override
+            public void onScanQrClicked() {
+                // The screen is drawn again on return; keep a name the user typed.
+                pendingDeviceName = deviceNameInputView != null ? deviceNameInputView.getText().toString() : null;
+                startActivityForResult(QrScanActivity.intent(RemoteMainActivity.this, PairingQr.PREFIX,
+                        L10n.t("Point the camera at the QR code on the home phone", "Hướng camera vào mã QR trên máy ở nhà"),
+                        L10n.t("You can type the address and the code instead.", "Có thể nhập tay địa chỉ và mã.")),
+                        REQUEST_CODE_SCAN_PAIRING);
+            }
+
+            @Override
             public void onPairClicked() {
                 startPairing();
             }
@@ -1585,6 +1608,35 @@ public class RemoteMainActivity extends Activity {
                 }
             }
         };
+    }
+
+    // Fills in the address and the code from the home phone's QR code and pairs right away. The result
+    // arrives before onStart has drawn the pairing screen again, so it waits for that when needed.
+    private void onPairingQrScanned(PairingQr qr) {
+        if (qr == null) {
+            Toast.makeText(this, L10n.t("This QR code is not a valid PCDash pairing code", "Mã QR này không phải mã ghép đôi PCDash hợp lệ"), Toast.LENGTH_LONG).show();
+            return;
+        }
+        pendingPairingQr = qr;
+        if (sessionReady) {
+            applyPendingPairingQr();
+        }
+    }
+
+    private void applyPendingPairingQr() {
+        PairingQr qr = pendingPairingQr;
+        pendingPairingQr = null;
+        if (qr == null || controller == null || controller.isPaired()) return;
+        if (pendingDeviceName != null && deviceNameInputView != null && !pendingDeviceName.trim().isEmpty()) {
+            deviceNameInputView.setText(pendingDeviceName);
+        }
+        pendingDeviceName = null;
+        setSelectedHostIp(qr.ip);
+        if (codeInputView != null) {
+            codeInputView.setText(qr.code);
+        }
+        Tap.outcome(contentContainer, true);
+        startPairing();
     }
 
     void setSelectedHostIp(String ip) {

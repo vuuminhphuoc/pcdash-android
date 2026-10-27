@@ -5,4 +5,5 @@
     <string name="shortcut_wake_long">Bật / Đánh thức PC</string>
     <string name="shortcut_sleep_short">Cho PC ngủ</string>
     <string name="shortcut_sleep_long">Đưa PC vào chế độ Sleep</string>
+    <string name="title_qr_scan">Quét mã QR ghép đôi</string>
 </resources>

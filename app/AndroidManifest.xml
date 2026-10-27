@@ -50,7 +50,7 @@
             android:label="@string/title_pc_settings" />
 
         <activity
-            android:name=".QrScanActivity"
+            android:name="vn.vuumi.pcdash.qr.QrScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:label="@string/title_qr_scan" />

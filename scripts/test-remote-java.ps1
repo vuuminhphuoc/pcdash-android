@@ -22,6 +22,7 @@ New-Item -ItemType Directory -Path $classesDir -Force | Out-Null
 $java = Join-Path $env:JAVA_HOME 'bin\java.exe'
 $javac = $tools.javac
 $androidJar = $tools['android.jar']
+$zxingJar = & "$PSScriptRoot\download-zxing.ps1"
 $sources = @(
     if (Test-Path "$remote\src") {
         Get-ChildItem "$remote\src" -Recurse -Filter *.java | ForEach-Object { $_.FullName }
@@ -36,9 +37,15 @@ $sources = @(
 )
 
 Write-Host "Compiling Remote Java tests and classes..."
-& $javac -encoding UTF-8 -source 8 -target 8 -classpath "$classesDir;$androidJar" -d $classesDir $sources
+& $javac -encoding UTF-8 -source 8 -target 8 -classpath "$classesDir;$androidJar;$zxingJar" -d $classesDir $sources
 if ($LASTEXITCODE -ne 0) {
     throw "javac compilation failed"
+}
+
+Write-Host "Executing PairingQrTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.pairing.PairingQrTest
+if ($LASTEXITCODE -ne 0) {
+    throw "PairingQrTest failed"
 }
 
 Write-Host "Executing PairingProtocolTest..."

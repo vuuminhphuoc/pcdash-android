@@ -78,7 +78,8 @@ phone does not need the Tailscale app or a VPN turned on.
    by hand (give the PC a DHCP reservation so the IP stays put; the token is printed by the installer).
 5. **Sign in to Tailscale** on both phones inside the apps (same account).
 6. **Pair.** With both phones on the home Wi-Fi, open **Remote devices -> Add device** on the
-   host, then enter the 6-character code on the remote. After that the remote works from anywhere.
+   host, then on the remote tap **Scan the QR code on the home phone** (or type the 6-character
+   code). After that the remote works from anywhere.
 
 Detailed steps, release flow, tests and ANR guardrails are in [README.vi.md](README.vi.md).
 

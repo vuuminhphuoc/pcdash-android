@@ -23,6 +23,9 @@ public class PairingScreen extends ScrollView {
     public interface Callback {
         void onFindHostClicked();
 
+        /** Scan the pairing QR code the home phone shows (fills in the address and the code). */
+        void onScanQrClicked();
+
         void onPairClicked();
     }
 
@@ -90,6 +93,33 @@ public class PairingScreen extends ScrollView {
         rootContainer.addView(deviceNameInput);
 
         addSpacing(rootContainer, UiKit.dp(context, 14));
+
+        // Fastest way: scan the QR code the home phone shows under Remote devices > Add device.
+        Button scanBtn = new Button(context);
+        scanBtn.setText(L10n.t("📷 Scan the QR code on the home phone", "📷 Quét mã QR trên máy ở nhà"));
+        scanBtn.setAllCaps(false);
+        scanBtn.setTextSize(16);
+        scanBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        scanBtn.setTextColor(Color.WHITE);
+        scanBtn.setBackground(UiKit.withRipple(UiKit.roundedFill(context, Color.rgb(27, 102, 42), 12)));
+        scanBtn.setMinHeight(UiKit.dp(context, 54));
+        Tap.wire(scanBtn, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                callback.onScanQrClicked();
+            }
+        });
+        rootContainer.addView(scanBtn);
+
+        TextView scanNote = new TextView(context);
+        scanNote.setText(L10n.t("On the home phone: Remote devices > Add device shows the code. Or find the host / type the code below.",
+                "Trên máy ở nhà: Thiết bị điều khiển từ xa > Thêm thiết bị sẽ hiện mã. Hoặc tìm host / nhập mã ở dưới."));
+        scanNote.setTextSize(12);
+        scanNote.setTextColor(Color.rgb(139, 148, 158));
+        scanNote.setPadding(0, UiKit.dp(context, 6), 0, 0);
+        rootContainer.addView(scanNote);
+
+        addSpacing(rootContainer, UiKit.dp(context, 18));
 
         // Discovery section
         TextView discHeader = new TextView(context);

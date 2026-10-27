@@ -1,6 +1,7 @@
 package vn.vuumi.pcdash;
 
 import com.google.zxing.RGBLuminanceSource;
+import vn.vuumi.pcdash.qr.QrDecoder;
 
 import java.awt.image.BufferedImage;
 import java.io.File;

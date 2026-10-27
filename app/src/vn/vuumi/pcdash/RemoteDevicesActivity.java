@@ -1,5 +1,7 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.pairing.PairingQr;
+import vn.vuumi.pcdash.qr.QrBitmap;
 import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
@@ -12,6 +14,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -25,6 +28,7 @@ import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -54,6 +58,8 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
     private Button cancelPairingBtn;
     private LinearLayout pairingCodeCard;
     private TextView codeView;
+    private ImageView qrView;
+    private String shownQrPayload;
     private TextView countdownView;
     private LinearLayout deviceListContainer;
     private LinearLayout commandLogContainer;
@@ -207,6 +213,19 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         cardTitle.setGravity(Gravity.CENTER);
         pairingCodeCard.addView(cardTitle);
 
+        // The remote scans this instead of typing the address and the code.
+        qrView = new ImageView(this);
+        qrView.setContentDescription(L10n.t("Pairing QR code", "Mã QR ghép đôi"));
+        qrView.setBackgroundColor(Color.WHITE);
+        int qrPad = dp(8);
+        qrView.setPadding(qrPad, qrPad, qrPad, qrPad);
+        LinearLayout.LayoutParams qrLp = new LinearLayout.LayoutParams(dp(220), dp(220));
+        qrLp.gravity = Gravity.CENTER_HORIZONTAL;
+        qrLp.setMargins(0, dp(12), 0, dp(4));
+        qrView.setLayoutParams(qrLp);
+        qrView.setVisibility(View.GONE);
+        pairingCodeCard.addView(qrView);
+
         codeView = new TextView(this);
         codeView.setTextSize(34);
         codeView.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
@@ -223,7 +242,8 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         pairingCodeCard.addView(countdownView);
 
         TextView guide = new TextView(this);
-        guide.setText(L10n.t("Open PCDash Remote on the other phone (same Wi-Fi) and enter this code", "Mở APK PCDash Remote trên máy điều khiển (cùng Wi-Fi) và nhập mã trên"));
+        guide.setText(L10n.t("On the other phone (same Wi-Fi): PCDash Remote > Scan the QR code, or type this phone's IP and the code",
+                "Trên máy điều khiển (cùng Wi-Fi): PCDash Remote > Quét mã QR, hoặc nhập IP của máy này và mã trên"));
         guide.setTextSize(12);
         guide.setTextColor(Color.rgb(110, 118, 129));
         guide.setGravity(Gravity.CENTER);
@@ -378,14 +398,39 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
                 final List<RemoteDeviceStore.RemoteDevice> devs = remoteController != null
                         ? remoteController.listDevices()
                         : null;
+                final String lanIp = activeCode != null ? LanAddressPolicy.pairingAddress() : null;
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
                         applyViewStateWithTailnet(devs, tsState);
+                        showPairingQr(lanIp);
                     }
                 });
             }
         }).start();
+    }
+
+    // Draws the QR code for the open pairing code (and the IP to type, for manual pairing).
+    private void showPairingQr(String lanIp) {
+        if (qrView == null) return;
+        PairingManager.PairingCode code = activeCode;
+        if (code == null || lanIp == null) {
+            qrView.setVisibility(View.GONE);
+            shownQrPayload = null;
+            return;
+        }
+        String payload = PairingQr.build(lanIp, code.getCode());
+        if (!payload.equals(shownQrPayload)) {
+            Bitmap bmp = QrBitmap.encode(payload, dp(204));
+            if (bmp == null) {
+                qrView.setVisibility(View.GONE);
+                return;
+            }
+            qrView.setImageBitmap(bmp);
+            shownQrPayload = payload;
+        }
+        qrView.setVisibility(View.VISIBLE);
+        countdownView.setText(countdownView.getText() + "  ·  IP " + lanIp);
     }
 
     private void applyViewStateWithTailnet(List<RemoteDeviceStore.RemoteDevice> devs, PcnetState tsState) {

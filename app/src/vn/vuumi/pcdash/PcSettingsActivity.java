@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.qr.QrScanActivity;
 import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
@@ -298,7 +299,9 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         if (v == saveBtn) {
             handleSave();
         } else if (v == scanBtn) {
-            startActivityForResult(new Intent(this, QrScanActivity.class), REQ_SCAN_QR);
+            startActivityForResult(QrScanActivity.intent(this, PcProvisioning.SCHEME_PREFIX,
+                    L10n.t("Point the camera at the QR code on the PC screen", "Hướng camera vào mã QR đang hiện trên màn hình PC"),
+                    L10n.t("You can type the values in PC settings instead.", "Có thể nhập tay trong Cài đặt PC.")), REQ_SCAN_QR);
         } else if (v == copyWebTokenBtn) {
             handleCopyWebToken();
         } else if (v == regenWebTokenBtn) {

@@ -65,12 +65,15 @@ $sources = @(
         Get-ChildItem "$PSScriptRoot\shared\src" -Recurse -Filter *.java | ForEach-Object { $_.FullName }
     }
 )
-& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath $androidJar -d "$build\classes" $sources
+# ZXing decodes the pairing QR code the home phone shows (shared/src/vn/vuumi/pcdash/qr).
+$zxingJar = & "$PSScriptRoot\scripts\download-zxing.ps1"
+& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath "$androidJar;$zxingJar" -d "$build\classes" $sources
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
 
 Write-Host "3. d8..."
 $classFiles = Get-ChildItem "$build\classes" -Recurse -Filter *.class | ForEach-Object { $_.FullName }
 $argsFile = "$build\d8_args.txt"
+$classFiles += $zxingJar
 $classFiles | Set-Content -Path $argsFile -Encoding UTF8
 & $tools.d8 --release --min-api 24 --lib $androidJar --output "$build\dex" "@$argsFile"
 if ($LASTEXITCODE -ne 0) { throw "d8 failed" }

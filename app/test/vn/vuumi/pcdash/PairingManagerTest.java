@@ -186,6 +186,7 @@ public class PairingManagerTest {
         String allowed = PairingManager.CODE_ALPHABET;
         assertEquals(allowed, "ABCDEFGHJKMNPQRSTUVWXYZ23456789", "Allowed alphabet must match spec");
         assertEquals(allowed.length(), 31, "CODE_ALPHABET length must be exactly 31");
+        assertEquals(vn.vuumi.pcdash.pairing.PairingQr.CODE_ALPHABET, allowed, "The pairing QR code accepts the same alphabet");
 
         for (int i = 0; i < 50; i++) {
             PairingManager.PairingCode code = manager.begin();

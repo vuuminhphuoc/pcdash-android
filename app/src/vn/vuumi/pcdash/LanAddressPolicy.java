@@ -2,8 +2,32 @@ package vn.vuumi.pcdash;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.Locale;
 
 public class LanAddressPolicy {
+
+    /**
+     * This phone's address on the home LAN, for the pairing QR code: the first private IPv4 of an
+     * interface that is up, Wi-Fi first; null when the phone is not on a LAN. Not on the UI thread.
+     */
+    public static String pairingAddress() {
+        String fallback = null;
+        try {
+            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                String name = ni.getName() != null ? ni.getName().toLowerCase(Locale.ROOT) : "";
+                if (name.startsWith("tun")) continue;
+                for (InetAddress a : Collections.list(ni.getInetAddresses())) {
+                    if (!isAllowedPairingPeer(a)) continue;
+                    if (name.startsWith("wlan")) return a.getHostAddress();
+                    if (fallback == null) fallback = a.getHostAddress();
+                }
+            }
+        } catch (Exception ignored) {}
+        return fallback;
+    }
 
     public static boolean isAllowedPairingPeer(InetAddress address) {
         if (address == null) return false;

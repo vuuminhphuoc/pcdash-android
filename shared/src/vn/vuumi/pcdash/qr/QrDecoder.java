@@ -1,4 +1,4 @@
-package vn.vuumi.pcdash;
+package vn.vuumi.pcdash.qr;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
