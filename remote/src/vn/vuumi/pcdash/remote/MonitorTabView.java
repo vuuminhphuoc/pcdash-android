@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -176,7 +177,7 @@ public class MonitorTabView implements TabContent {
 
         updateChartIntervalButtons();
 
-        btnChart1h.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(btnChart1h, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (chartMinutes != 60) {
@@ -187,7 +188,7 @@ public class MonitorTabView implements TabContent {
             }
         });
 
-        btnChart6h.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(btnChart6h, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (chartMinutes != 360) {
@@ -270,24 +271,16 @@ public class MonitorTabView implements TabContent {
     }
 
     private void updateChartIntervalButtons() {
-        if (btnChart1h != null) {
-            if (chartMinutes == 60) {
-                btnChart1h.setBackgroundColor(Color.rgb(26, 84, 176));
-                btnChart1h.setTextColor(Color.WHITE);
-            } else {
-                btnChart1h.setBackgroundColor(Color.rgb(33, 38, 45));
-                btnChart1h.setTextColor(Color.rgb(139, 148, 158));
-            }
-        }
-        if (btnChart6h != null) {
-            if (chartMinutes == 360) {
-                btnChart6h.setBackgroundColor(Color.rgb(26, 84, 176));
-                btnChart6h.setTextColor(Color.WHITE);
-            } else {
-                btnChart6h.setBackgroundColor(Color.rgb(33, 38, 45));
-                btnChart6h.setTextColor(Color.rgb(139, 148, 158));
-            }
-        }
+        styleIntervalButton(btnChart1h, chartMinutes == 60);
+        styleIntervalButton(btnChart6h, chartMinutes == 360);
+    }
+
+    // A plain color background would drop the press ripple each time the selection changes.
+    private static void styleIntervalButton(Button b, boolean selected) {
+        if (b == null) return;
+        int fill = selected ? Color.rgb(26, 84, 176) : Color.rgb(33, 38, 45);
+        b.setBackground(UiKit.withRipple(UiKit.roundedFill(b.getContext(), fill, 8)));
+        b.setTextColor(selected ? Color.WHITE : Color.rgb(139, 148, 158));
     }
 
     public void updateMetrics(MetricsSnapshot snapshot, boolean isOld) {

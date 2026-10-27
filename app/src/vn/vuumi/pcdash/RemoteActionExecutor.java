@@ -20,6 +20,7 @@ public interface RemoteActionExecutor {
 
     String[] FAILURE_PREFIXES = {
             "error", "wol error", "agent refused", "the pc agent has no token", "cannot reach the pc agent",
+            "agent[4", "agent[5", // the agent answered with an HTTP error
             "lỗi", "agent từ chối", "agent pc chưa", "không kết nối được" // l10n-ok: matches both languages
     };
 }

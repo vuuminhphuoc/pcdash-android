@@ -9,8 +9,9 @@ import java.security.SecureRandom;
  * {@link CodeHasher} keeps (Android Keystore in the apps), so a copied settings file cannot be
  * brute-forced off the phone. On the phone, 5 wrong codes start a lockout that doubles each time.
  *
- * The lock closes when the process starts and when the app comes back after {@link #RELOCK_AFTER_MS}
- * in the background (no activity of the app started). Not Android-specific, so it is tested on the JVM.
+ * The lock closes when the process starts, and then by the user's choice: when the app comes back after
+ * some time with none of its activities started (immediately, 30 s, 1 or 5 min), or only when the phone's
+ * screen turns off. Not Android-specific, so it is tested on the JVM.
  */
 public final class AppLock {
 
@@ -29,7 +30,12 @@ public final class AppLock {
     }
 
     public static final int CODE_LENGTH = 6;
+    /** Default time away before the lock closes again. */
     public static final long RELOCK_AFTER_MS = 30_000L;
+    /** Relock choice: only when the phone's screen turns off, however long the app was away. */
+    public static final long RELOCK_ON_SCREEN_OFF = -1L;
+    /** The relock choices offered in settings, in order. */
+    public static final long[] RELOCK_CHOICES = {0L, RELOCK_AFTER_MS, 60_000L, 300_000L, RELOCK_ON_SCREEN_OFF};
     public static final int FREE_ATTEMPTS = 5;
     public static final long FIRST_LOCKOUT_MS = 30_000L;
     // 30 s doubling to 16 min: 5 tries per lockout make guessing 1 of 10^6 codes take years.
@@ -41,6 +47,7 @@ public final class AppLock {
     static final String KEY_BIOMETRIC = "biometric";
     static final String KEY_FAILURES = "failures";
     static final String KEY_LOCKED_UNTIL = "lockedUntil";
+    static final String KEY_RELOCK = "relock";
 
     /** Outcome of {@link #check}. */
     public static final class Result {
@@ -118,7 +125,7 @@ public final class AppLock {
         store.put(KEY_ENABLED, "1");
         store.remove(KEY_FAILURES);
         store.remove(KEY_LOCKED_UNTIL);
-        unlocked = true;
+        unlock();
     }
 
     public synchronized void disable() {
@@ -128,7 +135,8 @@ public final class AppLock {
         store.remove(KEY_BIOMETRIC);
         store.remove(KEY_FAILURES);
         store.remove(KEY_LOCKED_UNTIL);
-        unlocked = true;
+        store.remove(KEY_RELOCK);
+        unlock();
     }
 
     /** Checks a typed code; a correct one unlocks the app. */
@@ -140,7 +148,7 @@ public final class AppLock {
         if (matches(code)) {
             store.remove(KEY_FAILURES);
             store.remove(KEY_LOCKED_UNTIL);
-            unlocked = true;
+            unlock();
             return new Result(Result.OK, FREE_ATTEMPTS, 0L);
         }
         int failures = parseInt(store.get(KEY_FAILURES)) + 1;
@@ -158,7 +166,37 @@ public final class AppLock {
     public synchronized void unlockWithBiometric() {
         store.remove(KEY_FAILURES);
         store.remove(KEY_LOCKED_UNTIL);
+        unlock();
+    }
+
+    // An unlock while no activity is started (a fingerprint prompt shown as its own activity) must not
+    // count as time away when the app's activity comes back.
+    private void unlock() {
         unlocked = true;
+        backgroundSinceMs = -1L;
+    }
+
+    /** One of {@link #RELOCK_CHOICES}: time away in ms, or {@link #RELOCK_ON_SCREEN_OFF}. */
+    public synchronized long relockAfterMs() {
+        String v = store.get(KEY_RELOCK);
+        if (v == null) return RELOCK_AFTER_MS;
+        try {
+            long ms = Long.parseLong(v);
+            for (long choice : RELOCK_CHOICES) {
+                if (choice == ms) return ms;
+            }
+        } catch (NumberFormatException ignored) {}
+        return RELOCK_AFTER_MS;
+    }
+
+    public synchronized void setRelockAfterMs(long ms) {
+        for (long choice : RELOCK_CHOICES) {
+            if (choice == ms) {
+                store.put(KEY_RELOCK, String.valueOf(ms));
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Not a relock choice: " + ms);
     }
 
     /** When the next code may be tried; 0 when not locked out. */
@@ -173,19 +211,36 @@ public final class AppLock {
         return until > nowMs ? until : 0L;
     }
 
-    /** An activity of the app became visible. Locks again after a long enough time away. */
+    /**
+     * An activity of the app became visible. Locks again after a long enough time away.
+     *
+     * @param nowMs a clock that never goes back (elapsed time since boot on the phone)
+     */
     public synchronized void onActivityStarted(long nowMs) {
-        if (startedActivities == 0 && backgroundSinceMs >= 0 && nowMs - backgroundSinceMs >= RELOCK_AFTER_MS) {
+        long after = relockAfterMs();
+        if (startedActivities == 0 && backgroundSinceMs >= 0 && after != RELOCK_ON_SCREEN_OFF
+                && nowMs - backgroundSinceMs >= after) {
             unlocked = false;
         }
         startedActivities++;
     }
 
-    public synchronized void onActivityStopped(long nowMs) {
+    /**
+     * @param changingConfigurations the activity stops only to be recreated at once (rotation, dark
+     *                               mode): not time away, even with the "immediately" choice
+     */
+    public synchronized void onActivityStopped(long nowMs, boolean changingConfigurations) {
         startedActivities = Math.max(0, startedActivities - 1);
         if (startedActivities == 0) {
-            backgroundSinceMs = nowMs;
+            backgroundSinceMs = changingConfigurations ? -1L : nowMs;
         }
+    }
+
+    /** The phone's screen turned off. Returns true when that closed the lock. */
+    public synchronized boolean onScreenOff() {
+        if (!isEnabled() || !unlocked || relockAfterMs() != RELOCK_ON_SCREEN_OFF) return false;
+        unlocked = false;
+        return true;
     }
 
     private boolean matches(String code) {

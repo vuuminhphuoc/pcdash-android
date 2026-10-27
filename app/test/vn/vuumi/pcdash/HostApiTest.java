@@ -186,6 +186,7 @@ public class HostApiTest {
             assertTrue(RemoteActionExecutor.isFailure("Agent từ chối: sai mã token"), "Vietnamese agent refusal is a failure");
             assertTrue(RemoteActionExecutor.isFailure("Cannot reach the PC agent: timeout"), "Unreachable agent is a failure");
             assertTrue(!RemoteActionExecutor.isFailure("Agent[200]: {\"ok\":true}"), "Agent success is not a failure");
+            assertTrue(RemoteActionExecutor.isFailure("Agent[400]: unknown action"), "Agent HTTP error is a failure");
         } finally {
             server.close();
             temp.delete();

@@ -1,33 +1,80 @@
 package vn.vuumi.pcdash.lock;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 
-/** The process-wide {@link AppLock}: settings in SharedPreferences, the HMAC key in Android Keystore. */
+/**
+ * The process-wide {@link AppLock}: settings in SharedPreferences, the HMAC key in Android Keystore.
+ * Also tells the lock when the screen turns off (for the "when the screen turns off" choice); a
+ * screen-off broadcast can only be received by a receiver registered at run time, so this lasts as
+ * long as the process. A new process starts locked anyway.
+ */
 public final class AndroidAppLock {
     private static final String PREFS = "pcdash_app_lock";
     private static final String KEY_ALIAS = "pcdash-app-lock";
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
 
     private static AppLock instance;
+    // Main thread only: gates of started activities, told when the screen-off closed the lock.
+    private static final List<Runnable> lockListeners = new ArrayList<Runnable>();
 
     private AndroidAppLock() {}
 
     public static synchronized AppLock get(Context context) {
         if (instance == null) {
-            SharedPreferences prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            Context app = context.getApplicationContext();
+            SharedPreferences prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
             instance = new AppLock(new PrefsStore(prefs), new KeystoreHasher(), new SecureRandom());
+            watchScreenOff(app);
         }
         return instance;
+    }
+
+    /** Runs on the main thread when the screen turning off closes the lock. */
+    static void addLockListener(Runnable listener) {
+        if (!lockListeners.contains(listener)) {
+            lockListeners.add(listener);
+        }
+    }
+
+    static void removeLockListener(Runnable listener) {
+        lockListeners.remove(listener);
+    }
+
+    private static void watchScreenOff(Context app) {
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                AppLock lock = instance;
+                if (lock != null && lock.onScreenOff()) {
+                    for (Runnable l : new ArrayList<Runnable>(lockListeners)) {
+                        l.run();
+                    }
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        // SCREEN_OFF comes from the system, which reaches a not-exported receiver too.
+        if (Build.VERSION.SDK_INT >= 33) {
+            app.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            app.registerReceiver(receiver, filter);
+        }
     }
 
     private static final class PrefsStore implements AppLock.Store {

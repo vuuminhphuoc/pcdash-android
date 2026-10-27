@@ -7,10 +7,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
-import android.view.Gravity;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /** Small helpers shared by the tab views so cards and buttons look the same everywhere. */
@@ -21,6 +18,10 @@ final class UiKit {
     static final int BORDER = Color.rgb(36, 42, 50);
     static final int TEXT = Color.rgb(230, 237, 243);
     static final int MUTED = Color.rgb(139, 148, 158);
+    static final int ACCENT = Color.rgb(88, 166, 255);
+    static final int OK = Color.rgb(63, 185, 80);
+    static final int WARN = Color.rgb(210, 153, 34);
+    static final int ERROR = Color.rgb(248, 81, 73);
 
     private UiKit() {}
 
@@ -50,42 +51,6 @@ final class UiKit {
     static void styleCard(View card) {
         Context ctx = card.getContext();
         card.setBackground(roundedOutline(ctx, CARD, BORDER, 12));
-    }
-
-    /** Icon + label tile used for the power actions. */
-    static LinearLayout actionTile(Context ctx, IconDrawable.Type icon, String label,
-                                   int fill, int stroke, int contentColor, int heightDp,
-                                   View.OnClickListener listener) {
-        LinearLayout tile = new LinearLayout(ctx);
-        tile.setOrientation(LinearLayout.HORIZONTAL);
-        tile.setGravity(Gravity.CENTER);
-        tile.setClickable(true);
-        tile.setFocusable(true);
-        Drawable bg = stroke != 0
-                ? roundedOutline(ctx, fill, stroke, 12)
-                : roundedFill(ctx, fill, 12);
-        tile.setBackground(withRipple(bg));
-        tile.setMinimumHeight(dp(ctx, heightDp));
-        int padH = dp(ctx, 12);
-        tile.setPadding(padH, dp(ctx, 8), padH, dp(ctx, 8));
-
-        ImageView iv = new ImageView(ctx);
-        iv.setImageDrawable(new IconDrawable(icon, contentColor));
-        LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dp(ctx, 22), dp(ctx, 22));
-        ivLp.rightMargin = dp(ctx, 10);
-        iv.setLayoutParams(ivLp);
-        tile.addView(iv);
-
-        TextView tv = new TextView(ctx);
-        tv.setText(label);
-        tv.setTextColor(contentColor);
-        tv.setTextSize(15);
-        tv.setTypeface(Typeface.DEFAULT_BOLD);
-        tile.addView(tv);
-
-        tile.setContentDescription(label);
-        tile.setOnClickListener(listener);
-        return tile;
     }
 
     static TextView sectionLabel(Context ctx, String text) {

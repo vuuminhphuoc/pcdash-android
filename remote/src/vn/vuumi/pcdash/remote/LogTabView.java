@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -61,7 +62,7 @@ public class LogTabView implements TabContent {
         refreshBtn.setTextColor(Color.rgb(88, 166, 255));
         refreshBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         refreshBtn.setTextSize(13);
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(refreshBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 loadLogs();

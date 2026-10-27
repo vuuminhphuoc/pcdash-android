@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -84,7 +85,7 @@ public class QuotaTabView implements TabContent {
         refreshBtn.setTextColor(Color.rgb(88, 166, 255));
         refreshBtn.setBackground(UiKit.withRipple(UiKit.roundedFill(context, Color.rgb(33, 38, 45), 10)));
         refreshBtn.setTextSize(13);
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(refreshBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 uiHandler.removeCallbacks(pollTask);
@@ -424,7 +425,7 @@ public class QuotaTabView implements TabContent {
             detailsContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
             indicatorView.setText(expanded ? L10n.t("Less ▲", "Thu gọn ▲") : L10n.t("Details ▼", "Chi tiết ▼"));
 
-            cardLayout.setOnClickListener(new View.OnClickListener() {
+            Tap.wire(cardLayout, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     boolean wasExpanded = detailsContainer.getVisibility() == View.VISIBLE;

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import android.Manifest;
 import vn.vuumi.pcdash.lock.AppLockSettings;
 import vn.vuumi.pcdash.lock.AppLockGate;
@@ -22,6 +23,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.os.StrictMode;
 import android.view.View;
 import android.widget.Button;
@@ -69,9 +71,11 @@ public class RemoteMainActivity extends Activity {
     private static final int REQUEST_CODE_NOTIFICATIONS = 1004;
     private static final int REQUEST_CODE_FORGET_AUTH = 1003;
     private String pendingDangerousAction = null;
-    private String pendingDangerousToast = null;
 
     private boolean isBusy = false;
+    // A power command the home phone accepted, until the PC is seen in the new state (or we give up).
+    private PowerActionWatch actionWatch;
+    private int actionSeq;
     private boolean isPolling = false;
     private volatile boolean isStopped = false;
     private volatile boolean isDestroyed = false;
@@ -263,8 +267,10 @@ public class RemoteMainActivity extends Activity {
         if (controlTabView != null) {
             controlTabView.updateStatus(status, error);
         }
+        followActionWatch(status);
         if (!isStopped && !isDestroyed && isPolling && navigator != null && navigator.current() == MainTab.CONTROL && statusGeneration.isValid(generation)) {
-            ui.postDelayed(pollStatusTask, 5000);
+            // Look more often while a command is changing the PC's state.
+            ui.postDelayed(pollStatusTask, actionWatch != null ? 2500 : 5000);
         }
     }
 
@@ -655,9 +661,7 @@ public class RemoteMainActivity extends Activity {
         if (navigator != null) {
             navigator.select(MainTab.CONTROL);
         }
-        handleActionClick(action, "wake".equals(action)
-                ? L10n.t("Sending the wake signal...", "Đang gửi tín hiệu bật PC...")
-                : L10n.t("Putting the PC to sleep...", "Đang đưa PC vào chế độ Sleep..."));
+        handleActionClick(action);
     }
 
     @Override
@@ -691,6 +695,7 @@ public class RemoteMainActivity extends Activity {
             actionFuture.cancel(true);
             actionFuture = null;
         }
+        dropActionInFlight();
         if (discoveryFuture != null) {
             discoveryFuture.cancel(true);
             discoveryFuture = null;
@@ -750,8 +755,8 @@ public class RemoteMainActivity extends Activity {
         if (controlTabView == null) {
             controlTabView = new ControlTabView(this, new ControlTabView.Callback() {
                 @Override
-                public void onActionClicked(String action, String toastMsg) {
-                    handleActionClick(action, toastMsg);
+                public void onActionClicked(String action) {
+                    handleActionClick(action);
                 }
 
                 @Override
@@ -1062,7 +1067,12 @@ public class RemoteMainActivity extends Activity {
         });
     }
 
-    private void handleActionClick(final String action, final String toastMsg) {
+    private void handleActionClick(final String action) {
+        if (isBusy) {
+            // A tap while the last command is still on its way: say so instead of doing nothing.
+            Toast.makeText(this, L10n.t("Still sending the last command...", "Đang gửi lệnh trước, đợi một chút..."), Toast.LENGTH_SHORT).show();
+            return;
+        }
         KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         boolean isDeviceSecure = km != null && km.isDeviceSecure();
         boolean requireAuthSetting = controller != null ? controller.isRequireDangerousAuth() : true;
@@ -1070,7 +1080,6 @@ public class RemoteMainActivity extends Activity {
         ActionGuard.AuthRequirement req = ActionGuard.checkAuthRequirement(action, requireAuthSetting, isDeviceSecure);
         if (req == ActionGuard.AuthRequirement.DEVICE_CREDENTIAL) {
             pendingDangerousAction = action;
-            pendingDangerousToast = toastMsg;
             Intent intent = km.createConfirmDeviceCredentialIntent(
                     "shutdown".equals(action) ? L10n.t("Confirm PC shutdown", "Xác nhận tắt máy PC") : L10n.t("Confirm PC hibernate", "Xác nhận ngủ đông PC"),
                     L10n.t("Unlock with your PIN or fingerprint to continue", "Vui lòng xác thực mã PIN/vân tay của thiết bị trước khi thực hiện thao tác này"));
@@ -1078,15 +1087,15 @@ public class RemoteMainActivity extends Activity {
                 startActivityForResult(intent, REQUEST_CODE_DANGEROUS_AUTH);
                 return;
             }
-            confirmActionDialog(action, toastMsg);
+            confirmActionDialog(action);
         } else if (req == ActionGuard.AuthRequirement.CONFIRM_DIALOG) {
-            confirmActionDialog(action, toastMsg);
+            confirmActionDialog(action);
         } else {
-            executeAction(action, toastMsg);
+            executeAction(action);
         }
     }
 
-    private void confirmActionDialog(final String action, final String toastMsg) {
+    private void confirmActionDialog(final String action) {
         String title = "shutdown".equals(action) ? L10n.t("Confirm shutdown", "Xác nhận tắt máy") : L10n.t("Confirm hibernate", "Xác nhận ngủ đông");
         String msg = "shutdown".equals(action)
                 ? L10n.t("Shut down the PC now?", "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?")
@@ -1097,7 +1106,7 @@ public class RemoteMainActivity extends Activity {
                 .setPositiveButton(L10n.t("Continue", "Thực hiện"), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        executeAction(action, toastMsg);
+                        executeAction(action);
                     }
                 })
                 .setNegativeButton(L10n.t("Cancel", "Hủy"), new DialogInterface.OnClickListener() {
@@ -1116,17 +1125,29 @@ public class RemoteMainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_DANGEROUS_AUTH) {
             if (resultCode == RESULT_OK && pendingDangerousAction != null) {
-                confirmActionDialog(pendingDangerousAction, pendingDangerousToast);
+                final String action = pendingDangerousAction;
+                // The PIN screen may have been long enough away for the app lock to close; the
+                // confirmation must not open on top of the lock screen.
+                lockGate.runWhenUnlocked(new Runnable() {
+                    @Override
+                    public void run() {
+                        confirmActionDialog(action);
+                    }
+                });
             } else {
                 Toast.makeText(this, L10n.t("Authentication failed", "Xác thực không thành công"), Toast.LENGTH_SHORT).show();
             }
             pendingDangerousAction = null;
-            pendingDangerousToast = null;
             return;
         }
         if (requestCode == REQUEST_CODE_FORGET_AUTH) {
             if (resultCode == RESULT_OK) {
-                confirmForgetHost();
+                lockGate.runWhenUnlocked(new Runnable() {
+                    @Override
+                    public void run() {
+                        confirmForgetHost();
+                    }
+                });
             } else {
                 Toast.makeText(this, L10n.t("Authentication failed", "Xác thực không thành công"), Toast.LENGTH_SHORT).show();
             }
@@ -1172,6 +1193,8 @@ public class RemoteMainActivity extends Activity {
                             actionFuture.cancel(true);
                             actionFuture = null;
                         }
+                        dropActionInFlight();
+                        actionWatch = null;
                         if (discoveryFuture != null) {
                             discoveryFuture.cancel(true);
                             discoveryFuture = null;
@@ -1215,22 +1238,94 @@ public class RemoteMainActivity extends Activity {
         forget.show();
     }
 
-    private void executeAction(final String action, final String toastMsg) {
+    private void executeAction(final String action) {
         if (isBusy || isStopped || isDestroyed) return;
         isBusy = true;
-        if (toastMsg != null) {
-            Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show();
+        actionWatch = null;
+        if (controlTabView != null) {
+            controlTabView.showSending(action);
         }
-        actionFuture = executor.submit(new ActionWorker(this, action));
+        actionFuture = executor.submit(new ActionWorker(this, action, ++actionSeq));
+    }
+
+    // The worker was cancelled (app left the screen, host forgotten): nothing will report back, so the
+    // buttons must not stay blocked.
+    private void dropActionInFlight() {
+        if (!isBusy) return;
+        isBusy = false;
+        actionSeq++;
+        if (controlTabView != null) {
+            controlTabView.resetActions();
+        }
+    }
+
+    /** The home phone answered the command (or could not be reached). */
+    private void onActionResult(int seq, String action, boolean ok, String error) {
+        if (seq != actionSeq) return; // dropped, or a newer command was sent since
+        isBusy = false;
+        if (controlTabView == null) return;
+        if (!ok) {
+            controlTabView.showOutcome(action, false, L10n.t("Failed", "Lỗi"),
+                    L10n.t("Could not send the command: ", "Không gửi được lệnh: ")
+                            + (error != null && !error.isEmpty() ? error : L10n.t("unknown error", "lỗi không rõ")),
+                    UiKit.ERROR);
+            return;
+        }
+        actionWatch = PowerActionWatch.start(action, SystemClock.elapsedRealtime());
+        if (actionWatch == null) {
+            controlTabView.showOutcome(action, true, L10n.t("Done", "Xong"), null, 0);
+        } else {
+            controlTabView.showWaiting(action, waitingLine(action));
+        }
+        ui.removeCallbacks(pollStatusTask);
+        ui.postDelayed(pollStatusTask, 1500);
+    }
+
+    // Called with every status while a command waits for the PC to change state.
+    private void followActionWatch(RemoteApiClient.RemoteStatus status) {
+        if (actionWatch == null || controlTabView == null) return;
+        Boolean pcOnline = status != null ? Boolean.valueOf(status.online) : null;
+        PowerActionWatch.Progress p = actionWatch.check(pcOnline, SystemClock.elapsedRealtime());
+        if (p == PowerActionWatch.Progress.WAITING) return;
+        String action = actionWatch.action;
+        boolean wake = actionWatch.expectOnline;
+        actionWatch = null;
+        if (p == PowerActionWatch.Progress.REACHED) {
+            controlTabView.showOutcome(action, true,
+                    wake ? L10n.t("PC is on", "PC đã bật") : L10n.t("Done", "Xong"),
+                    wake ? L10n.t("The PC is on.", "PC đã bật.")
+                            : "sleep".equals(action) ? L10n.t("The PC is asleep.", "PC đã ngủ.")
+                            : L10n.t("The PC is off.", "PC đã tắt."),
+                    UiKit.OK);
+        } else {
+            controlTabView.showOutcome(action, false, L10n.t("No change", "Chưa thấy đổi"),
+                    wake ? L10n.t("Sent, but the PC is still not on after 2 minutes. Check Wake-on-LAN and the PC's power.",
+                                    "Đã gửi lệnh nhưng sau 2 phút PC vẫn chưa bật. Kiểm tra Wake-on-LAN và nguồn điện PC.")
+                            : L10n.t("Sent, but the PC still answers after 90 seconds.",
+                                    "Đã gửi lệnh nhưng sau 90 giây PC vẫn đang chạy."),
+                    UiKit.WARN);
+        }
+    }
+
+    private static String waitingLine(String action) {
+        if ("wake".equals(action)) {
+            return L10n.t("Wake sent. Waiting for the PC to start...", "Đã gửi lệnh bật. Đang chờ PC khởi động...");
+        }
+        if ("sleep".equals(action)) {
+            return L10n.t("Sleep sent. Waiting for the PC to go to sleep...", "Đã gửi lệnh Sleep. Đang chờ PC ngủ...");
+        }
+        return L10n.t("Command sent. Waiting for the PC to turn off...", "Đã gửi lệnh. Đang chờ PC tắt...");
     }
 
     private static class ActionWorker implements Runnable {
         private final WeakReference<RemoteMainActivity> activityRef;
         private final String action;
+        private final int seq;
 
-        ActionWorker(RemoteMainActivity activity, String action) {
+        ActionWorker(RemoteMainActivity activity, String action, int seq) {
             this.activityRef = new WeakReference<RemoteMainActivity>(activity);
             this.action = action;
+            this.seq = seq;
         }
 
         @Override
@@ -1251,10 +1346,7 @@ public class RemoteMainActivity extends Activity {
                     public void run() {
                         RemoteMainActivity a = activityRef.get();
                         if (a == null || a.isStopped || a.isDestroyed) return;
-                        a.isBusy = false;
-                        String msg = res.ok ? L10n.t("Done: ", "Thành công: ") + action : L10n.t("Error: ", "Lỗi: ") + res.detail;
-                        Toast.makeText(a, msg, Toast.LENGTH_SHORT).show();
-                        a.ui.postDelayed(a.pollStatusTask, 1500);
+                        a.onActionResult(seq, action, res.ok, res.detail);
                     }
                 });
             } catch (final RemoteApiClient.DeviceRevokedException e) {
@@ -1265,7 +1357,7 @@ public class RemoteMainActivity extends Activity {
                     public void run() {
                         RemoteMainActivity a = activityRef.get();
                         if (a == null || a.isStopped || a.isDestroyed) return;
-                        a.isBusy = false;
+                        a.dropActionInFlight();
                         a.handleDeviceRevoked();
                     }
                 });
@@ -1278,8 +1370,7 @@ public class RemoteMainActivity extends Activity {
                     public void run() {
                         RemoteMainActivity a = activityRef.get();
                         if (a == null || a.isStopped || a.isDestroyed) return;
-                        a.isBusy = false;
-                        Toast.makeText(a, L10n.t("Could not send the command: ", "Lỗi gửi lệnh: ") + e.getMessage(), Toast.LENGTH_LONG).show();
+                        a.onActionResult(seq, action, false, e.getMessage());
                     }
                 });
             }
@@ -1426,7 +1517,7 @@ public class RemoteMainActivity extends Activity {
                             hostBtn.setText(L10n.t("Use host: ", "Chọn host: ") + ipStr);
                             hostBtn.setTextColor(Color.rgb(230, 237, 243));
                             hostBtn.setBackgroundColor(Color.rgb(46, 160, 67));
-                            hostBtn.setOnClickListener(new View.OnClickListener() {
+                            Tap.wire(hostBtn, new View.OnClickListener() {
                                 @Override
                                 public void onClick(View v) {
                                     RemoteMainActivity act = activityRef.get();
@@ -1446,7 +1537,11 @@ public class RemoteMainActivity extends Activity {
     }
 
     private void startPairing() {
-        if (isBusy || isStopped || isDestroyed) return;
+        if (isStopped || isDestroyed) return;
+        if (isBusy) {
+            Toast.makeText(this, L10n.t("Already connecting to the host...", "Đang kết nối với host, đợi một chút..."), Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         if (loginPanel != null && !loginPanel.isTailscaleReady()) {
             Toast.makeText(this, L10n.t("Sign in to Tailscale in step 1 before pairing", "Vui lòng đăng nhập Tailscale ở Bước 1 trước khi ghép đôi"), Toast.LENGTH_LONG).show();

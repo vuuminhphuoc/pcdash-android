@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Dialog;
 import android.content.Context;
@@ -135,7 +136,7 @@ public class MoreSheet {
         reloginBtn.setTextColor(Color.rgb(88, 166, 255));
         reloginBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         reloginBtn.setTextSize(13);
-        reloginBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(reloginBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog.dismiss();
@@ -173,7 +174,7 @@ public class MoreSheet {
         diagContainer.addView(diagView);
         content.addView(diagContainer);
 
-        diagBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(diagBtn, new View.OnClickListener() {
             private boolean isOpen = false;
             @Override
             public void onClick(View v) {
@@ -207,7 +208,7 @@ public class MoreSheet {
         checkUpdateBtn.setTextColor(Color.rgb(88, 166, 255));
         checkUpdateBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         checkUpdateBtn.setTextSize(13);
-        checkUpdateBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(checkUpdateBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog.dismiss();
@@ -225,7 +226,7 @@ public class MoreSheet {
         appLockBtn.setTextColor(Color.rgb(230, 237, 243));
         appLockBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         appLockBtn.setTextSize(13);
-        appLockBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(appLockBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog.dismiss();
@@ -246,7 +247,7 @@ public class MoreSheet {
         forgetBtn.setTextColor(Color.rgb(248, 81, 73));
         forgetBtn.setBackgroundColor(Color.TRANSPARENT);
         forgetBtn.setTextSize(14);
-        forgetBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(forgetBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog.dismiss();
@@ -272,7 +273,7 @@ public class MoreSheet {
         closeBtn.setTextColor(Color.rgb(201, 209, 217));
         closeBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         closeBtn.setTextSize(13);
-        closeBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(closeBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dialog.dismiss();

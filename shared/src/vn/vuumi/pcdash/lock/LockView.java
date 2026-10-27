@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import vn.vuumi.pcdash.i18n.L10n;
+import vn.vuumi.pcdash.ui.Tap;
 
 /** Full-screen 6-digit keypad, used for unlocking and for setting or checking the passcode. */
 public final class LockView extends LinearLayout {
@@ -117,7 +118,7 @@ public final class LockView extends LinearLayout {
         biometricButton.setText(L10n.t("Use fingerprint / face", "Dùng vân tay / khuôn mặt"));
         biometricButton.setPadding(dp(16), dp(18), dp(16), dp(12));
         biometricButton.setVisibility(GONE);
-        biometricButton.setOnClickListener(new OnClickListener() {
+        Tap.wire(biometricButton, new OnClickListener() {
             @Override
             public void onClick(View v) {
                 LockView.this.listener.onBiometric();
@@ -226,7 +227,8 @@ public final class LockView extends LinearLayout {
         bg.setColor(KEY_FILL);
         bg.setStroke(dp(1), KEY_BORDER);
         key.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.argb(70, 255, 255, 255)), bg, null));
-        key.setClickable(true);
+        // Press feel only: digits are typed fast and often repeat, so no repeat-tap guard here.
+        Tap.feel(key);
         key.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {

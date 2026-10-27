@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -106,7 +107,7 @@ public class PairingScreen extends ScrollView {
         searchBtn.setText(L10n.t("🔍 Find the host on this Wi-Fi", "🔍 Tìm host tự động trên Wi-Fi"));
         searchBtn.setTextColor(Color.rgb(230, 237, 243));
         searchBtn.setBackgroundColor(Color.rgb(33, 38, 45));
-        searchBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(searchBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 callback.onFindHostClicked();
@@ -190,7 +191,7 @@ public class PairingScreen extends ScrollView {
         int padH = UiKit.dp(context, 16);
         int padV = UiKit.dp(context, 14);
         pairBtn.setPadding(padH, padV, padH, padV);
-        pairBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(pairBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 callback.onPairClicked();

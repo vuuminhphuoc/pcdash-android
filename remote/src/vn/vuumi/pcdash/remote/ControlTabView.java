@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -10,12 +11,14 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class ControlTabView implements TabContent {
 
     public interface Callback {
-        void onActionClicked(String action, String toastMsg);
+        void onActionClicked(String action);
         void onStartUpdate();
         void onCancelUpdate();
     }
@@ -23,6 +26,15 @@ public class ControlTabView implements TabContent {
     private final ScrollView scrollView;
     private final TextView pcStatusView;
     private final TextView pcDetailView;
+    // What the last power command is doing (sending, waiting for the PC, how it went).
+    private final TextView actionLineView;
+    private final Map<String, ActionTile> tiles = new LinkedHashMap<String, ActionTile>();
+    private final Runnable hideActionLine = new Runnable() {
+        @Override
+        public void run() {
+            actionLineView.setVisibility(View.GONE);
+        }
+    };
 
     private final LinearLayout updateCardContainer;
     private final TextView updateTitleView;
@@ -60,6 +72,13 @@ public class ControlTabView implements TabContent {
         pcDetailView.setTextSize(12);
         pcDetailView.setTextColor(Color.rgb(139, 148, 158));
         statusCard.addView(pcDetailView);
+
+        actionLineView = new TextView(context);
+        actionLineView.setTextSize(13);
+        actionLineView.setPadding(0, dpToPx(context, 8), 0, 0);
+        actionLineView.setVisibility(View.GONE);
+        actionLineView.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        statusCard.addView(actionLineView);
 
         container.addView(statusCard);
         addSpacing(container, dpToPx(context, 18));
@@ -103,7 +122,7 @@ public class ControlTabView implements TabContent {
         updateBtn.setText(L10n.t("Update", "Cập nhật"));
         updateBtn.setTextColor(Color.WHITE);
         updateBtn.setBackgroundColor(Color.rgb(27, 102, 42));
-        updateBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(updateBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null) callback.onStartUpdate();
@@ -115,7 +134,7 @@ public class ControlTabView implements TabContent {
         cancelUpdateBtn.setText(L10n.t("Cancel", "Hủy"));
         cancelUpdateBtn.setTextColor(Color.WHITE);
         cancelUpdateBtn.setBackgroundColor(Color.rgb(110, 118, 129));
-        cancelUpdateBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(cancelUpdateBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null) callback.onCancelUpdate();
@@ -127,7 +146,7 @@ public class ControlTabView implements TabContent {
         retryUpdateBtn.setText(L10n.t("Retry", "Thử lại"));
         retryUpdateBtn.setTextColor(Color.WHITE);
         retryUpdateBtn.setBackgroundColor(Color.rgb(26, 84, 176));
-        retryUpdateBtn.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(retryUpdateBtn, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null) callback.onStartUpdate();
@@ -141,19 +160,19 @@ public class ControlTabView implements TabContent {
         // Control buttons
         container.addView(UiKit.sectionLabel(context, L10n.t("POWER", "NGUỒN")));
         container.addView(makeTile(context, IconDrawable.Type.WAKE, L10n.t("Turn on / Wake PC", "Bật / Đánh thức PC"),
-                Color.rgb(27, 102, 42), 0, Color.WHITE, 60, "wake", L10n.t("Sending the wake signal...", "Đang gửi tín hiệu bật PC..."), callback));
+                Color.rgb(27, 102, 42), 0, Color.WHITE, 60, "wake", callback));
         addSpacing(container, dpToPx(context, 10));
 
         LinearLayout sleepRow = new LinearLayout(context);
         sleepRow.setOrientation(LinearLayout.HORIZONTAL);
         View sleepTile = makeTile(context, IconDrawable.Type.SLEEP, "Sleep",
-                Color.rgb(26, 84, 176), 0, Color.WHITE, 56, "sleep", L10n.t("Putting the PC to sleep...", "Đang đưa PC vào chế độ Sleep..."), callback);
+                Color.rgb(26, 84, 176), 0, Color.WHITE, 56, "sleep", callback);
         LinearLayout.LayoutParams sleepLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         sleepLp.rightMargin = dpToPx(context, 5);
         sleepTile.setLayoutParams(sleepLp);
         sleepRow.addView(sleepTile);
         View hibernateTile = makeTile(context, IconDrawable.Type.HIBERNATE, "Hibernate",
-                Color.rgb(100, 64, 168), 0, Color.WHITE, 56, "hibernate", L10n.t("Hibernating the PC...", "Đang đưa PC vào chế độ Hibernate..."), callback);
+                Color.rgb(100, 64, 168), 0, Color.WHITE, 56, "hibernate", callback);
         LinearLayout.LayoutParams hibLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         hibLp.leftMargin = dpToPx(context, 5);
         hibernateTile.setLayoutParams(hibLp);
@@ -164,26 +183,86 @@ public class ControlTabView implements TabContent {
         container.addView(UiKit.sectionLabel(context, L10n.t("DANGER ZONE", "VÙNG NGUY HIỂM")));
         int danger = Color.rgb(248, 81, 73);
         container.addView(makeTile(context, IconDrawable.Type.SHUTDOWN, L10n.t("Shut down", "Tắt máy (Shutdown)"),
-                Color.rgb(34, 20, 22), danger, danger, 56, "shutdown", null, callback));
+                Color.rgb(34, 20, 22), danger, danger, 56, "shutdown", callback));
         addSpacing(container, dpToPx(context, 10));
         container.addView(makeTile(context, IconDrawable.Type.ABORT, L10n.t("Cancel shutdown", "Hủy lệnh tắt máy"),
-                UiKit.CARD, UiKit.BORDER, Color.rgb(201, 209, 217), 48, "abort", L10n.t("Cancelling the shutdown...", "Đang gửi lệnh hủy tắt máy..."), callback));
+                UiKit.CARD, UiKit.BORDER, Color.rgb(201, 209, 217), 48, "abort", callback));
     }
 
-    private static View makeTile(Context ctx, IconDrawable.Type icon, String label, int fill, int stroke,
-                                 int contentColor, int heightDp, final String action, final String toastMsg,
-                                 final Callback callback) {
-        View tile = UiKit.actionTile(ctx, icon, label, fill, stroke, contentColor, heightDp, new View.OnClickListener() {
+    private View makeTile(Context ctx, IconDrawable.Type icon, String label, int fill, int stroke,
+                          int contentColor, int heightDp, final String action, final Callback callback) {
+        ActionTile tile = new ActionTile(ctx, icon, label, fill, stroke, contentColor, heightDp, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null) {
-                    callback.onActionClicked(action, toastMsg);
+                    callback.onActionClicked(action);
                 }
             }
         });
-        tile.setLayoutParams(new LinearLayout.LayoutParams(
+        tile.view.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        return tile;
+        tiles.put(action, tile);
+        return tile.view;
+    }
+
+    /** The command is on its way to the home phone: spinner on its tile, the other tiles wait. */
+    public void showSending(String action) {
+        for (Map.Entry<String, ActionTile> e : tiles.entrySet()) {
+            if (e.getKey().equals(action)) {
+                e.getValue().busy(L10n.t("Sending...", "Đang gửi..."));
+            } else {
+                // A new command replaces whatever the last one was still showing.
+                e.getValue().idle();
+                e.getValue().setAvailable(false);
+            }
+        }
+        setActionLine(null, 0, false);
+    }
+
+    /** The home phone took the command; the tile keeps spinning while the PC changes state. */
+    public void showWaiting(String action, String line) {
+        for (Map.Entry<String, ActionTile> e : tiles.entrySet()) {
+            if (e.getKey().equals(action)) {
+                e.getValue().busy(L10n.t("Waiting...", "Đang chờ..."));
+            } else if (e.getValue().isIdle()) {
+                e.getValue().setAvailable(true);
+            }
+        }
+        setActionLine(line, UiKit.ACCENT, false);
+    }
+
+    /** How the command went: a tick or a cross on its tile for a moment, and a line under the status. */
+    public void showOutcome(String action, boolean ok, String tileText, String line, int lineColor) {
+        for (Map.Entry<String, ActionTile> e : tiles.entrySet()) {
+            if (e.getKey().equals(action)) {
+                e.getValue().result(ok, tileText);
+            } else if (e.getValue().isIdle()) {
+                e.getValue().setAvailable(true);
+            }
+        }
+        setActionLine(line, lineColor, true);
+    }
+
+    /** Back to plain tiles (the command was dropped when the app left the screen). */
+    public void resetActions() {
+        for (ActionTile tile : tiles.values()) {
+            tile.idle();
+        }
+        setActionLine(null, 0, false);
+    }
+
+    private void setActionLine(String text, int color, boolean autoHide) {
+        actionLineView.removeCallbacks(hideActionLine);
+        if (text == null || text.isEmpty()) {
+            actionLineView.setVisibility(View.GONE);
+            return;
+        }
+        actionLineView.setText(text);
+        actionLineView.setTextColor(color);
+        actionLineView.setVisibility(View.VISIBLE);
+        if (autoHide) {
+            actionLineView.postDelayed(hideActionLine, 10_000L);
+        }
     }
 
     @Override

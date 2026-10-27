@@ -130,20 +130,99 @@ public class AppLockTest {
         lock.setCode("123456");
 
         lock.onActivityStarted(0L);
-        lock.onActivityStopped(1_000L);
+        lock.onActivityStopped(1_000L, false);
         lock.onActivityStarted(1_000L + AppLock.RELOCK_AFTER_MS - 1);
         assertTrue(!lock.isLocked(), "Short trip away keeps it unlocked");
 
         // Moving between two activities of the app is not "away".
         lock.onActivityStarted(50_000L);
-        lock.onActivityStopped(50_001L);
-        lock.onActivityStopped(200_000L);
+        lock.onActivityStopped(50_001L, false);
+        lock.onActivityStopped(200_000L, false);
         lock.onActivityStarted(200_000L + AppLock.RELOCK_AFTER_MS);
         assertTrue(lock.isLocked(), "Locks after 30 s with no activity of the app on screen");
 
         lock.unlockWithBiometric();
         assertTrue(!lock.isLocked(), "Biometric unlocks");
         System.out.println("PASS: testRelocksAfterThirtySecondsAway");
+    }
+
+    private static void testRelockChoices() throws Exception {
+        MapStore store = new MapStore();
+        AppLock lock = newLock(store);
+        lock.setCode("123456");
+        assertEquals(lock.relockAfterMs(), AppLock.RELOCK_AFTER_MS, "30 s by default");
+
+        lock.setRelockAfterMs(0L);
+        lock.onActivityStarted(0L);
+        lock.onActivityStopped(10L, false);
+        lock.onActivityStarted(10L);
+        assertTrue(lock.isLocked(), "Immediately: any trip away locks");
+
+        lock.check("123456", 0L);
+        lock.onActivityStopped(20L, true);
+        lock.onActivityStarted(20L);
+        assertTrue(!lock.isLocked(), "Immediately: a rotation is not a trip away");
+
+        lock.setRelockAfterMs(300_000L);
+        lock.onActivityStopped(1_000L, false);
+        lock.onActivityStarted(1_000L + 299_999L);
+        assertTrue(!lock.isLocked(), "5 min: still open just before");
+        lock.onActivityStopped(400_000L, false);
+        lock.onActivityStarted(700_000L);
+        assertTrue(lock.isLocked(), "5 min: locked after");
+
+        store.put(AppLock.KEY_RELOCK, "12345");
+        assertEquals(lock.relockAfterMs(), AppLock.RELOCK_AFTER_MS, "Unknown stored value falls back to 30 s");
+        boolean threw = false;
+        try {
+            lock.setRelockAfterMs(12345L);
+        } catch (IllegalArgumentException e) {
+            threw = true;
+        }
+        assertTrue(threw, "Only the offered choices can be set");
+        System.out.println("PASS: testRelockChoices");
+    }
+
+    private static void testScreenOffChoice() throws Exception {
+        MapStore store = new MapStore();
+        AppLock lock = newLock(store);
+        lock.setCode("123456");
+        assertTrue(!lock.onScreenOff(), "Timed choices ignore the screen");
+        assertTrue(!lock.isLocked(), "Still open with the 30 s choice");
+
+        lock.setRelockAfterMs(AppLock.RELOCK_ON_SCREEN_OFF);
+        lock.onActivityStarted(0L);
+        lock.onActivityStopped(1_000L, false);
+        lock.onActivityStarted(1_000L + 24L * 3600_000L);
+        assertTrue(!lock.isLocked(), "A day away with the screen on stays open");
+
+        assertTrue(lock.onScreenOff(), "Screen off closes the lock");
+        assertTrue(lock.isLocked(), "Locked");
+        assertTrue(!lock.onScreenOff(), "Already locked: nothing new to report");
+
+        lock.unlockWithBiometric();
+        assertTrue(!lock.isLocked(), "Unlocked again");
+        lock.disable();
+        assertTrue(!lock.onScreenOff(), "Lock off: the screen does nothing");
+        assertEquals(store.map.get(AppLock.KEY_RELOCK), null, "Disable forgets the choice");
+        System.out.println("PASS: testScreenOffChoice");
+    }
+
+    private static void testUnlockWhileAwayIsNotTimeAway() throws Exception {
+        MapStore store = new MapStore();
+        AppLock lock = newLock(store);
+        lock.setCode("123456");
+        lock.setRelockAfterMs(0L);
+        lock.onActivityStarted(0L);
+        lock.onActivityStopped(5L, false);
+        lock.onActivityStarted(6L);
+        assertTrue(lock.isLocked(), "Locked on return");
+        // Some phones show the fingerprint prompt as an activity: ours stops, the unlock comes while away.
+        lock.onActivityStopped(7L, false);
+        lock.unlockWithBiometric();
+        lock.onActivityStarted(9L);
+        assertTrue(!lock.isLocked(), "Coming back from the prompt keeps the unlock");
+        System.out.println("PASS: testUnlockWhileAwayIsNotTimeAway");
     }
 
     private static void testDisableAndBiometricFlag() throws Exception {
@@ -167,6 +246,9 @@ public class AppLockTest {
         testLockoutDoublesAndSurvivesRestart();
         testClockGoingBackDoesNotLockForever();
         testRelocksAfterThirtySecondsAway();
+        testRelockChoices();
+        testScreenOffChoice();
+        testUnlockWhileAwayIsNotTimeAway();
         testDisableAndBiometricFlag();
         System.out.println("ALL AppLockTest PASSED");
     }

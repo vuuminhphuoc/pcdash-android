@@ -3,6 +3,7 @@ package vn.vuumi.pcdash.lock;
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Build;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -29,6 +30,14 @@ public final class AppLockGate {
     // The fingerprint prompt opens by itself once per lock; cancelling it must not reopen it on the
     // next onStart (some phones show the prompt as an activity, which stops and restarts ours).
     private boolean biometricOffered;
+    // The screen turned off with this activity on screen and that closed the lock: cover it now, so
+    // the app is hidden before the screen comes back even if the activity was not stopped.
+    private final Runnable onScreenLock = new Runnable() {
+        @Override
+        public void run() {
+            refresh(false);
+        }
+    };
 
     /**
      * @param padSides system bar sides ({@link SystemBarInsets}) the content frame does not pad itself,
@@ -41,12 +50,14 @@ public final class AppLockGate {
     }
 
     public void onStart() {
-        lock.onActivityStarted(System.currentTimeMillis());
+        lock.onActivityStarted(SystemClock.elapsedRealtime());
+        AndroidAppLock.addLockListener(onScreenLock);
         refresh(true);
     }
 
     public void onStop() {
-        lock.onActivityStopped(System.currentTimeMillis());
+        AndroidAppLock.removeLockListener(onScreenLock);
+        lock.onActivityStopped(SystemClock.elapsedRealtime(), activity.isChangingConfigurations());
     }
 
     public boolean isLocked() {

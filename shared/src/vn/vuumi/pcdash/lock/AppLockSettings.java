@@ -1,8 +1,12 @@
 package vn.vuumi.pcdash.lock;
 
+import vn.vuumi.pcdash.ui.Tap;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,8 +24,9 @@ import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 
 /**
- * "App lock" settings: turn the 6-digit passcode on or off, change it, and allow fingerprint or face.
- * Turning it off or changing it asks for the current code first (wrong codes count toward the lockout).
+ * "App lock" settings: turn the 6-digit passcode on or off, change it, choose when it locks again, and
+ * allow fingerprint or face. Turning it off or changing it asks for the current code first (wrong codes
+ * count toward the lockout).
  */
 public final class AppLockSettings {
 
@@ -46,6 +51,8 @@ public final class AppLockSettings {
         final LinearLayout body;
         final Switch lockSwitch;
         final Switch bioSwitch;
+        final LinearLayout relockRow;
+        final TextView relockValue;
         final TextView changeCode;
         // Set while the switches are moved to match the stored state, so their listeners ignore it.
         boolean syncing;
@@ -64,6 +71,24 @@ public final class AppLockSettings {
             bioSwitch = switchRow(L10n.t("Unlock with fingerprint / face", "Mở bằng vân tay / khuôn mặt"));
             bioSwitch.setVisibility(biometricAvailable ? View.VISIBLE : View.GONE);
 
+            relockRow = new LinearLayout(activity);
+            relockRow.setOrientation(LinearLayout.VERTICAL);
+            relockRow.setPadding(0, dp(activity, 12), 0, dp(activity, 12));
+            relockRow.setClickable(true);
+            relockRow.setFocusable(true);
+            TextView relockTitle = new TextView(activity);
+            relockTitle.setText(L10n.t("Lock again", "Khóa lại khi nào"));
+            relockTitle.setTextSize(15);
+            relockTitle.setTextColor(DialogStyle.TITLE);
+            relockRow.addView(relockTitle);
+            relockValue = new TextView(activity);
+            relockValue.setTextSize(13);
+            relockValue.setTextColor(DialogStyle.ACCENT);
+            relockValue.setTypeface(Typeface.DEFAULT_BOLD);
+            relockValue.setPadding(0, dp(activity, 2), 0, 0);
+            relockRow.addView(relockValue);
+            body.addView(relockRow);
+
             changeCode = new TextView(activity);
             changeCode.setText(L10n.t("Change passcode", "Đổi mã"));
             changeCode.setTextSize(15);
@@ -72,8 +97,8 @@ public final class AppLockSettings {
             body.addView(changeCode);
 
             TextView note = new TextView(activity);
-            note.setText(L10n.t("The app locks when opened and after 30 seconds away. Forgot the code? Clear the app's data in Android settings (you will need to set the app up again).",
-                    "App khóa khi mở và khi rời app quá 30 giây. Quên mã: xóa dữ liệu ứng dụng trong Cài đặt Android (sẽ phải cài đặt lại app)."));
+            note.setText(L10n.t("The app also locks whenever Android has closed it in the background. Forgot the code? Clear the app's data in Android settings (you will need to set the app up again).",
+                    "App cũng khóa mỗi khi Android đã đóng app chạy nền. Quên mã: xóa dữ liệu ứng dụng trong Cài đặt Android (sẽ phải cài đặt lại app)."));
             note.setTextSize(12);
             note.setTextColor(DialogStyle.MUTED);
             note.setPadding(0, dp(activity, 4), 0, dp(activity, 8));
@@ -117,7 +142,13 @@ public final class AppLockSettings {
                     });
                 }
             });
-            changeCode.setOnClickListener(new View.OnClickListener() {
+            Tap.wire(relockRow, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (lock.isEnabled()) chooseRelock();
+                }
+            });
+            Tap.wire(changeCode, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (!lock.isEnabled()) return;
@@ -138,9 +169,35 @@ public final class AppLockSettings {
             bioSwitch.setChecked(lock.isBiometricEnabled());
             syncing = false;
             bioSwitch.setEnabled(on && biometricAvailable);
+            relockValue.setText(relockLabel(lock.relockAfterMs()));
+            relockRow.setEnabled(on);
+            relockRow.setAlpha(on ? 1f : 0.4f);
             changeCode.setEnabled(on);
             changeCode.setAlpha(on ? 1f : 0.4f);
             gate.refresh(false);
+        }
+
+        void chooseRelock() {
+            final long[] choices = AppLock.RELOCK_CHOICES;
+            String[] labels = new String[choices.length];
+            int selected = 0;
+            long current = lock.relockAfterMs();
+            for (int i = 0; i < choices.length; i++) {
+                labels[i] = relockLabel(choices[i]);
+                if (choices[i] == current) selected = i;
+            }
+            AlertDialog.Builder b = DialogStyle.builder(activity)
+                    .setTitle(L10n.t("Lock again", "Khóa lại khi nào"))
+                    .setSingleChoiceItems(labels, selected, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface d, int which) {
+                            lock.setRelockAfterMs(choices[which]);
+                            sync();
+                            d.dismiss();
+                        }
+                    })
+                    .setNegativeButton(L10n.t("Cancel", "Hủy"), null);
+            DialogStyle.show(b, false);
         }
 
         Runnable syncTask() {
@@ -161,6 +218,19 @@ public final class AppLockSettings {
             body.addView(s);
             return s;
         }
+    }
+
+    static String relockLabel(long ms) {
+        if (ms == AppLock.RELOCK_ON_SCREEN_OFF) {
+            return L10n.t("Only when the phone screen turns off", "Chỉ khi tắt màn hình / khóa máy");
+        }
+        if (ms == 0L) {
+            return L10n.t("As soon as I leave the app", "Ngay khi rời app");
+        }
+        if (ms < 60_000L) {
+            return L10n.t("After " + (ms / 1000) + " seconds away", "Rời app quá " + (ms / 1000) + " giây");
+        }
+        return L10n.t("After " + (ms / 60_000L) + " min away", "Rời app quá " + (ms / 60_000L) + " phút");
     }
 
     /** New code typed twice; then the lock is on with it. */

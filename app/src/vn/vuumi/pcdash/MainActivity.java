@@ -2,7 +2,9 @@ package vn.vuumi.pcdash;
 
 import vn.vuumi.pcdash.lock.AppLockSettings;
 import vn.vuumi.pcdash.lock.AppLockGate;
+import vn.vuumi.pcdash.ui.ButtonProgress;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 import android.Manifest;
@@ -30,6 +32,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity implements View.OnClickListener {
     private View statusDot;
@@ -42,6 +46,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private Button tailscaleLoginBtn;
     private String currentTailscaleAuthUrl = "";
     private AppLockGate lockGate;
+    // One power command at a time; each power button shows its own progress.
+    private boolean actionRunning;
+    private final Map<View, ButtonProgress> buttonProgress = new HashMap<View, ButtonProgress>();
 
     private final Runnable tailnetPoll = new Runnable() {
         @Override
@@ -439,7 +446,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         b.setMinimumHeight(dp(minHeightDp));
         b.setPadding(dp(16), dp(10), dp(16), dp(10));
         b.setTag(action);
-        b.setOnClickListener(this);
+        Tap.wire(b, this);
         return b;
     }
 
@@ -483,7 +490,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     } catch (Exception ignored) {}
                 }
             } else {
-                act(action);
+                act(action, v);
             }
         }
     }
@@ -545,26 +552,52 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
-    private void act(final String action) {
+    private void act(final String action, View source) {
         if (!PcConn.isConfigured()) {
             Toast.makeText(this, L10n.t("PC not set up. Open PC settings first", "Chưa cấu hình PC. Vui lòng vào Cài đặt PC"), Toast.LENGTH_LONG).show();
             return;
         }
-        Toast.makeText(this, L10n.t("Sending: ", "Đang gửi: ") + action, Toast.LENGTH_SHORT).show();
+        if (actionRunning) {
+            Toast.makeText(this, L10n.t("Still sending the last command...", "Đang gửi lệnh trước, đợi một chút..."), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        actionRunning = true;
+        final ButtonProgress progress = progressFor(source);
+        if (progress != null) {
+            progress.busy(L10n.t("Sending...", "Đang gửi..."));
+        }
         new Thread(new Runnable() {
             @Override
             public void run() {
                 final String r = PcConn.doAction(action);
+                final boolean ok = !RemoteActionExecutor.isFailure(r);
                 final PcConn.PcStatus status = PcConn.status();
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, r, Toast.LENGTH_LONG).show();
+                        actionRunning = false;
+                        if (isFinishing() || isDestroyed()) return;
+                        if (progress != null) {
+                            progress.done(ok, ok ? L10n.t("Sent", "Đã gửi") : L10n.t("Failed", "Lỗi"));
+                        }
+                        if (!ok) {
+                            Toast.makeText(MainActivity.this, r, Toast.LENGTH_LONG).show();
+                        }
                         updateStatus(status);
                     }
                 });
             }
-        }).start();
+        }, "pcdash-main-action").start();
+    }
+
+    private ButtonProgress progressFor(View source) {
+        if (!(source instanceof TextView)) return null;
+        ButtonProgress p = buttonProgress.get(source);
+        if (p == null) {
+            p = new ButtonProgress((TextView) source);
+            buttonProgress.put(source, p);
+        }
+        return p;
     }
 
     private void requestExtras() {

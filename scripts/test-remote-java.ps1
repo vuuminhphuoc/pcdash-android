@@ -168,6 +168,12 @@ Write-Host "Executing HostAlertRulesTest..."
 if ($LASTEXITCODE -ne 0) {
     throw "HostAlertRulesTest failed"
 }
+
+Write-Host "Executing PowerActionWatchTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.remote.PowerActionWatchTest
+if ($LASTEXITCODE -ne 0) {
+    throw "PowerActionWatchTest failed"
+}
 Write-Host "Executing QuickActionsTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.QuickActionsTest
 if ($LASTEXITCODE -ne 0) {

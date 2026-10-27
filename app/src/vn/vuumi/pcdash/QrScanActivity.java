@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
@@ -133,7 +134,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         cancelBg.setStroke(dp(1), Color.rgb(48, 54, 61));
         cancelBg.setCornerRadius(dp(24));
         cancel.setBackground(cancelBg);
-        cancel.setOnClickListener(new View.OnClickListener() {
+        Tap.wire(cancel, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 setResult(RESULT_CANCELED);

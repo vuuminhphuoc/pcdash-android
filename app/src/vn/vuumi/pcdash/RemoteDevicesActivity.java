@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
@@ -578,7 +579,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             item.addView(timeText);
 
             Button delBtn = makeDestructiveButton(L10n.t("Remove device", "Xóa thiết bị"));
-            delBtn.setOnClickListener(new View.OnClickListener() {
+            Tap.wire(delBtn, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     confirmDelete(row, displayName);
@@ -659,7 +660,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             b.setBackground(gd);
         }
         b.setPadding(dp(16), dp(10), dp(16), dp(10));
-        b.setOnClickListener(this);
+        Tap.wire(b, this);
         return b;
     }
 
@@ -686,7 +687,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
             b.setBackground(gd);
         }
         b.setPadding(dp(14), dp(6), dp(14), dp(6));
-        b.setOnClickListener(this);
+        Tap.wire(b, this);
         return b;
     }
 }

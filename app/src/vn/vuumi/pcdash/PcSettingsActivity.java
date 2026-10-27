@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
@@ -168,7 +169,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         connCard.addView(scanHint);
 
         scanBtn = makeStyledButton(L10n.t("Scan QR code from PC", "Quét mã QR từ PC"), Color.rgb(31, 111, 235), 0, Color.WHITE, 48);
-        scanBtn.setOnClickListener(this);
+        Tap.wire(scanBtn, this);
         connCard.addView(scanBtn);
 
         connCard.addView(makeFieldLabel(L10n.t("PC IPv4 address (private, RFC1918):", "Địa chỉ IPv4 PC (RFC1918 nội bộ):")));
@@ -193,7 +194,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         sbLp.setMargins(0, dp(16), 0, 0);
         saveBtn.setLayoutParams(sbLp);
-        saveBtn.setOnClickListener(this);
+        Tap.wire(saveBtn, this);
         connCard.addView(saveBtn);
 
         root.addView(connCard);
@@ -247,14 +248,14 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         copyLp.rightMargin = dp(6);
         copyWebTokenBtn.setLayoutParams(copyLp);
-        copyWebTokenBtn.setOnClickListener(this);
+        Tap.wire(copyWebTokenBtn, this);
         btnRow.addView(copyWebTokenBtn);
 
         regenWebTokenBtn = makeStyledButton(L10n.t("New code", "Tạo mã mới"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(248, 81, 73), 42);
         LinearLayout.LayoutParams regenLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         regenLp.leftMargin = dp(6);
         regenWebTokenBtn.setLayoutParams(regenLp);
-        regenWebTokenBtn.setOnClickListener(this);
+        Tap.wire(regenWebTokenBtn, this);
         btnRow.addView(regenWebTokenBtn);
 
         webCard.addView(btnRow);

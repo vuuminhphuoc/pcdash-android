@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.content.Context;
 import android.graphics.Color;
@@ -66,7 +67,7 @@ public class LoginPanel extends LinearLayout {
         int bPadH = dpToPx(context, 16);
         int bPadV = dpToPx(context, 10);
         loginBtn.setPadding(bPadH, bPadV, bPadH, bPadV);
-        loginBtn.setOnClickListener(new OnClickListener() {
+        Tap.wire(loginBtn, new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null && currentAuthUrl != null && !currentAuthUrl.isEmpty()) {
@@ -81,7 +82,7 @@ public class LoginPanel extends LinearLayout {
         diagBtn.setTextColor(Color.rgb(139, 148, 158));
         diagBtn.setBackgroundColor(Color.TRANSPARENT);
         diagBtn.setTextSize(12);
-        diagBtn.setOnClickListener(new OnClickListener() {
+        Tap.wire(diagBtn, new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (callback != null) {
