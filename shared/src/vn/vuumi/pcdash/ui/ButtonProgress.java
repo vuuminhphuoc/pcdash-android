@@ -60,6 +60,14 @@ public final class ButtonProgress {
         if (!pulse.isStarted()) {
             pulse.start();
         }
+        setBreathing(true);
+    }
+
+    // A glowing button (Tap.glow) also breathes while its action runs.
+    private void setBreathing(boolean on) {
+        if (button.getForeground() instanceof GlowDrawable) {
+            ((GlowDrawable) button.getForeground()).setBreathing(on);
+        }
     }
 
     public void done(boolean ok, CharSequence text) {
@@ -96,5 +104,6 @@ public final class ButtonProgress {
             pulse.cancel();
         }
         button.setAlpha(1f);
+        setBreathing(false);
     }
 }

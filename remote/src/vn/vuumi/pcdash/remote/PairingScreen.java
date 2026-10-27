@@ -101,7 +101,8 @@ public class PairingScreen extends ScrollView {
         scanBtn.setTextSize(16);
         scanBtn.setTypeface(Typeface.DEFAULT_BOLD);
         scanBtn.setTextColor(Color.WHITE);
-        scanBtn.setBackground(UiKit.withRipple(UiKit.roundedFill(context, Color.rgb(27, 102, 42), 12)));
+        scanBtn.setBackground(UiKit.roundedFill(context, Color.rgb(27, 102, 42), 12));
+        Tap.glow(scanBtn, Color.rgb(27, 102, 42), UiKit.dp(context, 12));
         scanBtn.setMinHeight(UiKit.dp(context, 54));
         Tap.wire(scanBtn, new View.OnClickListener() {
             @Override

@@ -60,7 +60,9 @@ public final class Tap {
      */
     public static void feel(View view) {
         Drawable bg = view.getBackground();
-        if (bg == null || !bg.isStateful()) {
+        Drawable fg = view.getForeground();
+        boolean lit = fg != null && fg.isStateful(); // a GlowDrawable already shows the press
+        if (!lit && (bg == null || !bg.isStateful())) {
             // Without a mask the ripple only shows where the background is opaque, so a clear or
             // missing background gets the view's rectangle as mask; shapes keep their own outline.
             Drawable mask = bg == null || bg instanceof ColorDrawable ? new ColorDrawable(Color.WHITE) : null;
@@ -72,6 +74,18 @@ public final class Tap {
         press.addState(new int[0], scale(view, 1f, 160));
         view.setStateListAnimator(press);
         view.setClickable(true);
+    }
+
+    /**
+     * Lights the view up where it is touched (see {@link GlowDrawable}); call before {@link #wire}.
+     *
+     * @param buttonColor the button's fill; the glow uses a lighter shade of it
+     */
+    public static GlowDrawable glow(View view, int buttonColor, float cornerPx) {
+        float density = view.getResources().getDisplayMetrics().density;
+        GlowDrawable g = new GlowDrawable(GlowDrawable.lightOf(buttonColor), cornerPx, 1.5f * density);
+        view.setForeground(g);
+        return g;
     }
 
     /** A firm tick when an action worked, a short double buzz when it failed. */

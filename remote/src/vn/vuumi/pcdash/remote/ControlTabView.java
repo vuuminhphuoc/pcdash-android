@@ -35,6 +35,7 @@ public class ControlTabView implements TabContent {
     private final TextView pcStatusView;
     private final TextView pcDetailView;
     private final ImageView refreshButton;
+    private final StatusDot statusDot;
     private ObjectAnimator refreshSpin;
     // What the last power command is doing (sending, waiting for the PC, how it went).
     private final TextView actionLineView;
@@ -73,6 +74,11 @@ public class ControlTabView implements TabContent {
         LinearLayout statusHeader = new LinearLayout(context);
         statusHeader.setOrientation(LinearLayout.HORIZONTAL);
         statusHeader.setGravity(Gravity.CENTER_VERTICAL);
+        statusDot = new StatusDot(context);
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dpToPx(context, 14), dpToPx(context, 14));
+        dotLp.rightMargin = dpToPx(context, 10);
+        statusHeader.addView(statusDot, dotLp);
+        statusDot.show(Color.rgb(210, 153, 34), 900);
         pcStatusView = new TextView(context);
         pcStatusView.setText(L10n.t("Checking the PC...", "Đang kiểm tra trạng thái PC..."));
         pcStatusView.setTextSize(18);
@@ -306,6 +312,24 @@ public class ControlTabView implements TabContent {
     @Override
     public void onHide() {}
 
+    private static final int STATUS_ON = Color.rgb(63, 185, 80);
+    private static final int STATUS_WAIT = Color.rgb(210, 153, 34);
+
+    // Status line and dot: green pings slowly while the PC is on, amber quickly while connecting.
+    private void setStatus(final String text, final int color) {
+        statusDot.show(color, color == STATUS_ON ? 1800 : color == STATUS_WAIT ? 900 : 0);
+        pcStatusView.setTextColor(color);
+        if (text.contentEquals(pcStatusView.getText())) return;
+        pcStatusView.animate().cancel();
+        pcStatusView.animate().alpha(0f).setDuration(90).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                pcStatusView.setText(text);
+                pcStatusView.animate().alpha(1f).setDuration(160).start();
+            }
+        }).start();
+    }
+
     /** Spins the refresh button while a fresh status is on its way. */
     public void setRefreshing(boolean refreshing) {
         if (refreshing) {
@@ -340,26 +364,22 @@ public class ControlTabView implements TabContent {
      * @param tailnet its state, or null while it is being restarted
      */
     public void showConnecting(PcnetState tailnet) {
-        int amber = Color.rgb(210, 153, 34);
+        int amber = STATUS_WAIT;
         if (tailnet == null) {
-            pcStatusView.setText(L10n.t("Reconnecting...", "Đang kết nối lại..."));
-            pcStatusView.setTextColor(amber);
+            setStatus(L10n.t("Reconnecting...", "Đang kết nối lại..."), amber);
             pcDetailView.setText(L10n.t("Restarting the Tailscale connection", "Đang khởi động lại kết nối Tailscale"));
         } else if (tailnet.isNeedsLogin()) {
-            pcStatusView.setText(L10n.t("Tailscale sign-in needed", "Cần đăng nhập lại Tailscale"));
-            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+            setStatus(L10n.t("Tailscale sign-in needed", "Cần đăng nhập lại Tailscale"), Color.rgb(248, 81, 73));
             pcDetailView.setText(L10n.t("Open More > Sign in to Tailscale again", "Vào Thêm > Đăng nhập lại Tailscale"));
             setRefreshing(false);
             return;
         } else if (tailnet.isError()) {
-            pcStatusView.setText(L10n.t("Tailscale error", "Lỗi Tailscale"));
-            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+            setStatus(L10n.t("Tailscale error", "Lỗi Tailscale"), Color.rgb(248, 81, 73));
             pcDetailView.setText(!tailnet.error.isEmpty() ? tailnet.error : L10n.t("Tap refresh to try again", "Bấm làm mới để thử lại"));
             setRefreshing(false);
             return;
         } else {
-            pcStatusView.setText(L10n.t("Connecting to Tailscale...", "Đang kết nối Tailscale..."));
-            pcStatusView.setTextColor(amber);
+            setStatus(L10n.t("Connecting to Tailscale...", "Đang kết nối Tailscale..."), amber);
             pcDetailView.setText(L10n.t("Usually a few seconds", "Thường chỉ mất vài giây"));
         }
         setRefreshing(true);
@@ -371,31 +391,28 @@ public class ControlTabView implements TabContent {
     public void updateStatus(RemoteApiClient.RemoteStatus status, Exception error, TailnetPeers.Peer hostPeer) {
         if (status != null) {
             if (status.online) {
-                pcStatusView.setText(L10n.t("PC is ON", "PC đang BẬT"));
-                pcStatusView.setTextColor(Color.rgb(63, 185, 80));
+                setStatus(L10n.t("PC is ON", "PC đang BẬT"), STATUS_ON);
                 String detail = L10n.t("Port: ", "Cổng: ") + (status.port != null ? status.port : 8799)
                         + L10n.t("  ·  Latency: ", "  ·  Độ trễ: ") + status.rttMs + " ms";
                 pcDetailView.setText(detail);
             } else {
-                pcStatusView.setText(L10n.t("PC is OFF / not responding", "PC đang TẮT / không phản hồi"));
-                pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+                setStatus(L10n.t("PC is OFF / not responding", "PC đang TẮT / không phản hồi"), Color.rgb(248, 81, 73));
                 pcDetailView.setText(L10n.t("Cannot reach the PC", "Không thể kết nối đến PC"));
             }
         } else if (error != null) {
             String shortMsg = (error.getMessage() != null && !error.getMessage().isEmpty())
                     ? error.getMessage() : L10n.t("Timed out", "Hết thời gian chờ (timeout)");
-            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
             if (hostPeer != null && !hostPeer.online) {
                 // The device list says why: the phone itself is off the network.
-                pcStatusView.setText(L10n.t("Home phone is offline", "Máy ở nhà đang offline"));
+                setStatus(L10n.t("Home phone is offline", "Máy ở nhà đang offline"), Color.rgb(248, 81, 73));
                 String ago = TailnetPeers.ago(hostPeer.lastSeenMs, System.currentTimeMillis());
                 pcDetailView.setText(L10n.t("Tailscale shows it offline", "Tailscale báo máy này offline")
                         + (ago.isEmpty() ? "" : L10n.t(" · last seen ", " · lần cuối online ") + ago));
             } else if (hostPeer != null) {
-                pcStatusView.setText(L10n.t("PCDash host is not answering", "App PCDash ở nhà không phản hồi"));
+                setStatus(L10n.t("PCDash host is not answering", "App PCDash ở nhà không phản hồi"), Color.rgb(248, 81, 73));
                 pcDetailView.setText(L10n.t("The home phone is online in Tailscale. ", "Máy ở nhà vẫn online trên Tailscale. ") + shortMsg);
             } else {
-                pcStatusView.setText(L10n.t("Cannot reach the home phone", "Không kết nối được tới máy ở nhà"));
+                setStatus(L10n.t("Cannot reach the home phone", "Không kết nối được tới máy ở nhà"), Color.rgb(248, 81, 73));
                 pcDetailView.setText(shortMsg);
             }
         }

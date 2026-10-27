@@ -438,16 +438,23 @@ public class MainActivity extends Activity implements View.OnClickListener {
             gd.setStroke(dp(1), stroke);
         }
         gd.setCornerRadius(dp(12));
-        if (Build.VERSION.SDK_INT >= 21) {
-            b.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.argb(60, 255, 255, 255)), gd, null));
-        } else {
+        if (isPowerAction(action)) {
+            // Power buttons light up where they are touched, and glow while their command runs.
             b.setBackground(gd);
+            Tap.glow(b, stroke != 0 ? textColor : fill, dp(12));
+        } else {
+            b.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.argb(60, 255, 255, 255)), gd, null));
         }
         b.setMinimumHeight(dp(minHeightDp));
         b.setPadding(dp(16), dp(10), dp(16), dp(10));
         b.setTag(action);
         Tap.wire(b, this);
         return b;
+    }
+
+    private static boolean isPowerAction(String action) {
+        return "wake".equals(action) || "sleep".equals(action) || "hibernate".equals(action)
+                || "shutdown".equals(action) || "abort".equals(action);
     }
 
     @Override
