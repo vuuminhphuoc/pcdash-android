@@ -59,6 +59,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "L10nTest failed"
 }
 
+Write-Host "Executing AppLockTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.lock.AppLockTest
+if ($LASTEXITCODE -ne 0) {
+    throw "AppLockTest failed"
+}
+
 Write-Host "Executing RemoteTailnetTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.RemoteTailnetTest
 if ($LASTEXITCODE -ne 0) {

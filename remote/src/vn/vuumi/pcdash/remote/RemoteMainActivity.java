@@ -1,5 +1,7 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.lock.AppLockSettings;
+import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
@@ -97,6 +99,7 @@ public class RemoteMainActivity extends Activity {
     private boolean backCallbackRegistered;
     // True once controller.open() has finished for this start, so a quick action can be sent.
     private boolean sessionReady;
+    private AppLockGate lockGate;
 
     private ControlTabView controlTabView;
     private MonitorTabView monitorTabView;
@@ -465,10 +468,12 @@ public class RemoteMainActivity extends Activity {
         rootLayout.addView(bottomNavBar, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
+        setContentView(rootLayout);
         // The tab bar pads itself for the navigation bar; the rest of the screen stays below the status
         // bar, and the content area shrinks above the keyboard (pairing screen fields).
-        SystemBarInsets.pad(rootLayout, SystemBarInsets.LEFT | SystemBarInsets.TOP | SystemBarInsets.RIGHT | SystemBarInsets.IME);
-        setContentView(rootLayout);
+        SystemBarInsets.pad(findViewById(android.R.id.content),
+                SystemBarInsets.LEFT | SystemBarInsets.TOP | SystemBarInsets.RIGHT | SystemBarInsets.IME);
+        lockGate = new AppLockGate(this, SystemBarInsets.BOTTOM);
 
         IntentFilter filter = new IntentFilter(UpdateInstaller.ACTION_UPDATE_RESULT);
         if (Build.VERSION.SDK_INT >= 33) {
@@ -581,6 +586,7 @@ public class RemoteMainActivity extends Activity {
     protected void onStart() {
         super.onStart();
         isStopped = false;
+        lockGate.onStart();
         updateBackCallback();
         lifecycleExecutor.submit(new Runnable() {
             @Override
@@ -629,6 +635,16 @@ public class RemoteMainActivity extends Activity {
 
     // Wake or Sleep from a launcher shortcut or the Quick Settings tile (see QuickActions).
     private void runPendingQuickAction() {
+        if (lockGate.isLocked()) {
+            // A tile or shortcut must not bypass the app lock: send once the user unlocks.
+            lockGate.runWhenUnlocked(new Runnable() {
+                @Override
+                public void run() {
+                    runPendingQuickAction();
+                }
+            });
+            return;
+        }
         String action = QuickActions.take(System.currentTimeMillis());
         if (action == null || isStopped || isDestroyed) {
             return;
@@ -648,6 +664,7 @@ public class RemoteMainActivity extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
+        lockGate.onStop();
         isStopped = true;
         sessionReady = false;
         isPolling = false;
@@ -943,6 +960,11 @@ public class RemoteMainActivity extends Activity {
 
     private void showMoreSheet() {
         MoreSheet.show(this, store, getInstalledVersionName(), new MoreSheet.Callback() {
+            @Override
+            public void onAppLock() {
+                AppLockSettings.show(RemoteMainActivity.this, lockGate);
+            }
+
             @Override
             public void onRequireDangerousAuthChanged(final boolean required) {
                 executor.submit(new Runnable() {

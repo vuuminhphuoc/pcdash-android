@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
@@ -38,6 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class RemoteDevicesActivity extends Activity implements ServiceConnection, View.OnClickListener {
+    private AppLockGate lockGate;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private RemoteHostController remoteController;
@@ -260,11 +262,13 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         root.addView(commandLogContainer);
         setContentView(scroll);
         SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
+        lockGate = new AppLockGate(this, 0);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        lockGate.onStart();
         Intent svc = new Intent(this, DashService.class);
         if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(svc);
@@ -282,6 +286,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
 
     @Override
     protected void onStop() {
+        lockGate.onStop();
         if (isFinishing() && remoteController != null) {
             remoteController.cancelPairing();
             activeCode = null;

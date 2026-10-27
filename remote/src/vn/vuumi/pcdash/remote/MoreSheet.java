@@ -26,6 +26,7 @@ public class MoreSheet {
         void onForgetHost();
         void onDiagnosticsRequested(DiagnosticsCallback callback);
         default void onReloginTailscale() {}
+        default void onAppLock() {}
     }
 
     public interface DiagnosticsCallback {
@@ -190,6 +191,24 @@ public class MoreSheet {
             }
         });
         content.addView(checkUpdateBtn);
+
+        addSpacing(content, dpToPx(context, 12));
+
+        Button appLockBtn = new Button(context);
+        appLockBtn.setText(L10n.t("🔒 App lock", "🔒 Khóa ứng dụng"));
+        appLockBtn.setTextColor(Color.rgb(230, 237, 243));
+        appLockBtn.setBackgroundColor(Color.rgb(33, 38, 45));
+        appLockBtn.setTextSize(13);
+        appLockBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                if (callback != null) {
+                    callback.onAppLock();
+                }
+            }
+        });
+        content.addView(appLockBtn);
 
         addSpacing(content, dpToPx(context, 12));
         addDivider(content, context);

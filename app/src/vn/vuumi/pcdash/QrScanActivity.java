@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.Manifest;
@@ -44,6 +45,7 @@ import java.util.Arrays;
  * once a valid PCDash payload is seen. Camera2 + ZXing, no extra scanner app needed.
  */
 public class QrScanActivity extends Activity implements TextureView.SurfaceTextureListener {
+    private AppLockGate lockGate;
     public static final String EXTRA_TEXT = "text";
 
     private static final int REQ_CAMERA = 71;
@@ -145,6 +147,19 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
 
         setContentView(root);
         SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
+        lockGate = new AppLockGate(this, 0);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        lockGate.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        lockGate.onStop();
+        super.onStop();
     }
 
     @Override

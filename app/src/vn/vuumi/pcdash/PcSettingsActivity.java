@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
@@ -30,6 +31,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class PcSettingsActivity extends Activity implements View.OnClickListener {
+    private AppLockGate lockGate;
     private static final int REQ_SCAN_QR = 72;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -260,6 +262,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
 
         setContentView(scroll);
         SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
+        lockGate = new AppLockGate(this, 0);
 
         loadSettingsAsync();
     }
@@ -399,5 +402,16 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
                     }
                 })
                 .setNegativeButton(L10n.t("Cancel", "Hủy"), null), true);
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        lockGate.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        lockGate.onStop();
+        super.onStop();
     }
 }

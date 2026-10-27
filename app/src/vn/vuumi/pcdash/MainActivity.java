@@ -1,5 +1,7 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.lock.AppLockSettings;
+import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
@@ -39,6 +41,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private TextView tailscaleStatusView;
     private Button tailscaleLoginBtn;
     private String currentTailscaleAuthUrl = "";
+    private AppLockGate lockGate;
 
     private final Runnable tailnetPoll = new Runnable() {
         @Override
@@ -262,6 +265,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         pcSettingsBtn.setLayoutParams(psLp);
         root.addView(pcSettingsBtn);
 
+        Button appLockBtn = makeStyledButton(L10n.t("🔒 App lock", "🔒 Khóa ứng dụng"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "app_lock");
+        LinearLayout.LayoutParams alLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        alLp.setMargins(0, 0, 0, dp(14));
+        appLockBtn.setLayoutParams(alLp);
+        root.addView(appLockBtn);
+
         // Tailscale card
         LinearLayout tailscaleCard = new LinearLayout(this);
         tailscaleCard.setOrientation(LinearLayout.VERTICAL);
@@ -343,6 +353,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         setContentView(scroll);
         SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
+        lockGate = new AppLockGate(this, 0);
 
         requestExtras();
 
@@ -353,6 +364,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
             startService(svc);
         }
         ui.post(tick);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        lockGate.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        lockGate.onStop();
+        super.onStop();
     }
 
     @Override
@@ -425,7 +448,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Object tag = v.getTag();
         if (tag instanceof String) {
             String action = (String) tag;
-            if ("pc_settings".equals(action)) {
+            if ("app_lock".equals(action)) {
+                AppLockSettings.show(this, lockGate);
+            } else if ("pc_settings".equals(action)) {
                 Intent it = new Intent(this, PcSettingsActivity.class);
                 startActivity(it);
             } else if ("remote_devices".equals(action)) {
