@@ -27,6 +27,7 @@ public class MoreSheet {
         void onDiagnosticsRequested(DiagnosticsCallback callback);
         default void onReloginTailscale() {}
         default void onAppLock() {}
+        default void onHostAlertsChanged(boolean enabled) {}
     }
 
     public interface DiagnosticsCallback {
@@ -100,6 +101,31 @@ public class MoreSheet {
             }
         });
         content.addView(authSwitch);
+
+        addSpacing(content, dpToPx(context, 8));
+
+        CheckBox alertsSwitch = new CheckBox(context);
+        alertsSwitch.setText(L10n.t("Alert me when the home phone goes offline or its battery is low",
+                "Cảnh báo khi máy ở nhà mất kết nối hoặc yếu pin"));
+        alertsSwitch.setTextColor(Color.rgb(201, 209, 217));
+        alertsSwitch.setTextSize(13);
+        alertsSwitch.setChecked(HostWatch.isEnabled(context));
+        alertsSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (callback != null) {
+                    callback.onHostAlertsChanged(isChecked);
+                }
+            }
+        });
+        content.addView(alertsSwitch);
+        TextView alertsNote = new TextView(context);
+        alertsNote.setText(L10n.t("Checks about every 15 minutes in the background (a little battery and data). Android may delay checks while this phone sits idle.",
+                "Kiểm tra khoảng 15 phút một lần ở chế độ nền (tốn một ít pin và dữ liệu). Android có thể hoãn khi máy này để yên lâu."));
+        alertsNote.setTextColor(Color.rgb(139, 148, 158));
+        alertsNote.setTextSize(11);
+        alertsNote.setPadding(dpToPx(context, 32), 0, 0, 0);
+        content.addView(alertsNote);
 
         addSpacing(content, dpToPx(context, 8));
 

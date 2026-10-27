@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import android.Manifest;
 import vn.vuumi.pcdash.lock.AppLockSettings;
 import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.DialogStyle;
@@ -65,6 +66,7 @@ public class RemoteMainActivity extends Activity {
     private RemoteController controller;
     private RemoteConfigStore store;
     private static final int REQUEST_CODE_DANGEROUS_AUTH = 1002;
+    private static final int REQUEST_CODE_NOTIFICATIONS = 1004;
     private static final int REQUEST_CODE_FORGET_AUTH = 1003;
     private String pendingDangerousAction = null;
     private String pendingDangerousToast = null;
@@ -411,15 +413,9 @@ public class RemoteMainActivity extends Activity {
             }
         });
 
-        File filesDir = getFilesDir();
-        File configFile = new File(filesDir, "remote_config.json");
-        File stateDir = new File(filesDir, "tsnet");
-
-        store = new RemoteConfigStore(configFile);
-        PcnetBridge bridge = new PcnetBridge();
-        PairingClient pairing = new PairingClient();
-        RemoteApiClient api = new RemoteApiClient();
-        controller = new RemoteController(pairing, bridge, store, api, stateDir);
+        // Shared with the host-alert job: one tsnet node per process.
+        controller = RemoteSession.controller(this);
+        store = RemoteSession.store(this);
 
         navigator = new TabNavigator(new TabNavigator.Listener() {
             @Override
@@ -588,6 +584,9 @@ public class RemoteMainActivity extends Activity {
         isStopped = false;
         lockGate.onStart();
         updateBackCallback();
+        RemoteSession.setActivityVisible(true);
+        RemoteSession.acquire();
+        HostWatch.syncSchedule(this);
         lifecycleExecutor.submit(new Runnable() {
             @Override
             public void run() {
@@ -665,6 +664,7 @@ public class RemoteMainActivity extends Activity {
     protected void onStop() {
         super.onStop();
         lockGate.onStop();
+        RemoteSession.setActivityVisible(false);
         isStopped = true;
         sessionReady = false;
         isPolling = false;
@@ -715,9 +715,7 @@ public class RemoteMainActivity extends Activity {
             @Override
             public void run() {
                 // Chưa ghép đôi: đang chờ đăng nhập Tailscale trong trình duyệt, dừng tsnet sẽ làm hỏng đăng nhập.
-                if (controller.isPaired()) {
-                    controller.close();
-                }
+                RemoteSession.release(controller, controller.isPaired());
             }
         });
     }
@@ -963,6 +961,20 @@ public class RemoteMainActivity extends Activity {
             @Override
             public void onAppLock() {
                 AppLockSettings.show(RemoteMainActivity.this, lockGate);
+            }
+
+            @Override
+            public void onHostAlertsChanged(final boolean enabled) {
+                if (enabled && Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATIONS);
+                }
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        HostWatch.setEnabled(getApplicationContext(), enabled);
+                    }
+                });
             }
 
             @Override

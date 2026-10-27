@@ -17,6 +17,7 @@ component (host app, remote app, PcAgent), the steps to reproduce, and the impac
 | Host to PcAgent `:8799` | Same LAN as the PC | `X-PcAgent-Token` on `/exec`, `/metrics`, `/quota`; Windows firewall rule limited to the local subnet |
 | Setup QR | Whoever sees the screen | Contains IP, MAC, port and agent token; shown only on demand, auto-closes, and the host accepts it only for private (RFC1918) addresses |
 | Pairing | Same private LAN only | Private (RFC1918) addresses only; refused until the host is signed in to Tailscale |
+| App lock (optional, both apps) | Whoever holds the unlocked phone | 6-digit passcode stored only as HMAC(salt, code) with an Android Keystore key; 5 wrong codes start a 30 s wait that doubles up to 16 min and survives restarts; optional fingerprint / face |
 | Remote shortcuts and Quick Settings tile | The phone's own launcher and System UI | Wake and Sleep only, through a non-exported activity; the request lives in memory for 60 s, so other apps cannot trigger a command through the exported main activity |
 
 ## Things you must do

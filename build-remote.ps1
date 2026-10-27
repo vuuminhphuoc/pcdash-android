@@ -151,12 +151,14 @@ if (-not $hasExtractNative) {
 if ($xmlTree -match 'VpnService') {
     throw "Manifest check FAILED: illegal VpnService declared"
 }
-# Nothing may run in the background. The only service allowed is the Quick Settings tile, which
-# System UI binds while the panel is open; it just opens the app.
+# Nothing runs in the background on its own. Allowed services: the Quick Settings tile (System UI binds
+# it while the panel is open; it just opens the app) and the opt-in host-alert job (JobScheduler runs
+# it only after the user turns alerts on). No long-running or foreground service.
 $serviceCount = ([regex]::Matches($xmlTree, 'E:\s+service\b')).Count
 $tileCount = ([regex]::Matches($xmlTree, 'permission\([^)]*\)="android\.permission\.BIND_QUICK_SETTINGS_TILE"')).Count
-if ($serviceCount -ne $tileCount) {
-    throw "Manifest check FAILED: only Quick Settings tile services are allowed ($serviceCount services, $tileCount tiles)"
+$jobCount = ([regex]::Matches($xmlTree, 'permission\([^)]*\)="android\.permission\.BIND_JOB_SERVICE"')).Count
+if ($serviceCount -ne $tileCount + $jobCount) {
+    throw "Manifest check FAILED: only Quick Settings tile and JobScheduler services are allowed ($serviceCount services, $tileCount tiles, $jobCount jobs)"
 }
 if ($xmlTree -match 'BOOT_COMPLETED|BootReceiver') {
     throw "Manifest check FAILED: illegal BootReceiver declared"
@@ -166,7 +168,7 @@ Write-Host "Manifest verified successfully:"
 Write-Host "  - android:usesCleartextTraffic='true' [OK]"
 Write-Host "  - android:allowBackup='false' [OK]"
 Write-Host "  - android:extractNativeLibs='true' [OK]"
-Write-Host "  - No VpnService, BootReceiver or background Service ($tileCount Quick Settings tile) [OK]"
+Write-Host "  - No VpnService, BootReceiver or long-running Service ($tileCount tile, $jobCount job) [OK]"
 Write-Host ""
 Write-Host "APK Contents (Native Libraries & Dex):"
 $verifyZip = [System.IO.Compression.ZipFile]::OpenRead($signedApk)

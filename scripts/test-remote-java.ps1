@@ -163,6 +163,11 @@ Write-Host "Executing HistoryChartViewDataTest..."
 if ($LASTEXITCODE -ne 0) {
     throw "HistoryChartViewDataTest failed"
 }
+Write-Host "Executing HostAlertRulesTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.remote.HostAlertRulesTest
+if ($LASTEXITCODE -ne 0) {
+    throw "HostAlertRulesTest failed"
+}
 Write-Host "Executing QuickActionsTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.QuickActionsTest
 if ($LASTEXITCODE -ne 0) {

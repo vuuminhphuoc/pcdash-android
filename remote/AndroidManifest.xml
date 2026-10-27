@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Host alerts (off unless turned on in More). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -42,7 +44,7 @@
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
-        <!-- The only service: bound by System UI while the Quick Settings panel is open. -->
+        <!-- Bound by System UI while the Quick Settings panel is open. -->
         <service
             android:name=".WakeTileService"
             android:exported="true"
@@ -56,6 +58,12 @@
                 android:name="android.service.quicksettings.ACTIVE_TILE"
                 android:value="false" />
         </service>
+
+        <!-- Opt-in host alerts: a periodic check scheduled only when the user turns them on in More. -->
+        <service
+            android:name=".HostWatchJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
 

@@ -37,7 +37,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 ```
 
 - **Host** là app `app/` trên điện thoại ở nhà. Giữ dashboard `:8090` trong mạng nhà làm đường dự phòng; API mới `:8091` yêu cầu `Authorization: Bearer <token>` để điều khiển từ APK Remote. Host phát WOL trong LAN và gọi PcAgent trên PC.
-- **PCDash Remote** chạy trên máy Android điều khiển, dùng tsnet Go userspace trong app để vào tailnet, không cần bật Tailscale app/VPN. Kết nối chỉ hoạt động khi mở app; khi đóng app, tsnet dừng. Không có relay/cloud riêng.
+- **PCDash Remote** chạy trên máy Android điều khiển, dùng tsnet Go userspace trong app để vào tailnet, không cần bật Tailscale app/VPN. Kết nối chỉ hoạt động khi mở app; khi đóng app, tsnet dừng (nếu bật Cảnh báo máy ở nhà, app mở tsnet vài giây mỗi lần kiểm tra nền rồi dừng lại). Không có relay/cloud riêng.
 - **Ghép đôi** chỉ thực hiện trong cùng Wi-Fi/LAN nhà. Sau đó Remote gọi API host qua tailnet; Wake do host ở trong LAN thực hiện.
 - **PC** chạy `PcAgent.exe` lắng nghe `:8799`, thực thi Sleep/Hibernate/Shutdown/Abort.
 
@@ -150,6 +150,8 @@ Tính năng trong PCDash Remote:
 - **Điều hướng**: thanh tab dưới cùng gồm Điều khiển, Giám sát, Quota, Nhật ký và Thêm (Cài đặt, Quên host). App luôn mở ở Điều khiển.
 - **Quota**: PcAgent chạy `omp usage --json --redact` (đường dẫn tùy chỉnh bằng `PCAGENT_OMP_PATH`), gộp theo nhà cung cấp và nhóm, phục vụ `GET /quota`; host chuyển tiếp ở `/v1/quota` và giữ số cũ khi PC tắt. Mỗi thẻ hiện thanh gộp 5 giờ và tuần, chạm để xem mọi cửa sổ và từng tài khoản. Nhãn tài khoản là email đã che của omp (`ten@*`); không gửi email đầy đủ, accountId hay token. Claude chưa có trong tab này.
 - **Lối tắt**: ô **Bật PC** trong Cài đặt nhanh và lối tắt **Bật PC** / **Cho PC ngủ** khi nhấn giữ biểu tượng PCDash Remote. Chúng chỉ mở app với lệnh chờ sẵn; app gửi lệnh khi đã kết nối (tối đa 60 giây sau khi bấm), không có gì chạy nền.
+- **Cảnh báo máy ở nhà** (tùy chọn, tắt sẵn, trong **Thêm**): thông báo khi điện thoại ở nhà mất kết nối (2 lần kiểm tra liên tiếp thất bại), khi kết nối lại, và khi pin ≤ 20% mà không sạc.
+- **Khóa ứng dụng** (tùy chọn, cả host và remote): mã 6 số, có thể mở bằng vân tay / khuôn mặt (Android 10 trở lên). App khóa khi mở và khi rời app quá 30 giây; nhập sai 5 lần phải chờ 30 giây, tăng gấp đôi mỗi lần sai tiếp (tối đa 16 phút). Mã không được lưu, chỉ lưu HMAC với khóa trong Android Keystore. Quên mã thì xóa dữ liệu ứng dụng.
 - **Ngôn ngữ**: hai app, dashboard web và cửa sổ QR trên PC có tiếng Anh và tiếng Việt, tự theo ngôn ngữ máy. Android 13 trở lên chọn riêng trong Cài đặt > Ứng dụng > PCDash > Ngôn ngữ. Chuỗi giao diện nằm trong `L10n.t("English", "Tiếng Việt")` (`shared/src/vn/vuumi/pcdash/i18n/L10n.java`); `scripts\lint-l10n.ps1` báo lỗi nếu có chữ tiếng Việt viết cứng ngoài `L10n.t`.
 - **Host bền vững**: wake lock và Wi-Fi lock, tự chạy lại sau reboot hoặc khi cài bản mới, watchdog mỗi 15 phút, thẻ **Sức khỏe host** (loại trừ tối ưu pin, tự khởi động Xiaomi). Nên bật Always-on VPN cho Tailscale trong cài đặt hệ thống.
 
@@ -165,7 +167,7 @@ Tính năng trong PCDash Remote:
 
 - Host yêu cầu Android minSdk 26; PCDash Remote yêu cầu minSdk 24.
 - Ghép đôi chỉ hoạt động khi hai thiết bị ở cùng Wi-Fi/LAN nhà.
-- Remote chỉ kết nối khi app đang mở, không chạy nền.
+- Remote chỉ kết nối khi app đang mở, không chạy nền, trừ khi bật **Cảnh báo máy ở nhà** (kiểm tra khoảng 15 phút một lần; Android có thể hoãn khi máy để yên lâu; sau khi khởi động lại máy remote cần mở app một lần để lịch kiểm tra chạy lại).
 - Wake cần điện thoại host đang chạy trong LAN và PC hỗ trợ Wake-on-LAN (bật WOL trong BIOS và driver NIC).
 - Nhiệt độ CPU thật cần quyền admin một lần (xem phần PcAgent).
 - IP PC nên đặt DHCP reservation ở router để địa chỉ trong Cài đặt PC không đổi.

@@ -47,6 +47,8 @@ phone does not need the Tailscale app or a VPN turned on.
 - Command log with device, time and result.
 - Quota tab for AI services read through [omp](https://github.com/can1357/oh-my-pi) on the PC (optional).
 - Wake PC Quick Settings tile and Wake / Sleep app shortcuts (long-press the PCDash Remote icon). They open the app, which sends the command once connected; nothing runs in the background.
+- Optional alerts on the remote when the home phone goes offline or its battery is low (More > alerts, off by default). When on, the remote checks about every 15 minutes in the background; Android may delay checks while the phone sits idle.
+- Optional app lock in both apps: a 6-digit passcode, with fingerprint / face unlock on Android 10+. It locks when the app opens and after 30 s away; wrong codes trigger a growing wait.
 - English and Vietnamese UI in both apps, the web dashboard and the PC setup window. The apps follow the phone language; on Android 13+ you can pick either under Settings > Apps > PCDash > Language.
 - Pure-black OLED theme, glass tab bar with a sliding selection pill, screen-reader friendly labels.
 - One-scan setup: the PC shows a QR code, the host phone scans it with its camera.
