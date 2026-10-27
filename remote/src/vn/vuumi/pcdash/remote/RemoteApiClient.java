@@ -71,6 +71,30 @@ public class RemoteApiClient {
         }
     }
 
+    // The PC that status, metrics, history, quota and actions are about, when the host has several;
+    // null asks about the host's first PC (and is all an older host understands).
+    private volatile String pcId;
+
+    public void setPcId(String id) {
+        this.pcId = id != null && id.matches("^[A-Za-z0-9_-]{1,24}$") ? id : null;
+    }
+
+    public String getPcId() {
+        return pcId;
+    }
+
+    // "?pc=..." or "&pc=..." (after other parameters), or nothing.
+    private String pcParam(boolean first) {
+        String id = pcId;
+        return id == null ? "" : (first ? "?pc=" : "&pc=") + id;
+    }
+
+    /** Every PC of the host with its state; UnsupportedRouteException from a host with one PC only. */
+    public String getPcs(int localPort, String token, int timeoutMs) throws IOException {
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/pcs";
+        return sendHttp("GET", urlStr, token, Math.min(timeoutMs, DEFAULT_CONNECT_TIMEOUT_MS), timeoutMs);
+    }
+
     private static final int DEFAULT_CONNECT_TIMEOUT_MS = 20000;
     private static final int DEFAULT_READ_TIMEOUT_MS = 20000;
 
@@ -80,7 +104,7 @@ public class RemoteApiClient {
 
     /** With a shorter wait, for the status the screen polls (the next poll is the retry). */
     public RemoteStatus getStatus(int localPort, String token, int timeoutMs) throws IOException {
-        String urlStr = "http://127.0.0.1:" + localPort + "/v1/status";
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/status" + pcParam(true);
         String body = sendHttp("GET", urlStr, token, Math.min(timeoutMs, DEFAULT_CONNECT_TIMEOUT_MS), timeoutMs);
 
         boolean online = body.contains("\"online\":true") || body.contains("\"online\": true");
@@ -121,7 +145,7 @@ public class RemoteApiClient {
         return new RemoteStatus(online, port, rtt, body);
     }
     public String getMetrics(int localPort, String token) throws IOException {
-        String urlStr = "http://127.0.0.1:" + localPort + "/v1/metrics";
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/metrics" + pcParam(true);
         return sendHttp("GET", urlStr, token);
     }
 
@@ -135,7 +159,8 @@ public class RemoteApiClient {
     }
 
     public String getHistory(int localPort, String token, int minutes) throws IOException {
-        String urlStr = "http://127.0.0.1:" + localPort + "/v1/history" + (minutes > 0 ? ("?minutes=" + minutes) : "");
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/history"
+                + (minutes > 0 ? ("?minutes=" + minutes + pcParam(false)) : pcParam(true));
         return sendHttp("GET", urlStr, token);
     }
 
@@ -144,7 +169,7 @@ public class RemoteApiClient {
     }
 
     public String getQuota(int localPort, String token, boolean refresh) throws IOException {
-        String urlStr = "http://127.0.0.1:" + localPort + "/v1/quota" + (refresh ? "?refresh=1" : "");
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/quota" + (refresh ? "?refresh=1" + pcParam(false) : pcParam(true));
         return sendHttp("GET", urlStr, token);
     }
 
@@ -187,7 +212,7 @@ public class RemoteApiClient {
             throw new IllegalArgumentException("Action not permitted: " + action);
         }
 
-        String urlStr = "http://127.0.0.1:" + localPort + "/v1/" + action;
+        String urlStr = "http://127.0.0.1:" + localPort + "/v1/" + action + pcParam(true);
         String body = sendHttp("POST", urlStr, token);
 
         boolean ok = body.contains("\"ok\":true") || body.contains("\"ok\": true");

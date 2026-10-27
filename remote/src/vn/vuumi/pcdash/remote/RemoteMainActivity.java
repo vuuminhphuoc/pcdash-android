@@ -88,6 +88,12 @@ public class RemoteMainActivity extends Activity {
     private boolean reconnecting;
     private static final long RECONNECT_GAP_MS = 2 * 60_000L;
     private static final int FAILURES_BEFORE_RECONNECT = 2;
+    // Several PCs on the home phone: the chips, the last list, and whether the host knows /v1/pcs at all.
+    private static final String UI_PREFS = "pcdash_remote_ui";
+    private static final String KEY_SELECTED_PC = "selected_pc";
+    private PcSwitcherBar pcSwitcher;
+    private PcList lastPcs;
+    private volatile Boolean pcsSupported;
     private boolean isPolling = false;
     private volatile boolean isStopped = false;
     private volatile boolean isDestroyed = false;
@@ -238,6 +244,9 @@ public class RemoteMainActivity extends Activity {
         private TailnetPeers.Peer hostPeer;
         // This phone's tailnet while it is not up yet (then no request is sent).
         private PcnetState tailnet;
+        // The home phone's PCs when it has the list (then the status is the chosen PC's entry).
+        private PcList pcs;
+        private boolean pcsUnsupported;
 
         PollWorker(RemoteMainActivity activity, int generation) {
             this.activityRef = new WeakReference<RemoteMainActivity>(activity);
@@ -262,10 +271,29 @@ public class RemoteMainActivity extends Activity {
                     // Still starting (or signed out): a request now would only wait for a timeout.
                     tailnet = st;
                 } else {
-                    try {
-                        status = act.controller.getStatusQuick();
-                    } catch (Exception e) {
-                        error = e;
+                    boolean answered = false;
+                    if (!Boolean.FALSE.equals(act.pcsSupported)) {
+                        // One request for every PC's state: the chips and the chosen PC's status.
+                        try {
+                            pcs = PcList.parse(act.controller.getPcsQuick());
+                            if (pcs != null) {
+                                PcList.Pc pc = pcs.pick(act.controller.getPcId());
+                                status = pc != null ? pc.toStatus() : new RemoteApiClient.RemoteStatus(false, null, 0, null);
+                                answered = true;
+                            }
+                        } catch (RemoteApiClient.UnsupportedRouteException e) {
+                            pcsUnsupported = true; // a host with one PC: ask /v1/status as before
+                        } catch (Exception e) {
+                            error = e;
+                            answered = true;
+                        }
+                    }
+                    if (!answered) {
+                        try {
+                            status = act.controller.getStatusQuick();
+                        } catch (Exception e) {
+                            error = e;
+                        }
                     }
                 }
                 if (error != null && !(error instanceof RemoteApiClient.DeviceRevokedException)) {
@@ -280,6 +308,12 @@ public class RemoteMainActivity extends Activity {
                 isUiPass = true;
                 act.ui.post(this);
             } else {
+                if (pcsUnsupported) {
+                    act.pcsSupported = Boolean.FALSE;
+                } else if (pcs != null) {
+                    act.pcsSupported = Boolean.TRUE;
+                    act.showPcs(pcs);
+                }
                 act.onStatusDeliver(status, error, hostPeer, tailnet, generation);
             }
         }
@@ -331,6 +365,60 @@ public class RemoteMainActivity extends Activity {
             // More often while a command changes the PC's state, or just after a failure.
             long next = actionWatch != null ? 2500 : status == null && statusFailures < FAILURES_BEFORE_RECONNECT ? 2000 : 5000;
             ui.postDelayed(pollStatusTask, next);
+        }
+    }
+
+    // The home phone's PCs arrived: chips when there are several, and keep the choice valid.
+    private void showPcs(PcList pcs) {
+        if (isStopped || isDestroyed) return;
+        lastPcs = pcs;
+        PcList.Pc chosen = pcs.pick(controller.getPcId());
+        if (chosen != null && !chosen.id.equals(controller.getPcId())) {
+            // Nothing chosen yet, or the chosen PC was removed on the home phone.
+            controller.setPcId(chosen.id);
+        }
+        pcSwitcher.show(pcs, chosen != null ? chosen.id : null);
+        updatePcSwitcherVisibility();
+    }
+
+    private void updatePcSwitcherVisibility() {
+        if (pcSwitcher == null) return;
+        boolean show = lastPcs != null && lastPcs.pcs.size() > 1 && controller != null && controller.isPaired()
+                && shownTab != null && shownTab != MainTab.LOG;
+        pcSwitcher.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    /** A chip was tapped: every tab now shows and acts on that PC. */
+    private void selectPc(String id) {
+        if (id == null || id.equals(controller.getPcId()) || isStopped || isDestroyed) return;
+        controller.setPcId(id);
+        getSharedPreferences(UI_PREFS, MODE_PRIVATE).edit().putString(KEY_SELECTED_PC, id).apply();
+        if (lastPcs != null) {
+            pcSwitcher.show(lastPcs, id);
+        }
+        // What is on screen belongs to the other PC.
+        actionWatch = null;
+        if (controlTabView != null) {
+            controlTabView.resetActions();
+            controlTabView.setRefreshing(true);
+            PcList.Pc pc = lastPcs != null ? lastPcs.pick(id) : null;
+            if (pc != null) {
+                controlTabView.updateStatus(pc.toStatus(), null, null);
+            }
+        }
+        lastSnapshot = null;
+        isMetricsOld = false;
+        if (navigator != null) {
+            adjustPollersForTab(navigator.current());
+            if (navigator.current() == MainTab.QUOTA && quotaTabView != null) {
+                // A load still running is for the other PC.
+                if (quotaFuture != null) {
+                    quotaFuture.cancel(true);
+                    quotaFuture = null;
+                }
+                quotaGeneration.invalidate();
+                quotaTabView.loadQuota(false);
+            }
         }
     }
 
@@ -538,6 +626,7 @@ public class RemoteMainActivity extends Activity {
         // Shared with the host-alert job: one tsnet node per process.
         controller = RemoteSession.controller(this);
         store = RemoteSession.store(this);
+        controller.setPcId(getSharedPreferences(UI_PREFS, MODE_PRIVATE).getString(KEY_SELECTED_PC, null));
 
         navigator = new TabNavigator(new TabNavigator.Listener() {
             @Override
@@ -567,6 +656,16 @@ public class RemoteMainActivity extends Activity {
         LinearLayout rootLayout = new LinearLayout(this);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
         rootLayout.setBackgroundColor(Color.rgb(0, 0, 0));
+
+        pcSwitcher = new PcSwitcherBar(this, new PcSwitcherBar.Listener() {
+            @Override
+            public void onPcSelected(String id) {
+                selectPc(id);
+            }
+        });
+        pcSwitcher.setVisibility(View.GONE);
+        rootLayout.addView(pcSwitcher, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         contentContainer = new FrameLayout(this);
         contentContainer.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1022,6 +1121,7 @@ public class RemoteMainActivity extends Activity {
             animateTabIn(incoming, shownTab, tab);
         }
         shownTab = tab;
+        updatePcSwitcherVisibility();
         if (bottomNavBar != null) {
             bottomNavBar.setSelected(tab);
         }
@@ -1417,10 +1517,12 @@ public class RemoteMainActivity extends Activity {
         if (actionWatch != null && !actionWatch.expectOnline) {
             // The PC going off now is no surprise for the background alerts.
             final Context app = getApplicationContext();
+            // The PC this command went to (an older host with one PC has no ids).
+            final String pcId = Boolean.TRUE.equals(pcsSupported) ? controller.getPcId() : null;
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    HostWatch.notePcOffExpected(app);
+                    HostWatch.notePcOffExpected(app, pcId);
                 }
             });
         }

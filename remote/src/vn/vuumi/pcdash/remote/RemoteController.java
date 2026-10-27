@@ -264,6 +264,21 @@ public class RemoteController {
         throw new IOException("Remote call failed");
     }
 
+    /** The PC that statuses, metrics, quota and actions are about (null: the host's first PC). */
+    public void setPcId(String pcId) {
+        api.setPcId(pcId);
+    }
+
+    public String getPcId() {
+        return api.getPcId();
+    }
+
+    /** All PCs with their state in one request; UnsupportedRouteException from a single-PC host. */
+    public String getPcsQuick() throws IOException {
+        Session session = session();
+        return api.getPcs(session.port, session.token, QUICK_STATUS_TIMEOUT_MS);
+    }
+
     /** One status request with a short wait, for the screen's polling (which retries on its own). */
     public RemoteApiClient.RemoteStatus getStatusQuick() throws IOException {
         Session session = session();

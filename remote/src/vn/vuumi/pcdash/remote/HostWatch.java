@@ -12,7 +12,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 
@@ -60,7 +64,7 @@ final class HostWatch {
             if (nm != null) {
                 nm.cancel(NOTIFY_CONNECTION);
                 nm.cancel(NOTIFY_BATTERY);
-                nm.cancel(NOTIFY_PC);
+                cancelPcNotifications(nm);
             }
         }
     }
@@ -74,16 +78,21 @@ final class HostWatch {
         prefs(context).edit().putBoolean(KEY_PC_ALERTS, enabled).commit();
         if (!enabled) {
             NotificationManager nm = context.getSystemService(NotificationManager.class);
-            if (nm != null) nm.cancel(NOTIFY_PC);
+            if (nm != null) cancelPcNotifications(nm);
         }
     }
 
-    /** This app just sent Sleep, Hibernate or Shut down: the PC going off is no surprise. Not on the UI thread. */
-    static synchronized void notePcOffExpected(Context context) {
+    /**
+     * This app just sent Sleep, Hibernate or Shut down: that PC going off is no surprise. Not on the UI
+     * thread.
+     *
+     * @param pcId the PC from the host's list, or null for a host with one PC
+     */
+    static synchronized void notePcOffExpected(Context context, String pcId) {
         if (!isEnabled(context)) return;
         SharedPreferences p = prefs(context);
         HostAlertRules.State state = HostAlertRules.State.decode(p.getString(KEY_STATE, null));
-        state.pcOffExpected = true;
+        state.pc(pcId).offExpected = true;
         p.edit().putString(KEY_STATE, state.encode()).commit();
     }
 
@@ -121,10 +130,11 @@ final class HostWatch {
             // Offline in the device list: one request in case the list lags; otherwise up to three
             // (a single request can land on a blip).
             int tries = Boolean.FALSE.equals(listedOnline) ? 1 : 3;
-            RemoteApiClient.RemoteStatus status = null;
-            for (int attempt = 0; attempt < tries && status == null; attempt++) {
+            Map<String, Boolean> pcs = null;
+            Map<String, String> names = new HashMap<String, String>();
+            for (int attempt = 0; attempt < tries && pcs == null; attempt++) {
                 try {
-                    status = c.getStatus();
+                    pcs = readPcs(c, names);
                 } catch (RemoteApiClient.DeviceRevokedException e) {
                     return;
                 } catch (IOException e) {
@@ -133,7 +143,7 @@ final class HostWatch {
             }
             Double battery = null;
             Boolean charging = null;
-            if (status != null) {
+            if (pcs != null) {
                 try {
                     MetricsSnapshot m = MetricsParser.parse(c.getMetrics());
                     if (m.phone != null && m.phone.battery != null) {
@@ -142,9 +152,8 @@ final class HostWatch {
                     }
                 } catch (IOException ignored) {}
             }
-            record(context, new HostAlertRules.Check(listedOnline, status != null,
-                    status != null ? Boolean.valueOf(status.online) : null, battery, charging),
-                    host != null ? host.lastSeenMs : -1L);
+            record(context, new HostAlertRules.Check(listedOnline, pcs != null, pcs, battery, charging),
+                    host != null ? host.lastSeenMs : -1L, names);
         } catch (IOException | InterruptedException ignored) {
             // Stopped by the system or the tailnet would not start; the next run tries again.
         } finally {
@@ -153,13 +162,33 @@ final class HostWatch {
         }
     }
 
-    private static synchronized void record(Context context, HostAlertRules.Check check, long hostLastSeenMs) {
+    // Each PC's state from the host's list (names filled in), or the one PC of an older host under "".
+    private static Map<String, Boolean> readPcs(RemoteController c, Map<String, String> names) throws IOException {
+        try {
+            PcList list = PcList.parse(c.getPcsQuick());
+            if (list == null) throw new IOException("Unreadable PC list");
+            Map<String, Boolean> out = new LinkedHashMap<String, Boolean>();
+            for (PcList.Pc pc : list.pcs) {
+                out.put(pc.id, pc.online);
+                names.put(pc.id, pc.name);
+            }
+            return out;
+        } catch (RemoteApiClient.UnsupportedRouteException e) {
+            return Collections.singletonMap("", c.getStatusQuick().online);
+        }
+    }
+
+    private static synchronized void record(Context context, HostAlertRules.Check check, long hostLastSeenMs,
+                                            Map<String, String> names) {
         SharedPreferences p = prefs(context);
         HostAlertRules.State state = HostAlertRules.State.decode(p.getString(KEY_STATE, null));
-        List<HostAlertRules.Alert> alerts = HostAlertRules.apply(state, check, isPcAlertsEnabled(context));
+        List<HostAlertRules.Event> events = HostAlertRules.apply(state, check, isPcAlertsEnabled(context));
         p.edit().putString(KEY_STATE, state.encode()).commit();
-        for (HostAlertRules.Alert alert : alerts) {
-            notify(context, alert, check.batteryPercent, hostLastSeenMs);
+        // Name the PC only when the home phone has several.
+        boolean several = names.size() > 1;
+        for (HostAlertRules.Event e : events) {
+            notify(context, e.alert, check.batteryPercent, hostLastSeenMs,
+                    e.pcId, several ? names.get(e.pcId) : null);
         }
     }
 
@@ -174,7 +203,8 @@ final class HostWatch {
         return false;
     }
 
-    private static void notify(Context context, HostAlertRules.Alert alert, Double battery, long hostLastSeenMs) {
+    private static void notify(Context context, HostAlertRules.Alert alert, Double battery, long hostLastSeenMs,
+                               String pcId, String pcName) {
         NotificationManager nm = context.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -202,14 +232,18 @@ final class HostWatch {
                         "Điện thoại ở nhà vẫn online trên Tailscale nhưng app PCDash host không trả lời. Mở app trên máy đó và kiểm tra tối ưu pin.");
                 break;
             case PC_OFFLINE:
-                id = NOTIFY_PC;
-                title = L10n.t("PC is off or unreachable", "PC đã tắt hoặc mất kết nối");
+                id = pcNotificationId(pcId);
+                title = pcName != null
+                        ? pcName + L10n.t(" is off or unreachable", " đã tắt hoặc mất kết nối")
+                        : L10n.t("PC is off or unreachable", "PC đã tắt hoặc mất kết nối");
                 text = L10n.t("The home phone can no longer reach the PC. You can turn it on again with Wake.",
                         "Điện thoại ở nhà không còn thấy PC. Có thể bật lại bằng nút Bật / Đánh thức PC.");
                 break;
             case PC_BACK_ONLINE:
-                id = NOTIFY_PC;
-                title = L10n.t("PC is back on", "PC đã bật lại");
+                id = pcNotificationId(pcId);
+                title = pcName != null
+                        ? pcName + L10n.t(" is back on", " đã bật lại")
+                        : L10n.t("PC is back on", "PC đã bật lại");
                 text = L10n.t("The home phone can reach the PC again.", "Điện thoại ở nhà đã thấy PC trở lại.");
                 break;
             case HOST_BACK_ONLINE:
@@ -240,6 +274,20 @@ final class HostWatch {
                 .setAutoCancel(true);
         // Missing POST_NOTIFICATIONS permission (Android 13+) only makes this silent.
         nm.notify(id, b.build());
+    }
+
+    private static void cancelPcNotifications(NotificationManager nm) {
+        nm.cancel(NOTIFY_PC);
+        try {
+            for (android.service.notification.StatusBarNotification n : nm.getActiveNotifications()) {
+                if (n.getId() >= 1000 && n.getId() < 1000 + 0x10000) nm.cancel(n.getId());
+            }
+        } catch (RuntimeException ignored) {}
+    }
+
+    // One notification per PC; the single PC of an older host keeps the old id.
+    private static int pcNotificationId(String pcId) {
+        return pcId == null || pcId.isEmpty() ? NOTIFY_PC : 1000 + (pcId.hashCode() & 0xffff);
     }
 
     private static int smallIcon(Context context) {

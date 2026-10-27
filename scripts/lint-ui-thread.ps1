@@ -66,7 +66,7 @@ function Lint-File {
             if ($line -match '\bnew\s+URL\s*\(') {
                 $violations += "$($filePath):$($lineIdx+1): new URL() khong duoc phep goi truc tiep tren luong giao dien"
             }
-            if ($line -match '\b(controller|ctrl|act\.controller)\.(getStatus|getStatusQuick|postAction|getMetrics|getLog|getHistory|getQuota|getUpdateInfo|downloadUpdate|open|close|pair|forgetHost)\s*\(') {
+            if ($line -match '\b(controller|ctrl|act\.controller)\.(getStatus|getStatusQuick|getPcsQuick|postAction|getMetrics|getLog|getHistory|getQuota|getUpdateInfo|downloadUpdate|open|close|pair|forgetHost)\s*\(') {
                 $violations += "$($filePath):$($lineIdx+1): controller.$($Matches[2])() khong duoc phep goi truc tiep tren luong giao dien"
             }
         }

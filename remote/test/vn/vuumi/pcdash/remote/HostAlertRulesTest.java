@@ -2,7 +2,9 @@ package vn.vuumi.pcdash.remote;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class HostAlertRulesTest {
 
@@ -12,10 +14,24 @@ public class HostAlertRulesTest {
         throw new AssertionError("Assertion failed for " + message + ": expected <" + expected + "> but got <" + actual + ">");
     }
 
-    private static final List<HostAlertRules.Alert> NONE = Collections.<HostAlertRules.Alert>emptyList();
+    private static final List<HostAlertRules.Event> NONE = Collections.<HostAlertRules.Event>emptyList();
 
-    private static List<HostAlertRules.Alert> alerts(HostAlertRules.Alert... a) {
-        return Arrays.asList(a);
+    // Alerts about the home phone (no PC).
+    private static List<HostAlertRules.Event> alerts(HostAlertRules.Alert... a) {
+        HostAlertRules.Event[] out = new HostAlertRules.Event[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = new HostAlertRules.Event(a[i], a[i] == HostAlertRules.Alert.PC_OFFLINE || a[i] == HostAlertRules.Alert.PC_BACK_ONLINE ? "" : null);
+        }
+        return Arrays.asList(out);
+    }
+
+    private static HostAlertRules.Event ev(HostAlertRules.Alert a, String pc) {
+        return new HostAlertRules.Event(a, pc);
+    }
+
+    // The single PC of a host without a PC list, reported under "".
+    private static Map<String, Boolean> onePc(boolean online) {
+        return Collections.singletonMap("", online);
     }
 
     /** Listed offline in the Tailscale device list. */
@@ -29,14 +45,14 @@ public class HostAlertRulesTest {
     }
 
     private static HostAlertRules.Check up(Double battery, Boolean charging) {
-        return new HostAlertRules.Check(true, true, true, battery, charging);
+        return new HostAlertRules.Check(true, true, onePc(true), battery, charging);
     }
 
     private static HostAlertRules.Check pc(boolean pcOnline) {
-        return new HostAlertRules.Check(true, true, pcOnline, 80.0, true);
+        return new HostAlertRules.Check(true, true, onePc(pcOnline), 80.0, true);
     }
 
-    private static List<HostAlertRules.Alert> apply(HostAlertRules.State s, HostAlertRules.Check c) {
+    private static List<HostAlertRules.Event> apply(HostAlertRules.State s, HostAlertRules.Check c) {
         return HostAlertRules.apply(s, c, true);
     }
 
@@ -101,11 +117,11 @@ public class HostAlertRulesTest {
 
     private static void testExpectedPcOffIsQuiet() {
         HostAlertRules.State s = new HostAlertRules.State();
-        s.pcOffExpected = true; // this app sent Sleep
+        s.pc("").offExpected = true; // this app sent Sleep
         apply(s, pc(false));
         assertEquals(apply(s, pc(false)), NONE, "Sleep sent from this app: no alert");
         assertEquals(apply(s, pc(true)), NONE, "Woken again: no 'back' alert either");
-        assertEquals(s.pcOffExpected, false, "Cleared once the PC is back on");
+        assertEquals(s.pc("").offExpected, false, "Cleared once the PC is back on");
         apply(s, pc(false));
         assertEquals(apply(s, pc(false)), alerts(HostAlertRules.Alert.PC_OFFLINE), "Next unexpected off alerts");
         System.out.println("PASS: testExpectedPcOffIsQuiet");
@@ -119,22 +135,46 @@ public class HostAlertRulesTest {
         System.out.println("PASS: testPcAlertsOff");
     }
 
+    private static void testSeveralPcs() {
+        HostAlertRules.State s = new HostAlertRules.State();
+        Map<String, Boolean> both = new LinkedHashMap<String, Boolean>();
+        both.put("pc1", true);
+        both.put("pcb2", false);
+        HostAlertRules.Check c = new HostAlertRules.Check(true, true, both, 80.0, true);
+        assertEquals(apply(s, c), NONE, "First miss");
+        assertEquals(apply(s, c), Arrays.asList(ev(HostAlertRules.Alert.PC_OFFLINE, "pcb2")), "Only the PC that is off");
+        s.pc("pc1").offExpected = true;
+        Map<String, Boolean> flipped = new LinkedHashMap<String, Boolean>();
+        flipped.put("pc1", false);
+        flipped.put("pcb2", true);
+        HostAlertRules.Check f = new HostAlertRules.Check(true, true, flipped, 80.0, true);
+        assertEquals(apply(s, f), Arrays.asList(ev(HostAlertRules.Alert.PC_BACK_ONLINE, "pcb2")), "pcb2 back");
+        assertEquals(apply(s, f), NONE, "pc1 was put to sleep from this app: quiet");
+        Map<String, Boolean> onlyB = Collections.singletonMap("pcb2", true);
+        apply(s, new HostAlertRules.Check(true, true, onlyB, 80.0, true));
+        assertEquals(s.pcs.containsKey("pc1"), false, "A PC removed on the home phone is forgotten");
+        System.out.println("PASS: testSeveralPcs");
+    }
+
     private static void testStateRoundTrip() {
         HostAlertRules.State s = new HostAlertRules.State();
         s.failedChecks = 3;
         s.offlineAlerted = true;
-        s.pcFailedChecks = 2;
-        s.pcOffExpected = true;
+        s.pc("pc1").failedChecks = 2;
+        s.pc("pc1").offExpected = true;
+        s.pc("pcb2").alerted = true;
         HostAlertRules.State back = HostAlertRules.State.decode(s.encode());
         assertEquals(back.failedChecks, 3, "failedChecks");
         assertEquals(back.offlineAlerted, true, "offlineAlerted");
         assertEquals(back.batteryAlerted, false, "batteryAlerted");
-        assertEquals(back.pcFailedChecks, 2, "pcFailedChecks");
-        assertEquals(back.pcAlerted, false, "pcAlerted");
-        assertEquals(back.pcOffExpected, true, "pcOffExpected");
+        assertEquals(back.pc("pc1").failedChecks, 2, "pc1 failedChecks");
+        assertEquals(back.pc("pc1").offExpected, true, "pc1 offExpected");
+        assertEquals(back.pc("pcb2").alerted, true, "pcb2 alerted");
         HostAlertRules.State old = HostAlertRules.State.decode("1,1,0");
-        assertEquals(old.offlineAlerted, true, "State saved by the previous version still reads");
-        assertEquals(old.pcFailedChecks, 0, "with fresh PC fields");
+        assertEquals(old.offlineAlerted, true, "State saved two versions ago still reads");
+        HostAlertRules.State oneLine = HostAlertRules.State.decode("0,0,0,2,1,0");
+        assertEquals(oneLine.pc("").failedChecks, 2, "The previous version's single PC");
+        assertEquals(oneLine.pc("").alerted, true, "with its alert");
         assertEquals(HostAlertRules.State.decode("garbage").failedChecks, 0, "Bad text starts fresh");
         assertEquals(HostAlertRules.State.decode(null).offlineAlerted, false, "No text starts fresh");
         System.out.println("PASS: testStateRoundTrip");
@@ -149,6 +189,7 @@ public class HostAlertRulesTest {
         testPcOfflineAndBack();
         testExpectedPcOffIsQuiet();
         testPcAlertsOff();
+        testSeveralPcs();
         testStateRoundTrip();
         System.out.println("ALL HostAlertRulesTest PASSED");
     }

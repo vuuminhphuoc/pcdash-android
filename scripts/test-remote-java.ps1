@@ -176,6 +176,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "HostAlertRulesTest failed"
 }
 
+Write-Host "Executing PcListTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.remote.PcListTest
+if ($LASTEXITCODE -ne 0) {
+    throw "PcListTest failed"
+}
+
 Write-Host "Executing TailnetPeersTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.remote.TailnetPeersTest
 if ($LASTEXITCODE -ne 0) {
