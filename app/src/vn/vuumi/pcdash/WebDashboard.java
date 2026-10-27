@@ -2,6 +2,7 @@ package vn.vuumi.pcdash;
 
 import android.content.Context;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,25 @@ import java.util.concurrent.ThreadFactory;
 
 public class WebDashboard {
     public static final int PORT = 8090;
+    static final int MAX_HEADER_BYTES = 8192;
+    static final int MAX_HEADER_LINES = 64;
+
+    static final class HeaderTooLargeException extends IOException {
+    }
+
+    /** Reads one LF or CRLF terminated line, charging every byte to budget[0]; null at end of stream. */
+    static String readLimitedLine(InputStream in, int[] budget) throws IOException {
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream(128);
+        int c;
+        while ((c = in.read()) != -1) {
+            if (--budget[0] < 0) throw new HeaderTooLargeException();
+            if (c == '\n') break;
+            if (c != '\r') buf.write(c);
+        }
+        if (c == -1 && buf.size() == 0) return null;
+        return new String(buf.toByteArray(), StandardCharsets.UTF_8);
+    }
+
     private final Context ctx;
     private final CommandLog commandLog;
     private final PcSettingsSource settings;
@@ -118,9 +138,13 @@ public class WebDashboard {
 
     private void handle(Socket s) {
         try {
+            if (!LanAddressPolicy.isAllowedDashboardPeer(s.getInetAddress())) {
+                return;
+            }
             s.setSoTimeout(10000);
-            BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
-            String request = in.readLine();
+            InputStream in = new BufferedInputStream(s.getInputStream());
+            int[] budget = { MAX_HEADER_BYTES };
+            String request = readLimitedLine(in, budget);
             if (request == null) return;
             String[] parts = request.split(" ");
             String method = parts.length > 0 ? parts[0] : "GET";
@@ -131,7 +155,9 @@ public class WebDashboard {
 
             Map<String, String> headers = new HashMap<String, String>();
             String line;
-            while ((line = in.readLine()) != null && !line.isEmpty()) {
+            int headerLines = 0;
+            while ((line = readLimitedLine(in, budget)) != null && !line.isEmpty()) {
+                if (++headerLines > MAX_HEADER_LINES) throw new HeaderTooLargeException();
                 int i = line.indexOf(':');
                 if (i > 0) headers.put(line.substring(0, i).trim().toLowerCase(), line.substring(i + 1).trim());
             }
@@ -200,10 +226,15 @@ public class WebDashboard {
                 }
                 String detail = rawDetail != null ? rawDetail.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") : "";
                 send(s, 200, "application/json",
-                        ("{\"ok\":true,\"detail\":\"" + detail + "\"}").getBytes(StandardCharsets.UTF_8));
+                        ("{\"ok\":" + ok + ",\"detail\":\"" + detail + "\"}").getBytes(StandardCharsets.UTF_8));
                 return;
             }
             send(s, 404, "application/json", "{\"error\":\"not_found\"}".getBytes(StandardCharsets.UTF_8));
+        } catch (HeaderTooLargeException e) {
+            try {
+                send(s, 431, "application/json", "{\"error\":\"header_too_large\"}".getBytes(StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+            }
         } catch (IOException ignored) {
         } finally {
             try { s.close(); } catch (IOException ignored) {}
@@ -217,6 +248,7 @@ public class WebDashboard {
             case 401: reason = "Unauthorized"; break;
             case 403: reason = "Forbidden"; break;
             case 404: reason = "Not Found"; break;
+            case 431: reason = "Request Header Fields Too Large"; break;
             default: reason = "Error"; break;
         }
         String head = "HTTP/1.1 " + code + " " + reason + "\r\n"

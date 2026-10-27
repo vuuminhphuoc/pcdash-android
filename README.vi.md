@@ -4,7 +4,7 @@
 
 <p align="center"><img src="docs/logo/pcdash-host.svg" width="96" alt="PCDash"> <img src="docs/logo/pcdash-remote.svg" width="96" alt="PCDash Remote"></p>
 
-Điều khiển PC ở nhà bằng điện thoại Android: bật (Wake-on-LAN), Sleep, Hibernate, Shutdown và hủy lệnh. Có dashboard `:8090` qua LAN/Tailscale và APK `PCDash Remote` để điều khiển từ xa mà máy điều khiển không cần bật VPN/Tailscale app.
+Điều khiển PC ở nhà bằng điện thoại Android: bật (Wake-on-LAN), Sleep, Hibernate, Shutdown và hủy lệnh. Có dashboard `:8090` trong mạng nhà và APK `PCDash Remote` để điều khiển từ xa mà máy điều khiển không cần bật VPN/Tailscale app.
 
 ## Mục tiêu
 
@@ -36,7 +36,7 @@
 Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời, SRP-6a.
 ```
 
-- **Host** là app `app/` trên điện thoại ở nhà. Giữ nguyên dashboard `:8090` qua LAN/Tailscale làm đường dự phòng; API mới `:8091` yêu cầu `Authorization: Bearer <token>` để điều khiển từ APK Remote. Host phát WOL trong LAN và gọi PcAgent trên PC.
+- **Host** là app `app/` trên điện thoại ở nhà. Giữ dashboard `:8090` trong mạng nhà làm đường dự phòng; API mới `:8091` yêu cầu `Authorization: Bearer <token>` để điều khiển từ APK Remote. Host phát WOL trong LAN và gọi PcAgent trên PC.
 - **PCDash Remote** chạy trên máy Android điều khiển, dùng tsnet Go userspace trong app để vào tailnet, không cần bật Tailscale app/VPN. Kết nối chỉ hoạt động khi mở app; khi đóng app, tsnet dừng. Không có relay/cloud riêng.
 - **Ghép đôi** chỉ thực hiện trong cùng Wi-Fi/LAN nhà. Sau đó Remote gọi API host qua tailnet; Wake do host ở trong LAN thực hiện.
 - **PC** chạy `PcAgent.exe` lắng nghe `:8799`, thực thi Sleep/Hibernate/Shutdown/Abort.
@@ -121,7 +121,7 @@ Sau đó điều khiển được từ bất kỳ đâu, kể cả 5G, không c�
 
 ## Sử dụng
 
-Dashboard dự phòng mở tại `http://<IP-điện-thoại>:8090` trong LAN hoặc `http://<tailscale-ip>:8090` qua Tailscale; lần đầu bấm lệnh trang hỏi **mã truy cập web** (xem trong Cài đặt PC trên host). PCDash Remote kết nối host qua tailnet mà không cần bật VPN/Tailscale app trên máy điều khiển.
+Dashboard dự phòng mở tại `http://<IP-điện-thoại>:8090` trong LAN (hoặc `http://<tailscale-ip>:8090` nếu điện thoại host có cài app Tailscale). Dashboard từ chối mọi địa chỉ IP công cộng; lần đầu bấm lệnh trang hỏi **mã truy cập web** (xem trong Cài đặt PC trên host). PCDash Remote kết nối host qua tailnet mà không cần bật VPN/Tailscale app trên máy điều khiển.
 
 - **Bật / Đánh thức**: host gửi magic packet WOL trong LAN.
 - **Sleep**: `rundll32 powrprof.dll,SetSuspendState`.

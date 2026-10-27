@@ -31,6 +31,36 @@ public class LanAddressPolicy {
         return false;
     }
 
+    /**
+     * Who may talk to the :8090 web dashboard: this phone, the home LAN (RFC 1918, link-local, IPv6 ULA)
+     * and a Tailscale app on the phone (100.64.0.0/10). Public addresses are refused, so the dashboard
+     * stays closed when mobile data hands the phone a routable IPv4 or IPv6 address.
+     */
+    public static boolean isAllowedDashboardPeer(InetAddress address) {
+        if (address == null) return false;
+        byte[] b = address.getAddress();
+        if (b.length == 16) {
+            boolean mapped = true;
+            for (int i = 0; i < 10; i++) {
+                if (b[i] != 0) { mapped = false; break; }
+            }
+            if (mapped && (b[10] & 0xFF) == 0xFF && (b[11] & 0xFF) == 0xFF) {
+                b = new byte[] { b[12], b[13], b[14], b[15] };
+            } else {
+                if (address.isLoopbackAddress() || address.isLinkLocalAddress()) return true;
+                return ((b[0] & 0xFE) == 0xFC); // fc00::/7 unique local, includes Tailscale fd7a:115c:a1e0::/48
+            }
+        }
+        int b0 = b[0] & 0xFF;
+        int b1 = b[1] & 0xFF;
+        if (b0 == 127) return true;
+        if (b0 == 10) return true;
+        if (b0 == 172 && b1 >= 16 && b1 <= 31) return true;
+        if (b0 == 192 && b1 == 168) return true;
+        if (b0 == 169 && b1 == 254) return true;
+        return b0 == 100 && b1 >= 64 && b1 <= 127;
+    }
+
     public static boolean isTailnetIpv4(InetAddress address) {
         if (address == null || !(address instanceof Inet4Address)) return false;
         byte[] bytes = address.getAddress();

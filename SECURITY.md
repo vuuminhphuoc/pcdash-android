@@ -13,7 +13,7 @@ component (host app, remote app, PcAgent), the steps to reproduce, and the impac
 | Path | Who can reach it | Protection |
 |---|---|---|
 | Remote app to host `:8091` | Your tailnet only (embedded tsnet), plus loopback | Per-device Bearer token (only its hash is stored), device pairing with SRP-6a, a one-time code valid for 5 minutes and cancelled after 5 wrong tries |
-| Web dashboard host `:8090` | Same LAN as the host phone | `X-PCDash-Token` access code on every control request, custom header blocks cross-site requests |
+| Web dashboard host `:8090` | Same LAN as the host phone (connections from public IP addresses are dropped) | `X-PCDash-Token` access code on every control request, custom header blocks cross-site requests |
 | Host to PcAgent `:8799` | Same LAN as the PC | `X-PcAgent-Token` on `/exec`, `/metrics`, `/quota`; Windows firewall rule limited to the local subnet |
 | Setup QR | Whoever sees the screen | Contains IP, MAC, port and agent token; shown only on demand, auto-closes, and the host accepts it only for private (RFC1918) addresses |
 | Pairing | Same private LAN only | Private (RFC1918) addresses only; refused until the host is signed in to Tailscale |

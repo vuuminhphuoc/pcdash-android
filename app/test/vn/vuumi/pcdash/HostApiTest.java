@@ -810,6 +810,50 @@ public class HostApiTest {
         }
     }
 
+    public static void testWebDashboardRejectsOversizedHeaders() throws Exception {
+        android.content.Context mockCtx = new android.content.Context();
+        WebDashboard dash = new WebDashboard(mockCtx);
+        dash.start();
+        Thread.sleep(200);
+
+        try {
+            StringBuilder big = new StringBuilder("GET /healthz HTTP/1.1\r\nX-Fill: ");
+            for (int i = 0; i < WebDashboard.MAX_HEADER_BYTES + 100; i++) big.append('a');
+            big.append("\r\n\r\n");
+            String status;
+            try (Socket sock = new Socket("127.0.0.1", WebDashboard.PORT)) {
+                sock.setSoTimeout(3000);
+                OutputStream os = sock.getOutputStream();
+                try {
+                    os.write(big.toString().getBytes(StandardCharsets.US_ASCII));
+                    os.flush();
+                } catch (IOException ignored) {
+                    // server may close before the whole header is written
+                }
+                BufferedReader r = new BufferedReader(new InputStreamReader(sock.getInputStream(), StandardCharsets.US_ASCII));
+                status = r.readLine();
+            }
+            assertTrue(status != null && status.startsWith("HTTP/1.1 431"), "oversized header must get 431, got " + status);
+
+            HttpResponse rHealth = sendRequest(WebDashboard.PORT, "GET", "/healthz", null);
+            assertEquals(rHealth.code, 200, "dashboard must keep serving after an oversized request");
+        } finally {
+            dash.stop();
+        }
+    }
+
+    public static void testDashboardPeerPolicy() throws Exception {
+        String[] allowed = { "127.0.0.1", "::1", "192.168.1.20", "10.1.2.3", "172.20.0.5", "169.254.10.1", "100.64.0.9", "fe80::1", "fd7a:115c:a1e0::9", "::ffff:192.168.1.20" };
+        String[] refused = { "8.8.8.8", "11.22.33.44", "172.32.0.1", "100.128.0.1", "2001:ee0:6aa:c790::1", "::ffff:8.8.8.8" };
+        for (String a : allowed) {
+            assertTrue(LanAddressPolicy.isAllowedDashboardPeer(java.net.InetAddress.getByName(a)), a + " must be allowed");
+        }
+        for (String a : refused) {
+            assertTrue(!LanAddressPolicy.isAllowedDashboardPeer(java.net.InetAddress.getByName(a)), a + " must be refused");
+        }
+        assertTrue(!LanAddressPolicy.isAllowedDashboardPeer(null), "null must be refused");
+    }
+
     public static void testWebDashboardOpenEndpoints() throws Exception {
         android.content.Context mockCtx = new android.content.Context();
         final String secretWebToken = "super-secret-token-do-not-leak";
@@ -917,6 +961,10 @@ public class HostApiTest {
             System.out.println("  PASS: testWebDashboardAuth401WithoutTokenAnd200WithToken");
             testWebDashboardOptionsReturns403();
             System.out.println("  PASS: testWebDashboardOptionsReturns403");
+            testWebDashboardRejectsOversizedHeaders();
+            System.out.println("  PASS: testWebDashboardRejectsOversizedHeaders");
+            testDashboardPeerPolicy();
+            System.out.println("  PASS: testDashboardPeerPolicy");
             testWebDashboardOpenEndpoints();
             System.out.println("  PASS: testWebDashboardOpenEndpoints");
             System.out.println("ALL 12 TESTS PASSED");

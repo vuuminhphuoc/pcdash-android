@@ -29,6 +29,13 @@ if (Test-Path $shortcutPath) {
     Remove-Item $shortcutPath -Force -ErrorAction SilentlyContinue
 }
 
+# Remove the Start Menu shortcut that opens the setup QR code
+$programsDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
+$qrShortcut = Join-Path $programsDir "PCDash - Ma QR cai dat.lnk"
+if (Test-Path $qrShortcut) {
+    Remove-Item $qrShortcut -Force -ErrorAction SilentlyContinue
+}
+
 # Remove %LOCALAPPDATA%\PcAgent
 $dstDir = Join-Path $env:LOCALAPPDATA "PcAgent"
 if (Test-Path $dstDir) {
