@@ -92,6 +92,9 @@ var (
 	state            lifecycleState = stateStopped
 	startCancel      context.CancelFunc
 	refreshCancel    context.CancelFunc
+	// True while runBegin is inside srv.Start(); Stop waits for it, since closing a tsnet.Server
+	// that is still starting can panic inside tsnet.
+	beginStarting    bool
 
 	activeServer     *tsnet.Server
 	activeListener   net.Listener
@@ -1037,6 +1040,9 @@ func Stop() error {
 	}
 
 	state = stateStopping
+	for beginStarting {
+		lifecycleCond.Wait()
+	}
 
 	ln := activeListener
 	srv := activeServer
@@ -1285,6 +1291,7 @@ func Begin(cfg BeginConfig) error {
 
 	bgCtx, cancel := context.WithCancel(context.Background())
 	startCancel = cancel
+	beginStarting = true
 
 	lifecycleMu.Unlock()
 
@@ -1294,8 +1301,11 @@ func Begin(cfg BeginConfig) error {
 }
 
 func runBegin(ctx context.Context, srv *tsnet.Server, cfg BeginConfig, ln net.Listener, boundPort int) {
-	if err := srv.Start(); err != nil {
-		lifecycleMu.Lock()
+	err := srv.Start()
+	lifecycleMu.Lock()
+	beginStarting = false
+	lifecycleCond.Broadcast()
+	if err != nil {
 		if state != stateStopping && state != stateStopped {
 			currentStateStr = "error"
 			lastError = fmt.Sprintf("tsnet start failed: %v", err)
@@ -1310,6 +1320,7 @@ func runBegin(ctx context.Context, srv *tsnet.Server, cfg BeginConfig, ln net.Li
 		lifecycleMu.Unlock()
 		return
 	}
+	lifecycleMu.Unlock()
 
 	var lc *local.Client
 	for {
