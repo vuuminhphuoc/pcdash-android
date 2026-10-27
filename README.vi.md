@@ -203,6 +203,8 @@ Các runner PowerShell hiện có:
 .\scripts\lint-l10n.ps1
 ```
 
+`test-remote-java.ps1` chạy test của `remote` và `shared` qua Gradle. Kiểm tra trên hai điện thoại thật (có thể giao cho một phiên Claude Code chạy trên máy bạn): xem [docs/device-check.md](docs/device-check.md).
+
 ## Giấy phép
 
 [MIT](LICENSE). Thư viện bên thứ ba xem [THIRD_PARTY.md](THIRD_PARTY.md).

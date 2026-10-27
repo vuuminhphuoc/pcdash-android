@@ -7,6 +7,8 @@ description: Check performance (ANR, memory, jank), UX and UI of the PCDash host
 
 Real phones, real screenshots. Never judge a UI from code alone.
 
+For a full functional check on the phones (power commands with the user's OK, multi-PC, QR pairing, app lock, alerts, language, update card), follow `docs/device-check.md`; it reuses the scripts below.
+
 ## Safety (hard rules)
 
 - Walkthrough is read-only. Never tap Wake, Sleep, Hibernate, Shutdown, Hủy lệnh tắt, Xóa thiết bị, Xóa nhật ký, Quên host, Thêm thiết bị, or enter PIN/passwords. `scripts\ux-walkthrough.ps1` refuses these by name.
@@ -103,13 +105,13 @@ Each finding: screen, what is seen, why it matters, suggested fix. End with perf
 ## Build and install (when fixing)
 
 ```powershell
-pwsh -File build-all.ps1                           # remote first, embeds remote APK into host assets, then host
+pwsh -File build-all.ps1                           # Gradle: remote first, embeds remote APK into host assets, then host
 adb -s <serial> install -r remote\build\pcdash-remote-signed.apk
-adb -s <serial> install -r app\build\<host apk>    # path printed by build-all
+adb -s <serial> install -r app\build\pcdash-signed.apk
 ```
 
 Do not run two builds at once. Delegated builder agents run host-only `build.ps1`; run `build-all.ps1` only after they finish.
 
-Bump both `version.properties` files on every UI change so `install -r` and the host's self-update path see a new version. Current: remote 1.23 (24), host 1.21 (22).
+Bump both `version.properties` files on every UI change so `install -r` and the host's self-update path see a new version. Current: remote 1.25 (26), host 1.24 (25).
 
 Committing on this machine: git has no `user.name` or `user.email`. Reuse the repo's existing author for that one commit instead of changing config: `git -c user.name="<name>" -c user.email="<email>" commit ...` (see `git log -1 --format=%an,%ae`). Commit and push only when the user asks.
