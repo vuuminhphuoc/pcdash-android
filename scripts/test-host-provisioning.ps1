@@ -51,7 +51,7 @@ $sources = @(
 )
 
 Write-Host "Compiling setup-QR payload tests..."
-& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath $androidJar -d $classesDir $sources
+& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath $androidJar -sourcepath "$app\src;$app\test;$repoRoot\shared\src" -d $classesDir $sources
 if ($LASTEXITCODE -ne 0) { throw "javac compilation failed" }
 
 Write-Host "Executing PcProvisioningTest..."

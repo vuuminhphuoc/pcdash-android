@@ -43,7 +43,7 @@ $sources = @(
 )
 
 Write-Host "Compiling Pairing E2E tests and classes..."
-& $javac -encoding UTF-8 -source 8 -target 8 -classpath "$classesDir;$androidJar" -d $classesDir $sources
+& $javac -encoding UTF-8 -source 8 -target 8 -classpath "$classesDir;$androidJar" -sourcepath "$app\src;$app\test;$shared\src;$remote\src" -d $classesDir $sources
 if ($LASTEXITCODE -ne 0) {
     throw "javac compilation failed"
 }

@@ -50,7 +50,7 @@ $sources = @(
 )
 
 Write-Host "Compiling Java decoder test..."
-& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath "$androidJar;$zxingJar" -d $classesDir $sources
+& $javac -encoding UTF-8 -source 8 -target 8 -nowarn -classpath "$androidJar;$zxingJar" -sourcepath "$repoRoot\app\src;$repoRoot\app\test;$repoRoot\shared\src" -d $classesDir $sources
 if ($LASTEXITCODE -ne 0) { throw "javac compilation failed" }
 
 Write-Host "Decoding with ZXing..."

@@ -32,7 +32,7 @@ $sources = @(
 )
 
 Write-Host "Compiling QuotaStoreTest and PcQuotaClientTest..."
-& $javac -encoding UTF-8 -source 8 -target 8 -sourcepath "$app\src;$app\test" -d $classesDir $sources
+& $javac -encoding UTF-8 -source 8 -target 8 -sourcepath "$app\src;$app\test;$repoRoot\shared\src" -d $classesDir $sources
 if ($LASTEXITCODE -ne 0) {
     throw "javac compilation failed"
 }
