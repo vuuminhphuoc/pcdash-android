@@ -36,6 +36,7 @@ public class DashService extends Service implements RemoteActionExecutor {
     private final QuotaStore quotaStore = new QuotaStore();
     private CommandLog commandLog;
     private MetricsHistory metricsHistory;
+    private PcFleet fleet;
     private ScheduledExecutorService metricsScheduler;
     private int sampleCount = 0;
 
@@ -137,6 +138,7 @@ public class DashService extends Service implements RemoteActionExecutor {
 
         commandLog = new CommandLog(new File(getFilesDir(), "command_log.jsonl"));
         metricsHistory = new MetricsHistory(new File(getFilesDir(), "metrics_history.json"));
+        fleet = new PcFleet(pcSettings, getFilesDir(), metricsHistory);
 
         web = new WebDashboard(this, commandLog, pcSettings);
         web.start();
@@ -191,14 +193,10 @@ public class DashService extends Service implements RemoteActionExecutor {
             @Override
             public void run() {
                 try {
-                    String pcJson = pcClient != null ? pcClient.getMetricsJson() : null;
-                    MetricsHistory.Sample sample = MetricsHistory.parseAgentMetrics(System.currentTimeMillis(), pcJson);
-                    if (metricsHistory != null) {
-                        metricsHistory.add(sample);
-                        sampleCount++;
-                        if (sampleCount % 10 == 0) {
-                            metricsHistory.save();
-                        }
+                    // Every PC gets its own history; the first keeps the file a single PC always used.
+                    sampleCount++;
+                    if (fleet != null) {
+                        fleet.sampleAll(System.currentTimeMillis(), sampleCount % 10 == 0);
                     }
                 } catch (Exception e) {
                     Log.w(TAG, "Error sampling metrics: " + e.getMessage());
@@ -249,7 +247,9 @@ public class DashService extends Service implements RemoteActionExecutor {
             metricsScheduler = null;
         }
 
-        if (metricsHistory != null) {
+        if (fleet != null) {
+            fleet.saveAll();
+        } else if (metricsHistory != null) {
             metricsHistory.save();
         }
 
@@ -311,5 +311,43 @@ public class DashService extends Service implements RemoteActionExecutor {
     public String quotaJson(boolean refresh) {
         String fresh = pcQuotaClient != null ? pcQuotaClient.getQuotaJson(refresh) : null;
         return quotaStore.resolve(fresh);
+    }
+
+    // Several PCs (see PcFleet); a null id is the first PC.
+
+    @Override
+    public String pcsJson() {
+        return fleet != null ? fleet.pcsJson() : null;
+    }
+
+    @Override
+    public String statusJson(String pcId) {
+        return fleet != null ? fleet.statusJson(pcId) : statusJson();
+    }
+
+    @Override
+    public String doAction(String pcId, String action) {
+        return fleet != null ? fleet.doAction(pcId, action) : doAction(action);
+    }
+
+    @Override
+    public String metricsJson(String pcId) {
+        return fleet != null ? fleet.metricsJson(pcId, phoneCollector) : metricsJson();
+    }
+
+    @Override
+    public String quotaJson(String pcId, boolean refresh) {
+        String json = fleet != null ? fleet.quotaJson(pcId, refresh) : null;
+        return json != null ? json : quotaJson(refresh);
+    }
+
+    @Override
+    public String historyJson(String pcId, int minutes) {
+        return fleet != null ? fleet.historyJson(pcId, minutes) : null;
+    }
+
+    @Override
+    public String pcLabel(String pcId) {
+        return fleet != null ? fleet.label(pcId) : null;
     }
 }

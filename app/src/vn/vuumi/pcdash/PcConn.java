@@ -68,7 +68,10 @@ public class PcConn {
     }
 
     public static PcStatus status() {
-        PcSettingsSource s = settings;
+        return status(settings);
+    }
+
+    public static PcStatus status(PcSettingsSource s) {
         if (s == null || !s.isConfigured()) {
             return new PcStatus(PcStatus.NOT_CONFIGURED, L10n.t("PC not set up", "Chưa cấu hình PC"));
         }
@@ -80,7 +83,10 @@ public class PcConn {
     }
 
     public static String statusJson() {
-        PcSettingsSource s = settings;
+        return statusJson(settings);
+    }
+
+    public static String statusJson(PcSettingsSource s) {
         if (s == null || !s.isConfigured()) {
             return "{\"online\":false,\"port\":null,\"rtt_ms\":0,\"configured\":false}";
         }
@@ -156,16 +162,22 @@ public class PcConn {
     }
 
     public static String doAction(String action) {
-        PcSettingsSource s = settings;
+        return doAction(settings, action);
+    }
+
+    public static String doAction(PcSettingsSource s, String action) {
         if (s == null || !s.isConfigured()) {
             return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }
-        if ("wake".equals(action)) return wol();
-        return agentExec(action);
+        if ("wake".equals(action)) return wol(s);
+        return agentExec(s, action);
     }
 
     public static String wol() {
-        PcSettingsSource s = settings;
+        return wol(settings);
+    }
+
+    static String wol(PcSettingsSource s) {
         if (s == null || !s.isConfigured()) {
             return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }
@@ -218,7 +230,10 @@ public class PcConn {
     }
 
     static String agentExec(String action) {
-        PcSettingsSource s = settings;
+        return agentExec(settings, action);
+    }
+
+    static String agentExec(PcSettingsSource s, String action) {
         if (s == null || !s.isConfigured()) {
             return L10n.t("Error: PC not set up", "Lỗi: Chưa cấu hình PC");
         }

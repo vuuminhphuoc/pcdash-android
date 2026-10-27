@@ -299,15 +299,27 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                 return;
             }
 
-            // Authenticated routing
+            // Authenticated routing. "?pc=<id>" picks one of several PCs; without it, the first PC.
+            final String pcId = pcParam(fullPath);
+            if ("GET".equalsIgnoreCase(method) && "/v1/pcs".equals(path)) {
+                String pcsJson = actions != null ? actions.pcsJson() : null;
+                if (pcsJson == null) {
+                    sendResponse(socket, 404, "application/json; charset=utf-8",
+                            "{\"error\":\"not_found\"}".getBytes(StandardCharsets.UTF_8));
+                    return;
+                }
+                sendResponse(socket, 200, "application/json; charset=utf-8",
+                        pcsJson.getBytes(StandardCharsets.UTF_8));
+                return;
+            }
             if ("GET".equalsIgnoreCase(method) && "/v1/status".equals(path)) {
-                String statusJson = actions.statusJson();
+                String statusJson = actions.statusJson(pcId);
                 sendResponse(socket, 200, "application/json; charset=utf-8",
                         statusJson.getBytes(StandardCharsets.UTF_8));
                 return;
             }
             if ("GET".equalsIgnoreCase(method) && "/v1/metrics".equals(path)) {
-                String metricsJson = actions != null ? actions.metricsJson() : null;
+                String metricsJson = actions != null ? actions.metricsJson(pcId) : null;
                 if (metricsJson == null) {
                     metricsJson = "{\"ts\":" + System.currentTimeMillis() + ",\"pc\":{\"online\":false},\"phone\":null}";
                 }
@@ -332,7 +344,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                         }
                     }
                 }
-                String quotaJson = actions != null ? actions.quotaJson(refresh) : null;
+                String quotaJson = actions != null ? actions.quotaJson(pcId, refresh) : null;
                 if (quotaJson == null) {
                     quotaJson = "{\"providers\":[],\"stale\":true}";
                 }
@@ -460,10 +472,12 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                         }
                     }
                 }
-                String historyJson;
-                if (metricsHistory != null) {
+                // The executor keeps one history per PC; without one, the server's own history.
+                String historyJson = actions != null ? actions.historyJson(pcId, minutes) : null;
+                if (historyJson == null && metricsHistory != null) {
                     historyJson = metricsHistory.toHistoryJson(System.currentTimeMillis(), minutes);
-                } else {
+                }
+                if (historyJson == null) {
                     historyJson = "{\"intervalMs\":30000,\"ts\":[],\"cpu\":[],\"gpu\":[],\"ram\":[],\"down\":[],\"up\":[],\"cpuTemp\":[],\"gpuTemp\":[],\"online\":[]}";
                 }
                 sendResponse(socket, 200, "application/json; charset=utf-8",
@@ -477,7 +491,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                     String detail = "";
                     boolean ok = true;
                     try {
-                        detail = actions.doAction(action);
+                        detail = actions.doAction(pcId, action);
                         ok = !RemoteActionExecutor.isFailure(detail);
                     } catch (Exception e) {
                         ok = false;
@@ -487,7 +501,9 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                     if (commandLog != null) {
                         String devName = (callerDevice != null && callerDevice.name != null && !callerDevice.name.trim().isEmpty())
                                 ? callerDevice.name.trim() : "remote";
-                        commandLog.log(System.currentTimeMillis(), devName, "remote", action, ok);
+                        String label = actions != null ? actions.pcLabel(pcId) : null;
+                        commandLog.log(System.currentTimeMillis(), devName, "remote",
+                                label != null ? action + " · " + label : action, ok);
                     }
 
                     String safeDetail = detail != null ? detail.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") : "";
@@ -507,6 +523,20 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
                 socket.close();
             } catch (IOException ignored) {}
         }
+    }
+
+    /** The "pc" query parameter if it is a valid PC id, else null (the first PC). */
+    static String pcParam(String fullPath) {
+        int q = fullPath.indexOf('?');
+        if (q < 0) return null;
+        for (String pair : fullPath.substring(q + 1).split("&")) {
+            int eq = pair.indexOf('=');
+            if (eq > 0 && "pc".equals(pair.substring(0, eq).trim())) {
+                String v = pair.substring(eq + 1).trim();
+                return v.matches("^[A-Za-z0-9_-]{1,24}$") ? v : null;
+            }
+        }
+        return null;
     }
 
     private void sendResponse(Socket s, int code, String contentType, byte[] body) throws IOException {

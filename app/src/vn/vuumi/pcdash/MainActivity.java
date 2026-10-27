@@ -28,11 +28,13 @@ import android.os.StrictMode;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends Activity implements View.OnClickListener {
@@ -46,6 +48,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private Button tailscaleLoginBtn;
     private String currentTailscaleAuthUrl = "";
     private AppLockGate lockGate;
+    private static final String UI_PREFS = "pcdash_host_ui";
+    private static final String KEY_SELECTED_PC = "selected_pc";
+    private volatile PcSettings hostSettings;
+    // The PC the power buttons act on when there are several (null: the first).
+    private volatile String selectedPcId;
+    private HorizontalScrollView pcChipsScroll;
+    private LinearLayout pcChips;
+    private String shownChips = "";
     // One power command at a time; each power button shows its own progress.
     private boolean actionRunning;
     private final Map<View, ButtonProgress> buttonProgress = new HashMap<View, ButtonProgress>();
@@ -79,11 +89,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    final PcConn.PcStatus status = PcConn.status();
+                    final List<PcProfile> list = hostSettings.listPcs();
+                    final PcProfile pc = selectedPc(list);
+                    final PcConn.PcStatus status = PcConn.status(pc);
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            updateStatus(status);
+                            showPcChips(list, pc);
+                            updateStatus(status, pc, list.size());
                         }
                     });
                 }
@@ -104,6 +117,54 @@ public class MainActivity extends Activity implements View.OnClickListener {
         v.setBackground(gd);
     }
 
+    private PcProfile selectedPc(List<PcProfile> list) {
+        String id = selectedPcId;
+        for (PcProfile p : list) {
+            if (p.id.equals(id)) return p;
+        }
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    private void showPcChips(List<PcProfile> list, PcProfile selected) {
+        if (pcChips == null) return;
+        StringBuilder key = new StringBuilder(selected != null ? selected.id : "");
+        for (PcProfile p : list) key.append('|').append(p.id).append(':').append(p.name);
+        if (key.toString().equals(shownChips)) return;
+        shownChips = key.toString();
+        pcChipsScroll.setVisibility(list.size() > 1 ? View.VISIBLE : View.GONE);
+        pcChips.removeAllViews();
+        for (final PcProfile p : list) {
+            boolean on = selected != null && p.id.equals(selected.id);
+            TextView chip = new TextView(this);
+            chip.setText(p.name);
+            chip.setTextSize(14);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setTextColor(on ? Color.WHITE : Color.rgb(201, 209, 217));
+            chip.setPadding(dp(16), dp(9), dp(16), dp(9));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(on ? Color.rgb(31, 111, 235) : Color.rgb(22, 27, 34));
+            bg.setStroke(dp(1), on ? Color.rgb(88, 166, 255) : Color.rgb(48, 54, 61));
+            bg.setCornerRadius(dp(18));
+            chip.setBackground(bg);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(8);
+            chip.setLayoutParams(lp);
+            chip.setSelected(on);
+            Tap.wire(chip, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectedPcId = p.id;
+                    getSharedPreferences(UI_PREFS, MODE_PRIVATE).edit().putString(KEY_SELECTED_PC, p.id).apply();
+                    statusView.setText(L10n.t("Checking...", "Đang kiểm tra..."));
+                    ui.removeCallbacks(tick);
+                    ui.post(tick);
+                }
+            });
+            pcChips.addView(chip);
+        }
+    }
+
     private void updateStatusDot(int color) {
         if (statusDot == null) return;
         GradientDrawable dot = new GradientDrawable();
@@ -112,9 +173,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
         statusDot.setBackground(dot);
     }
 
-    private void updateStatus(PcConn.PcStatus status) {
+    private void updateStatus(PcConn.PcStatus status, PcProfile pc, int pcCount) {
         if (statusView == null || status == null) return;
-        statusView.setText(status.line);
+        // With several PCs, say which one the line is about.
+        statusView.setText(pcCount > 1 && pc != null ? pc.name + ": " + status.line : status.line);
         if (status.state == PcConn.PcStatus.NOT_CONFIGURED) {
             updateStatusDot(Color.rgb(210, 153, 34));
             statusView.setTextColor(Color.rgb(210, 153, 34));
@@ -144,6 +206,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         PcSettings pcSettings = new PcSettings(this);
         PcConn.configure(pcSettings);
+        hostSettings = pcSettings;
+        selectedPcId = getSharedPreferences(UI_PREFS, MODE_PRIVATE).getString(KEY_SELECTED_PC, null);
 
         if (Build.VERSION.SDK_INT >= 21) {
             getWindow().setStatusBarColor(Color.rgb(0, 0, 0));
@@ -199,6 +263,19 @@ public class MainActivity extends Activity implements View.OnClickListener {
         statusView.setTypeface(Typeface.DEFAULT_BOLD);
         statusView.setTextColor(Color.rgb(230, 237, 243));
         statusCard.addView(statusView);
+        // Several PCs: pick the one the buttons below act on.
+        pcChipsScroll = new HorizontalScrollView(this);
+        pcChipsScroll.setHorizontalScrollBarEnabled(false);
+        pcChips = new LinearLayout(this);
+        pcChips.setOrientation(LinearLayout.HORIZONTAL);
+        pcChipsScroll.addView(pcChips);
+        LinearLayout.LayoutParams chipsLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        chipsLp.setMargins(0, 0, 0, dp(12));
+        pcChipsScroll.setLayoutParams(chipsLp);
+        pcChipsScroll.setVisibility(View.GONE);
+        root.addView(pcChipsScroll);
+
         root.addView(statusCard);
 
         // Power buttons
@@ -392,14 +469,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
         ui.post(tailnetPoll);
         PcSettings pcSettings = new PcSettings(this);
         PcConn.configure(pcSettings);
+        hostSettings = pcSettings;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final PcConn.PcStatus status = PcConn.status();
+                final List<PcProfile> list = hostSettings.listPcs();
+                final PcProfile pc = selectedPc(list);
+                final PcConn.PcStatus status = PcConn.status(pc);
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        updateStatus(status);
+                        showPcChips(list, pc);
+                        updateStatus(status, pc, list.size());
                     }
                 });
             }
@@ -560,7 +641,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void act(final String action, View source) {
-        if (!PcConn.isConfigured()) {
+        if (!PcConn.isConfigured() && hostSettings.listPcs().isEmpty()) {
             Toast.makeText(this, L10n.t("PC not set up. Open PC settings first", "Chưa cấu hình PC. Vui lòng vào Cài đặt PC"), Toast.LENGTH_LONG).show();
             return;
         }
@@ -576,9 +657,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String r = PcConn.doAction(action);
+                final List<PcProfile> list = hostSettings.listPcs();
+                final PcProfile pc = selectedPc(list);
+                final String r = PcConn.doAction(pc, action);
                 final boolean ok = !RemoteActionExecutor.isFailure(r);
-                final PcConn.PcStatus status = PcConn.status();
+                final PcConn.PcStatus status = PcConn.status(pc);
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
@@ -590,7 +673,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                         if (!ok) {
                             Toast.makeText(MainActivity.this, r, Toast.LENGTH_LONG).show();
                         }
-                        updateStatus(status);
+                        updateStatus(status, pc, list.size());
                     }
                 });
             }
