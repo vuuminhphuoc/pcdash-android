@@ -56,6 +56,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private HorizontalScrollView pcChipsScroll;
     private LinearLayout pcChips;
     private String shownChips = "";
+    // PCs seen by the last status refresh (read off the UI thread: tokens are decrypted).
+    private volatile int lastPcCount;
     // One power command at a time; each power button shows its own progress.
     private boolean actionRunning;
     private final Map<View, ButtonProgress> buttonProgress = new HashMap<View, ButtonProgress>();
@@ -126,6 +128,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void showPcChips(List<PcProfile> list, PcProfile selected) {
+        lastPcCount = list.size();
         if (pcChips == null) return;
         StringBuilder key = new StringBuilder(selected != null ? selected.id : "");
         for (PcProfile p : list) key.append('|').append(p.id).append(':').append(p.name);
@@ -641,7 +644,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void act(final String action, View source) {
-        if (!PcConn.isConfigured() && hostSettings.listPcs().isEmpty()) {
+        if (!PcConn.isConfigured() && lastPcCount == 0) {
             Toast.makeText(this, L10n.t("PC not set up. Open PC settings first", "Chưa cấu hình PC. Vui lòng vào Cài đặt PC"), Toast.LENGTH_LONG).show();
             return;
         }

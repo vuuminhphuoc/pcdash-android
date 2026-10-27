@@ -396,7 +396,9 @@ public class RemoteMainActivity extends Activity {
         if (lastPcs != null) {
             pcSwitcher.show(lastPcs, id);
         }
-        // What is on screen belongs to the other PC.
+        // What is on screen belongs to the other PC (a command still on its way keeps going to it,
+        // but its result is not shown for this one).
+        dropActionInFlight();
         actionWatch = null;
         if (controlTabView != null) {
             controlTabView.resetActions();
