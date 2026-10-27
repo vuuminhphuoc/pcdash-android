@@ -464,8 +464,9 @@ public class RemoteMainActivity extends Activity {
         rootLayout.addView(bottomNavBar, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        // The tab bar pads itself for the navigation bar; the rest of the screen stays below the status bar.
-        SystemBarInsets.pad(rootLayout, SystemBarInsets.LEFT | SystemBarInsets.TOP | SystemBarInsets.RIGHT);
+        // The tab bar pads itself for the navigation bar; the rest of the screen stays below the status
+        // bar, and the content area shrinks above the keyboard (pairing screen fields).
+        SystemBarInsets.pad(rootLayout, SystemBarInsets.LEFT | SystemBarInsets.TOP | SystemBarInsets.RIGHT | SystemBarInsets.IME);
         setContentView(rootLayout);
 
         IntentFilter filter = new IntentFilter(UpdateInstaller.ACTION_UPDATE_RESULT);

@@ -258,8 +258,8 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         webCard.addView(btnRow);
         root.addView(webCard);
 
-        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
+        SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
 
         loadSettingsAsync();
     }

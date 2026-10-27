@@ -341,8 +341,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         info.setText(WebDashboard.infoText(this));
         root.addView(info);
 
-        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
+        SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
 
         requestExtras();
 

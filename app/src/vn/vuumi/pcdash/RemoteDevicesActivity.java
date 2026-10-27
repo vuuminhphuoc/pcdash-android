@@ -258,8 +258,8 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         commandLogContainer = new LinearLayout(this);
         commandLogContainer.setOrientation(LinearLayout.VERTICAL);
         root.addView(commandLogContainer);
-        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
+        SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
     }
 
     @Override

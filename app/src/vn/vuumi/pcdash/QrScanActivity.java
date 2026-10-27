@@ -143,8 +143,8 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         cancelLp.bottomMargin = dp(40);
         root.addView(cancel, cancelLp);
 
-        SystemBarInsets.pad(root, SystemBarInsets.ALL);
         setContentView(root);
+        SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
     }
 
     @Override

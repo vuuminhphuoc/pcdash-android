@@ -124,7 +124,14 @@ public class BottomNavBar extends LinearLayout {
         int bottomInset = 0;
         int cornerRadius = 0;
         if (insets != null) {
-            bottomInset = insets.getSystemWindowInsetBottom();
+            if (Build.VERSION.SDK_INT >= 30) {
+                // Only the navigation bar: while the keyboard is open the activity root already sits
+                // above it (SystemBarInsets.IME), and the keyboard covers the navigation bar.
+                bottomInset = insets.isVisible(WindowInsets.Type.ime())
+                        ? 0 : insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
+            } else {
+                bottomInset = insets.getSystemWindowInsetBottom();
+            }
             if (Build.VERSION.SDK_INT >= 31) {
                 cornerRadius = Math.max(cornerOf(insets, RoundedCorner.POSITION_BOTTOM_LEFT),
                         cornerOf(insets, RoundedCorner.POSITION_BOTTOM_RIGHT));
