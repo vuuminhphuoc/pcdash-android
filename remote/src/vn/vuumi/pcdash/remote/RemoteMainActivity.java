@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash.remote;
 
+import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -96,6 +97,9 @@ public class RemoteMainActivity extends Activity {
     private BottomNavBar bottomNavBar;
     private TabNavigator navigator;
     private TabContent activeTabContent = null;
+    // android.window.OnBackInvokedCallback on API 33+; Object so older phones never load the class.
+    private Object backToControlCallback;
+    private boolean backCallbackRegistered;
 
     private ControlTabView controlTabView;
     private MonitorTabView monitorTabView;
@@ -464,6 +468,8 @@ public class RemoteMainActivity extends Activity {
         rootLayout.addView(bottomNavBar, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
+        // The tab bar pads itself for the navigation bar; the rest of the screen stays below the status bar.
+        SystemBarInsets.pad(rootLayout, SystemBarInsets.LEFT | SystemBarInsets.TOP | SystemBarInsets.RIGHT);
         setContentView(rootLayout);
 
         IntentFilter filter = new IntentFilter(UpdateInstaller.ACTION_UPDATE_RESULT);
@@ -482,12 +488,44 @@ public class RemoteMainActivity extends Activity {
         }
     }
 
+    // Android 12 and older. From Android 13 the manifest opts in to OnBackInvokedCallback, so back
+    // goes through updateBackCallback() and the system back animation works at the Control tab.
     @Override
     public void onBackPressed() {
         if (controller != null && controller.isPaired() && navigator != null && navigator.onBack()) {
             return;
         }
         super.onBackPressed();
+    }
+
+    private void updateBackCallback() {
+        if (Build.VERSION.SDK_INT < 33) {
+            return;
+        }
+        boolean wanted = !isDestroyed && controller != null && controller.isPaired()
+                && navigator != null && navigator.current() != MainTab.CONTROL;
+        if (wanted == backCallbackRegistered) {
+            return;
+        }
+        if (backToControlCallback == null) {
+            backToControlCallback = new android.window.OnBackInvokedCallback() {
+                @Override
+                public void onBackInvoked() {
+                    if (navigator != null) {
+                        navigator.onBack();
+                    }
+                    updateBackCallback();
+                }
+            };
+        }
+        android.window.OnBackInvokedCallback callback = (android.window.OnBackInvokedCallback) backToControlCallback;
+        if (wanted) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
+        } else {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
+        }
+        backCallbackRegistered = wanted;
     }
 
     private final Runnable pollTailscaleStateTask = new Runnable() {
@@ -545,6 +583,7 @@ public class RemoteMainActivity extends Activity {
     protected void onStart() {
         super.onStart();
         isStopped = false;
+        updateBackCallback();
         lifecycleExecutor.submit(new Runnable() {
             @Override
             public void run() {
@@ -812,6 +851,7 @@ public class RemoteMainActivity extends Activity {
             bottomNavBar.setSelected(tab);
         }
         adjustPollersForTab(tab);
+        updateBackCallback();
     }
 
     // Short fade and slide toward the direction of travel, so content follows the glass pill.

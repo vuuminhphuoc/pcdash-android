@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.Manifest;
 import android.app.Activity;
@@ -142,6 +143,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         cancelLp.bottomMargin = dp(40);
         root.addView(cancel, cancelLp);
 
+        SystemBarInsets.pad(root, SystemBarInsets.ALL);
         setContentView(root);
     }
 

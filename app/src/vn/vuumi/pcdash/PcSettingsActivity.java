@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -257,6 +258,7 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         webCard.addView(btnRow);
         root.addView(webCard);
 
+        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
 
         loadSettingsAsync();

@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -257,6 +258,7 @@ public class RemoteDevicesActivity extends Activity implements ServiceConnection
         commandLogContainer = new LinearLayout(this);
         commandLogContainer.setOrientation(LinearLayout.VERTICAL);
         root.addView(commandLogContainer);
+        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
     }
 

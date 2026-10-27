@@ -1,5 +1,6 @@
 package vn.vuumi.pcdash;
 
+import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 import android.Manifest;
@@ -340,6 +341,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         info.setText(WebDashboard.infoText(this));
         root.addView(info);
 
+        SystemBarInsets.pad(scroll, SystemBarInsets.ALL);
         setContentView(scroll);
 
         requestExtras();
