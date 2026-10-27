@@ -109,14 +109,16 @@ Write-Host "5. zipalign..."
 if ($LASTEXITCODE -ne 0) { throw "zipalign failed" }
 
 Write-Host "6. keystore..."
+# CI passes the release key password in PCDASH_KEYSTORE_PASSWORD; local builds keep the default.
+$ksPass = if ($env:PCDASH_KEYSTORE_PASSWORD) { $env:PCDASH_KEYSTORE_PASSWORD } else { 'android' }
 $ks = "$app\pcdash.keystore"
 if (-not (Test-Path $ks)) {
-    & $keytool -genkeypair -keystore $ks -alias pcdash -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=PCDash, O=VuuMi, C=VN"
+    & $keytool -genkeypair -keystore $ks -alias pcdash -keyalg RSA -keysize 2048 -validity 10000 -storepass $ksPass -keypass $ksPass -dname "CN=PCDash, O=VuuMi, C=VN"
     if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
 }
 
 Write-Host "7. apksigner..."
-& $tools.apksigner sign --ks $ks --ks-pass pass:android --key-pass pass:android --out "$build\pcdash-signed.apk" "$build\aligned.apk"
+& $tools.apksigner sign --ks $ks --ks-pass "pass:$ksPass" --key-pass "pass:$ksPass" --out "$build\pcdash-signed.apk" "$build\aligned.apk"
 if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 & $tools.apksigner verify "$build\pcdash-signed.apk"
 if ($LASTEXITCODE -ne 0) { throw "verify failed" }
