@@ -39,6 +39,9 @@ jobs:
       - name: Use JDK 17 for the build scripts
         run: Add-Content $env:GITHUB_ENV "PCDASH_JAVA_HOME=$env:JAVA_HOME"
 
+      # Caches the Gradle distribution and dependencies between runs.
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Install Android SDK packages
         run: |
           $sdkmanager = Join-Path $env:ANDROID_HOME 'cmdline-tools\latest\bin\sdkmanager.bat'

@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="vn.vuumi.pcdash"
-    android:versionCode="1"
-    android:versionName="1.0">
-
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+<!-- Package name, versions and SDK levels are set in build.gradle.kts. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -26,8 +22,7 @@
         android:label="PCDash"
         android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="true"
-        android:allowBackup="false"
-        android:extractNativeLibs="true">
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true">

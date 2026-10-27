@@ -56,7 +56,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 | `agent/PcAgent.cs` | Agent Windows lắng nghe `:8799`, xử lý `sleep`, `hibernate`, `shutdown`, `abort`, `ping`. |
 | `agent/build_agent.ps1` | Biên dịch agent bằng `csc.exe`, không cần Python/.NET SDK. |
 | `agent/install.bat` | Cài agent, sinh token truy cập, mở firewall TCP 8799 (chỉ mạng nội bộ) và tạo shortcut Startup. |
-| `build.ps1`, `build-remote.ps1`, `build-all.ps1` | Build APK host và remote; `build-all.ps1` tự động đóng gói APK remote vào assets của host để phục vụ tự cập nhật. |
+| `build.ps1`, `build-remote.ps1`, `build-all.ps1` | Build APK host và remote bằng Gradle (`settings.gradle.kts`, `*/build.gradle.kts`); bản build host tự đóng gói APK remote vào assets để phục vụ tự cập nhật. |
 | `scripts/test-*.ps1` | Runner kiểm thử toolchain, host API, pairing, UI, remote Java và pairing E2E. |
 | `scripts/install-go-toolchain.ps1` | Cài Go riêng trong `tools/`, không thay Go hệ thống. |
 
@@ -81,6 +81,15 @@ $env:JAVA_HOME = "C:\Path\To\corretto-17"
 
 Hai APK được tạo tại `app\build\pcdash-signed.apk` và `remote\build\pcdash-remote-signed.apk`.
 
+Các script trên gọi Gradle wrapper (`gradlew.bat`), lần đầu chạy sẽ tự tải Gradle và Android Gradle plugin. Có thể mở thư mục gốc bằng Android Studio, hoặc gọi Gradle trực tiếp:
+
+```powershell
+.\gradlew.bat :remote:assembleRelease :app:assembleRelease   # giống build-all.ps1, chưa copy/kiểm tra APK
+.\gradlew.bat :shared:testDebugUnitTest :remote:testDebugUnitTest "-Ppcdash.skipNative=true"
+```
+
+`shared` build thư viện native (Go + NDK) bằng `pcnet\build-android.ps1`; thêm `-Ppcdash.skipNative=true` để bỏ qua bước này (chạy test, hoặc build trên máy không phải Windows; APK khi đó không có thư viện native).
+
 ### 3. Cài APK
 
 Ghép nối thiết bị Android với adb (có thể dùng Gỡ lỗi không dây trên Android 11 trở lên), rồi cài từng APK:
@@ -99,7 +108,7 @@ Trên điện thoại Xiaomi/MIUI, bật **Cài đặt qua USB** nếu MIUI ch�
 1. **Lần đầu tiên**: phải cài PCDash Remote bằng adb (để app có sẵn tính năng tự cập nhật).
 2. **Khi phát hành bản mới**:
    - Tăng `versionCode` và `versionName` trong `remote/version.properties` (và `app/version.properties` nếu có sửa host).
-   - Chạy `.\build-all.ps1` để build remote, nhúng APK mới vào `app/assets/remote-update.apk` (kèm SHA-256 và size trong `remote-update.json`), rồi build host.
+   - Chạy `.\build-all.ps1` để build remote, nhúng APK mới vào assets của host (`remote-update.apk`, kèm SHA-256 và size trong `remote-update.json`, tạo ở `app\build\generated\remoteUpdate`), rồi build host.
    - Cài lại host trên điện thoại ở nhà: `adb install -r app\build\pcdash-signed.apk`.
    - Trên máy điều khiển: mở PCDash Remote, app tự phát hiện bản cập nhật mới từ host; bấm nút **Cập nhật** để tải và cài đặt một chạm qua tsnet mà không cần adb hay cáp nối.
 

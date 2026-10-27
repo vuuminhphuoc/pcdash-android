@@ -61,7 +61,7 @@ phone does not need the Tailscale app or a VPN turned on.
 - A free Tailscale account (both phones sign in inside the PCDash apps; no OAuth keys, tags or custom ACLs).
 - An always-on Android phone (host, Android 8+) on the same LAN as the PC, and a second Android phone (remote, Android 7+).
 - A Windows PC with Wake-on-LAN enabled in BIOS and in the network adapter driver.
-- To build: Android SDK (found at `%LOCALAPPDATA%\Android\Sdk`, or set `ANDROID_HOME`), JDK 17 (found in `~\.jdks` or Program Files, or set `PCDASH_JAVA_HOME`), Android NDK `27.1.12297006`, PowerShell 7, Go `1.27.1` or newer.
+- To build: Android SDK (found at `%LOCALAPPDATA%\Android\Sdk`, or set `ANDROID_HOME`), JDK 17 (found in `~\.jdks` or Program Files, or set `PCDASH_JAVA_HOME`), Android NDK `27.1.12297006`, PowerShell 7, Go `1.27.1` or newer. The apps build with Gradle (the wrapper downloads Gradle and the Android Gradle plugin on first use); the `.ps1` scripts wrap it, and the project also opens in Android Studio.
 
 ## Quick start
 
