@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $roots = @("app/src", "remote/src", "shared/src") | ForEach-Object { Join-Path $repoRoot $_ }
+# Case-sensitive (-cmatch): with -match, culture case folding makes this range match ASCII i and s.
 $vietnamese = '[\u00C0-\u1EF9\u0110\u0111]'
 $literal = '"(?:[^"\\]|\\.)*"'
 
@@ -19,7 +20,7 @@ foreach ($file in $files) {
         $isComment = $trimmed.StartsWith("//") -or $trimmed.StartsWith("*") -or $trimmed.StartsWith("/*")
         $hasText = $false
         foreach ($m in [regex]::Matches($line, $literal)) {
-            if ($m.Value -match $vietnamese) { $hasText = $true; break }
+            if ($m.Value -cmatch $vietnamese) { $hasText = $true; break }
         }
         $allowed = $isComment -or
             $line.Contains("L10n.t(") -or

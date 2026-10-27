@@ -64,9 +64,25 @@ $targetPid = $proc.Id
 Write-Host "Process started, PID = $targetPid (real agent on 8799 will NOT be touched)"
 
 try {
-    $url = "http://localhost:$testPort/metrics"
+    $url = "http://127.0.0.1:$testPort/metrics"
 
-    $quotaUrl = "http://localhost:$testPort/quota"
+    # Wait until the agent accepts connections, so the timing below measures /quota itself rather
+    # than Windows retrying refused connects while the process is still starting (seen as ~3 s on CI).
+    # /healthz needs no token and does not start the lazy quota fetch.
+    $ready = $false
+    for ($i = 0; $i -lt 50 -and -not $ready; $i++) {
+        try {
+            $null = Invoke-WebRequest -Uri "http://127.0.0.1:$testPort/healthz" -UseBasicParsing -TimeoutSec 2
+            $ready = $true
+        } catch {
+            Start-Sleep -Milliseconds 200
+        }
+    }
+    if (-not $ready) {
+        throw "PcAgent did not answer /healthz on port $testPort"
+    }
+
+    $quotaUrl = "http://127.0.0.1:$testPort/quota"
     Write-Host "=== 3.0 Immediate check of /quota right after startup (< 1 s) ==="
     $quotaSw = [System.Diagnostics.Stopwatch]::StartNew()
     $initQuotaResp = Invoke-WebRequest -Headers $auth -Uri $quotaUrl -UseBasicParsing -TimeoutSec 3
