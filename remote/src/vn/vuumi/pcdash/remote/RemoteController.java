@@ -26,6 +26,9 @@ public class RemoteController {
     private volatile int boundLocalPort = -1;
     private volatile RemoteConfigStore.RemoteConfig currentConfig = null;
 
+    // The home phone answers a status in about 2 s even with the PC off (it probes the PC's ports at once).
+    static final int QUICK_STATUS_TIMEOUT_MS = 8000;
+
     public RemoteController(PairingClient pairing, PcnetBridge bridge, RemoteConfigStore store, RemoteApiClient api, File stateDir) {
         this.pairing = pairing != null ? pairing : new PairingClient();
         this.bridge = bridge != null ? bridge : new PcnetBridge();
@@ -259,6 +262,12 @@ public class RemoteController {
             throw lastEx;
         }
         throw new IOException("Remote call failed");
+    }
+
+    /** One status request with a short wait, for the screen's polling (which retries on its own). */
+    public RemoteApiClient.RemoteStatus getStatusQuick() throws IOException {
+        Session session = session();
+        return api.getStatus(session.port, session.token, QUICK_STATUS_TIMEOUT_MS);
     }
 
     public RemoteApiClient.RemoteStatus getStatus() throws IOException {

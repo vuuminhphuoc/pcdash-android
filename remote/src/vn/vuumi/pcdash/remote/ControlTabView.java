@@ -2,11 +2,17 @@ package vn.vuumi.pcdash.remote;
 
 import vn.vuumi.pcdash.ui.Tap;
 import vn.vuumi.pcdash.i18n.L10n;
+import vn.vuumi.pcdash.net.PcnetState;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.view.Gravity;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -19,6 +25,8 @@ public class ControlTabView implements TabContent {
 
     public interface Callback {
         void onActionClicked(String action);
+        /** The refresh button: fetch the status now (and reconnect if it was failing). */
+        void onRefresh();
         void onStartUpdate();
         void onCancelUpdate();
     }
@@ -26,6 +34,8 @@ public class ControlTabView implements TabContent {
     private final ScrollView scrollView;
     private final TextView pcStatusView;
     private final TextView pcDetailView;
+    private final ImageView refreshButton;
+    private ObjectAnimator refreshSpin;
     // What the last power command is doing (sending, waiting for the PC, how it went).
     private final TextView actionLineView;
     private final Map<String, ActionTile> tiles = new LinkedHashMap<String, ActionTile>();
@@ -60,12 +70,32 @@ public class ControlTabView implements TabContent {
         statusCard.setPadding(dpToPx(context, 18), dpToPx(context, 16), dpToPx(context, 18), dpToPx(context, 16));
         UiKit.styleCard(statusCard);
 
+        LinearLayout statusHeader = new LinearLayout(context);
+        statusHeader.setOrientation(LinearLayout.HORIZONTAL);
+        statusHeader.setGravity(Gravity.CENTER_VERTICAL);
         pcStatusView = new TextView(context);
         pcStatusView.setText(L10n.t("Checking the PC...", "Đang kiểm tra trạng thái PC..."));
         pcStatusView.setTextSize(18);
         pcStatusView.setTypeface(Typeface.DEFAULT_BOLD);
         pcStatusView.setTextColor(Color.rgb(210, 153, 34));
-        statusCard.addView(pcStatusView);
+        statusHeader.addView(pcStatusView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        refreshButton = new ImageView(context);
+        refreshButton.setImageDrawable(new IconDrawable(IconDrawable.Type.REFRESH, Color.rgb(201, 209, 217)));
+        int refreshPad = dpToPx(context, 10);
+        refreshButton.setPadding(refreshPad, refreshPad, refreshPad, refreshPad);
+        refreshButton.setBackground(UiKit.withRipple(UiKit.roundedFill(context, Color.rgb(33, 38, 45), 22)));
+        refreshButton.setContentDescription(L10n.t("Refresh", "Làm mới"));
+        LinearLayout.LayoutParams refreshLp = new LinearLayout.LayoutParams(dpToPx(context, 44), dpToPx(context, 44));
+        refreshLp.leftMargin = dpToPx(context, 8);
+        statusHeader.addView(refreshButton, refreshLp);
+        Tap.wire(refreshButton, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (callback != null) callback.onRefresh();
+            }
+        });
+        statusCard.addView(statusHeader);
 
         pcDetailView = new TextView(context);
         pcDetailView.setText(L10n.t("Loading...", "Đang tải dữ liệu..."));
@@ -275,6 +305,65 @@ public class ControlTabView implements TabContent {
 
     @Override
     public void onHide() {}
+
+    /** Spins the refresh button while a fresh status is on its way. */
+    public void setRefreshing(boolean refreshing) {
+        if (refreshing) {
+            if (refreshSpin == null) {
+                refreshSpin = ObjectAnimator.ofFloat(refreshButton, View.ROTATION, 0f, 360f);
+                refreshSpin.setDuration(900);
+                refreshSpin.setRepeatCount(ValueAnimator.INFINITE);
+                refreshSpin.setInterpolator(new LinearInterpolator());
+            }
+            if (!refreshSpin.isStarted()) {
+                refreshButton.animate().cancel();
+                refreshSpin.start();
+            }
+        } else if (refreshSpin != null && refreshSpin.isStarted()) {
+            refreshSpin.cancel();
+            // Finish the turn instead of snapping back.
+            float r = refreshButton.getRotation() % 360f;
+            refreshButton.setRotation(r);
+            refreshButton.animate().rotation(360f).setDuration((long) ((360f - r) * 1.5f))
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            refreshButton.setRotation(0f);
+                        }
+                    }).start();
+        }
+    }
+
+    /**
+     * This phone's tailnet is not up yet, so there is no status to ask for.
+     *
+     * @param tailnet its state, or null while it is being restarted
+     */
+    public void showConnecting(PcnetState tailnet) {
+        int amber = Color.rgb(210, 153, 34);
+        if (tailnet == null) {
+            pcStatusView.setText(L10n.t("Reconnecting...", "Đang kết nối lại..."));
+            pcStatusView.setTextColor(amber);
+            pcDetailView.setText(L10n.t("Restarting the Tailscale connection", "Đang khởi động lại kết nối Tailscale"));
+        } else if (tailnet.isNeedsLogin()) {
+            pcStatusView.setText(L10n.t("Tailscale sign-in needed", "Cần đăng nhập lại Tailscale"));
+            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+            pcDetailView.setText(L10n.t("Open More > Sign in to Tailscale again", "Vào Thêm > Đăng nhập lại Tailscale"));
+            setRefreshing(false);
+            return;
+        } else if (tailnet.isError()) {
+            pcStatusView.setText(L10n.t("Tailscale error", "Lỗi Tailscale"));
+            pcStatusView.setTextColor(Color.rgb(248, 81, 73));
+            pcDetailView.setText(!tailnet.error.isEmpty() ? tailnet.error : L10n.t("Tap refresh to try again", "Bấm làm mới để thử lại"));
+            setRefreshing(false);
+            return;
+        } else {
+            pcStatusView.setText(L10n.t("Connecting to Tailscale...", "Đang kết nối Tailscale..."));
+            pcStatusView.setTextColor(amber);
+            pcDetailView.setText(L10n.t("Usually a few seconds", "Thường chỉ mất vài giây"));
+        }
+        setRefreshing(true);
+    }
 
     /**
      * @param hostPeer the home phone in the Tailscale device list, when it did not answer (may be null)

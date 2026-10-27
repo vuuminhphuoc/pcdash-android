@@ -75,8 +75,13 @@ public class RemoteApiClient {
     private static final int DEFAULT_READ_TIMEOUT_MS = 20000;
 
     public RemoteStatus getStatus(int localPort, String token) throws IOException {
+        return getStatus(localPort, token, DEFAULT_READ_TIMEOUT_MS);
+    }
+
+    /** With a shorter wait, for the status the screen polls (the next poll is the retry). */
+    public RemoteStatus getStatus(int localPort, String token, int timeoutMs) throws IOException {
         String urlStr = "http://127.0.0.1:" + localPort + "/v1/status";
-        String body = sendHttp("GET", urlStr, token);
+        String body = sendHttp("GET", urlStr, token, Math.min(timeoutMs, DEFAULT_CONNECT_TIMEOUT_MS), timeoutMs);
 
         boolean online = body.contains("\"online\":true") || body.contains("\"online\": true");
         Integer port = null;
@@ -193,12 +198,17 @@ public class RemoteApiClient {
     }
 
     private String sendHttp(String method, String urlStr, String token) throws IOException {
+        return sendHttp(method, urlStr, token, DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS);
+    }
+
+    private String sendHttp(String method, String urlStr, String token, int connectTimeoutMs, int readTimeoutMs)
+            throws IOException {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         try {
             conn.setRequestMethod(method);
-            conn.setConnectTimeout(DEFAULT_CONNECT_TIMEOUT_MS);
-            conn.setReadTimeout(DEFAULT_READ_TIMEOUT_MS);
+            conn.setConnectTimeout(connectTimeoutMs);
+            conn.setReadTimeout(readTimeoutMs);
             conn.setUseCaches(false);
             conn.setRequestProperty("Connection", "close");
             // The host words action results and errors in this language.

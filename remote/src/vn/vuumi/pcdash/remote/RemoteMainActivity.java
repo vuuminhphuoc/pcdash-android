@@ -76,6 +76,12 @@ public class RemoteMainActivity extends Activity {
     // A power command the home phone accepted, until the PC is seen in the new state (or we give up).
     private PowerActionWatch actionWatch;
     private int actionSeq;
+    // Status polls that failed in a row, and the last time the tailnet was restarted to recover.
+    private int statusFailures;
+    private long lastReconnectAtMs = -RECONNECT_GAP_MS;
+    private boolean reconnecting;
+    private static final long RECONNECT_GAP_MS = 2 * 60_000L;
+    private static final int FAILURES_BEFORE_RECONNECT = 2;
     private boolean isPolling = false;
     private volatile boolean isStopped = false;
     private volatile boolean isDestroyed = false;
@@ -224,6 +230,8 @@ public class RemoteMainActivity extends Activity {
         private Exception error;
         // The home phone in the Tailscale device list, read when it did not answer.
         private TailnetPeers.Peer hostPeer;
+        // This phone's tailnet while it is not up yet (then no request is sent).
+        private PcnetState tailnet;
 
         PollWorker(RemoteMainActivity activity, int generation) {
             this.activityRef = new WeakReference<RemoteMainActivity>(activity);
@@ -240,10 +248,19 @@ public class RemoteMainActivity extends Activity {
                 if (!act.isPolling || act.controller == null || !act.controller.isPaired() || !act.statusGeneration.isValid(generation)) {
                     return;
                 }
+                PcnetState st = null;
                 try {
-                    status = act.controller.getStatus();
-                } catch (Exception e) {
-                    error = e;
+                    st = act.controller.state();
+                } catch (Exception ignored) {}
+                if (st != null && !st.isRunning()) {
+                    // Still starting (or signed out): a request now would only wait for a timeout.
+                    tailnet = st;
+                } else {
+                    try {
+                        status = act.controller.getStatusQuick();
+                    } catch (Exception e) {
+                        error = e;
+                    }
                 }
                 if (error != null && !(error instanceof RemoteApiClient.DeviceRevokedException)) {
                     try {
@@ -257,30 +274,114 @@ public class RemoteMainActivity extends Activity {
                 isUiPass = true;
                 act.ui.post(this);
             } else {
-                act.onStatusDeliver(status, error, hostPeer, generation);
+                act.onStatusDeliver(status, error, hostPeer, tailnet, generation);
             }
         }
     }
 
     private void onStatusDeliver(RemoteApiClient.RemoteStatus status, Exception error, TailnetPeers.Peer hostPeer,
-                                 int generation) {
+                                 PcnetState tailnet, int generation) {
         if (isStopped || isDestroyed || !statusGeneration.isValid(generation)) return;
         if (error instanceof RemoteApiClient.DeviceRevokedException) {
             handleDeviceRevoked();
+            return;
+        }
+        boolean onControl = isPolling && navigator != null && navigator.current() == MainTab.CONTROL;
+        if (tailnet != null) {
+            if (controlTabView != null) {
+                controlTabView.showConnecting(tailnet);
+            }
+            boolean stuck = tailnet.isStopped() || tailnet.isError();
+            if (stuck && SystemClock.elapsedRealtime() - lastReconnectAtMs >= RECONNECT_GAP_MS) {
+                // Nothing is starting it (an earlier start failed): start it again.
+                reconnect();
+                return;
+            }
+            // Look again soon while it starts: the first status is sent the moment it is up.
+            if (onControl) {
+                ui.postDelayed(pollStatusTask, tailnet.isStarting() ? 800 : 3000);
+            }
             return;
         }
         if (status != null && !hasCheckedUpdateInitial) {
             hasCheckedUpdateInitial = true;
             triggerUpdateCheck();
         }
+        statusFailures = status != null ? 0 : statusFailures + 1;
         if (controlTabView != null) {
             controlTabView.updateStatus(status, error, hostPeer);
+            controlTabView.setRefreshing(false);
         }
         followActionWatch(status);
-        if (!isStopped && !isDestroyed && isPolling && navigator != null && navigator.current() == MainTab.CONTROL && statusGeneration.isValid(generation)) {
-            // Look more often while a command is changing the PC's state.
-            ui.postDelayed(pollStatusTask, actionWatch != null ? 2500 : 5000);
+        if (status == null && statusFailures >= FAILURES_BEFORE_RECONNECT
+                && (hostPeer == null || hostPeer.online)
+                && SystemClock.elapsedRealtime() - lastReconnectAtMs >= RECONNECT_GAP_MS) {
+            // The home phone looks reachable but our tunnel keeps failing (often after the app sat in the
+            // background): restart it once, as reopening the app used to.
+            reconnect();
+            return;
         }
+        if (onControl) {
+            // More often while a command changes the PC's state, or just after a failure.
+            long next = actionWatch != null ? 2500 : status == null && statusFailures < FAILURES_BEFORE_RECONNECT ? 2000 : 5000;
+            ui.postDelayed(pollStatusTask, next);
+        }
+    }
+
+    /** Refresh on the Control tab: ask now, or restart the tunnel when the last status failed. */
+    private void refreshNow() {
+        if (isStopped || isDestroyed || controller == null || !controller.isPaired()) return;
+        if (controlTabView != null) {
+            controlTabView.setRefreshing(true);
+        }
+        if (statusFailures > 0) {
+            reconnect();
+            return;
+        }
+        ui.removeCallbacks(pollStatusTask);
+        ui.post(pollStatusTask);
+    }
+
+    /** Stops and starts this phone's tailnet node, then polls the status again. */
+    private void reconnect() {
+        if (reconnecting || isStopped || isDestroyed) return;
+        reconnecting = true;
+        lastReconnectAtMs = SystemClock.elapsedRealtime();
+        statusFailures = 0;
+        statusGeneration.invalidate();
+        ui.removeCallbacks(pollStatusTask);
+        if (controlTabView != null) {
+            controlTabView.showConnecting(null);
+            controlTabView.setRefreshing(true);
+        }
+        lifecycleExecutor.submit(new Runnable() {
+            @Override
+            public void run() {
+                boolean revoked = false;
+                if (controller != null) {
+                    controller.close();
+                    try {
+                        controller.open();
+                    } catch (RemoteApiClient.DeviceRevokedException e) {
+                        revoked = true;
+                    } catch (IOException ignored) {}
+                }
+                final boolean finalRevoked = revoked;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        reconnecting = false;
+                        if (isStopped || isDestroyed) return;
+                        if (finalRevoked) {
+                            handleDeviceRevoked();
+                            return;
+                        }
+                        ui.removeCallbacks(pollStatusTask);
+                        ui.post(pollStatusTask);
+                    }
+                });
+            }
+        });
     }
 
     private static class MetricsWorker implements Runnable {
@@ -602,6 +703,10 @@ public class RemoteMainActivity extends Activity {
         RemoteSession.setActivityVisible(true);
         RemoteSession.acquire();
         HostWatch.syncSchedule(this);
+        if (controlTabView != null) {
+            // The last status stays on screen until a fresh one arrives; say that it is being updated.
+            controlTabView.setRefreshing(true);
+        }
         lifecycleExecutor.submit(new Runnable() {
             @Override
             public void run() {
@@ -729,7 +834,7 @@ public class RemoteMainActivity extends Activity {
             @Override
             public void run() {
                 // Chưa ghép đôi: đang chờ đăng nhập Tailscale trong trình duyệt, dừng tsnet sẽ làm hỏng đăng nhập.
-                RemoteSession.release(controller, controller.isPaired());
+                RemoteSession.release(controller, controller.isPaired(), RemoteSession.APP_KEEP_ALIVE_MS);
             }
         });
     }
@@ -766,6 +871,11 @@ public class RemoteMainActivity extends Activity {
                 @Override
                 public void onActionClicked(String action) {
                     handleActionClick(action);
+                }
+
+                @Override
+                public void onRefresh() {
+                    refreshNow();
                 }
 
                 @Override

@@ -12,7 +12,7 @@ import android.graphics.drawable.Drawable;
 /** Vector-style icons drawn with a single colour, so they stay sharp and match button text. */
 final class IconDrawable extends Drawable {
 
-    enum Type { WAKE, SLEEP, HIBERNATE, SHUTDOWN, ABORT }
+    enum Type { WAKE, SLEEP, HIBERNATE, SHUTDOWN, ABORT, REFRESH }
 
     private final Type type;
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -54,6 +54,9 @@ final class IconDrawable extends Drawable {
                 break;
             case ABORT:
                 drawAbort(canvas, left, top, s);
+                break;
+            case REFRESH:
+                drawRefresh(canvas, left, top, s);
                 break;
             default:
                 break;
@@ -112,6 +115,32 @@ final class IconDrawable extends Drawable {
         c.drawOval(oval, stroke);
         c.drawLine(l + s * 0.34f, t + s * 0.34f, l + s * 0.66f, t + s * 0.66f, stroke);
         c.drawLine(l + s * 0.66f, t + s * 0.34f, l + s * 0.34f, t + s * 0.66f, stroke);
+    }
+
+    // A circular arrow, turning clockwise.
+    private void drawRefresh(Canvas c, float l, float t, float s) {
+        float cx = l + s * 0.5f;
+        float cy = t + s * 0.5f;
+        float r = s * 0.34f;
+        oval.set(cx - r, cy - r, cx + r, cy + r);
+        float start = 20f;
+        float sweep = 280f;
+        c.drawArc(oval, start, sweep, false, stroke);
+        double end = Math.toRadians(start + sweep);
+        float ex = cx + r * (float) Math.cos(end);
+        float ey = cy + r * (float) Math.sin(end);
+        // Tangent (direction of travel) and normal at the end of the arc.
+        float tx = -(float) Math.sin(end);
+        float ty = (float) Math.cos(end);
+        float nx = (float) Math.cos(end);
+        float ny = (float) Math.sin(end);
+        float head = s * 0.16f;
+        path.reset();
+        path.moveTo(ex + tx * head, ey + ty * head);
+        path.lineTo(ex + nx * head, ey + ny * head);
+        path.lineTo(ex - nx * head, ey - ny * head);
+        path.close();
+        c.drawPath(path, fill);
     }
 
     @Override

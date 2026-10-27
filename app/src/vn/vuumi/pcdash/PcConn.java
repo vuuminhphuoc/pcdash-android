@@ -15,6 +15,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 public class PcConn {
     public static final int DEFAULT_AGENT_PORT = 8799;
@@ -22,6 +25,15 @@ public class PcConn {
     static final int STATUS_TIMEOUT = 2000;
 
     private static volatile PcSettingsSource settings = null;
+
+    private static final ExecutorService PROBES = Executors.newCachedThreadPool(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "pcdash-port-probe");
+            t.setDaemon(true);
+            return t;
+        }
+    });
 
     public static void configure(PcSettingsSource source) {
         settings = source;
@@ -60,11 +72,9 @@ public class PcConn {
         if (s == null || !s.isConfigured()) {
             return new PcStatus(PcStatus.NOT_CONFIGURED, L10n.t("PC not set up", "Chưa cấu hình PC"));
         }
-        String ip = s.getPcIp();
-        for (int p : STATUS_PORTS) {
-            if (tcpOpen(ip, p, STATUS_TIMEOUT)) {
-                return new PcStatus(PcStatus.ON, L10n.t("PC is ON (port ", "PC đang BẬT (port ") + p + ")");
-            }
+        int p = firstOpenPort(s.getPcIp(), STATUS_PORTS, STATUS_TIMEOUT);
+        if (p > 0) {
+            return new PcStatus(PcStatus.ON, L10n.t("PC is ON (port ", "PC đang BẬT (port ") + p + ")");
         }
         return new PcStatus(PcStatus.OFF, L10n.t("PC is OFF / not responding", "PC đang TẮT / không phản hồi"));
     }
@@ -74,19 +84,62 @@ public class PcConn {
         if (s == null || !s.isConfigured()) {
             return "{\"online\":false,\"port\":null,\"rtt_ms\":0,\"configured\":false}";
         }
-        String ip = s.getPcIp();
         long t0 = System.currentTimeMillis();
-        int openPort = -1;
-        for (int p : STATUS_PORTS) {
-            if (tcpOpen(ip, p, STATUS_TIMEOUT)) {
-                openPort = p;
-                break;
-            }
-        }
+        int openPort = firstOpenPort(s.getPcIp(), STATUS_PORTS, STATUS_TIMEOUT);
         long rtt = System.currentTimeMillis() - t0;
         boolean online = openPort != -1;
         String portJson = online ? String.valueOf(openPort) : "null";
         return "{\"online\":" + online + ",\"port\":" + portJson + ",\"rtt_ms\":" + rtt + ",\"configured\":true}";
+    }
+
+    /**
+     * The first of {@code ports}, in their order, that accepts a TCP connection, or -1. All ports are
+     * tried at once, so a PC that is off answers in one timeout instead of one per port, and an open
+     * port early in the list answers without waiting for the others.
+     */
+    static int firstOpenPort(final String ip, final int[] ports, final int timeoutMs) {
+        final int[] result = new int[ports.length]; // 0 pending, 1 open, 2 closed
+        final Object lock = new Object();
+        for (int i = 0; i < ports.length; i++) {
+            final int index = i;
+            PROBES.execute(new Runnable() {
+                @Override
+                public void run() {
+                    boolean open = tcpOpen(ip, ports[index], timeoutMs);
+                    synchronized (lock) {
+                        result[index] = open ? 1 : 2;
+                        lock.notifyAll();
+                    }
+                }
+            });
+        }
+        long deadline = System.currentTimeMillis() + timeoutMs + 500L;
+        synchronized (lock) {
+            while (true) {
+                boolean undecided = false;
+                for (int i = 0; i < ports.length; i++) {
+                    if (result[i] == 1) return ports[i];
+                    if (result[i] == 0) {
+                        undecided = true;
+                        break;
+                    }
+                }
+                if (!undecided) return -1;
+                long left = deadline - System.currentTimeMillis();
+                if (left <= 0) {
+                    for (int i = 0; i < ports.length; i++) {
+                        if (result[i] == 1) return ports[i];
+                    }
+                    return -1;
+                }
+                try {
+                    lock.wait(left);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return -1;
+                }
+            }
+        }
     }
 
     static boolean tcpOpen(String ip, int port, int timeoutMs) {

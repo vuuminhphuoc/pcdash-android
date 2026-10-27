@@ -148,7 +148,8 @@ final class HostWatch {
         } catch (IOException | InterruptedException ignored) {
             // Stopped by the system or the tailnet would not start; the next run tries again.
         } finally {
-            RemoteSession.release(c, true);
+            // A background check closes at once (unless the app came back meanwhile).
+            RemoteSession.release(c, true, 0L);
         }
     }
 

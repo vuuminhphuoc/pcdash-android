@@ -2,6 +2,11 @@ package vn.vuumi.pcdash.remote;
 
 import android.content.Context;
 import java.io.File;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import vn.vuumi.pcdash.net.PcnetBridge;
 
@@ -13,12 +18,26 @@ import vn.vuumi.pcdash.net.PcnetBridge;
  * acquire() is a plain counter so the UI thread can call it. release() runs off the UI thread and holds
  * the controller's lock while it decides to close; open() takes the same lock, so a user that acquired
  * after the count reached zero always opens after that close.
+ *
+ * The app keeps the tailnet for {@link #APP_KEEP_ALIVE_MS} after it leaves the screen, so coming back
+ * soon (another app, the screen off and on) finds it up instead of starting it again.
  */
 final class RemoteSession {
     private static RemoteController controller;
     private static RemoteConfigStore store;
     private static final AtomicInteger users = new AtomicInteger();
     private static volatile boolean activityVisible;
+
+    static final long APP_KEEP_ALIVE_MS = 3 * 60_000L;
+    private static final ScheduledExecutorService closer = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "pcdash-tailnet-closer");
+            t.setDaemon(true);
+            return t;
+        }
+    });
+    private static ScheduledFuture<?> pendingClose;
 
     private RemoteSession() {}
 
@@ -39,20 +58,45 @@ final class RemoteSession {
 
     static void acquire() {
         users.incrementAndGet();
+        cancelPendingClose();
     }
 
     /**
      * Drops one user; closes the tailnet when none is left and closing is allowed (the activity keeps
-     * it while a Tailscale sign-in is in progress). Never on the UI thread: close() can block.
+     * it while a Tailscale sign-in is in progress), after {@code keepAliveMs} if no one comes back.
+     * Never on the UI thread: close() can block.
      */
-    static void release(RemoteController c, boolean mayClose) {
+    static void release(final RemoteController c, boolean mayClose, long keepAliveMs) {
         synchronized (c) {
-            if (users.decrementAndGet() <= 0) {
-                users.set(0);
-                if (mayClose) {
-                    c.close();
-                }
+            if (users.decrementAndGet() > 0) return;
+            users.set(0);
+            if (!mayClose) return;
+            if (keepAliveMs <= 0) {
+                cancelPendingClose();
+                c.close();
+                return;
             }
+        }
+        synchronized (RemoteSession.class) {
+            cancelPendingClose();
+            pendingClose = closer.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (c) {
+                        // Someone acquired in the meantime: their open() keeps using the tailnet.
+                        if (users.get() == 0) {
+                            c.close();
+                        }
+                    }
+                }
+            }, keepAliveMs, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private static synchronized void cancelPendingClose() {
+        if (pendingClose != null) {
+            pendingClose.cancel(false);
+            pendingClose = null;
         }
     }
 
