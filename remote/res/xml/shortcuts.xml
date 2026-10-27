@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon. Both open QuickActionActivity, which is not exported. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="wake"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_wake"
+        android:shortcutShortLabel="@string/shortcut_wake_short"
+        android:shortcutLongLabel="@string/shortcut_wake_long">
+        <intent
+            android:action="vn.vuumi.pcdash.remote.action.WAKE"
+            android:targetPackage="vn.vuumi.pcdash.remote"
+            android:targetClass="vn.vuumi.pcdash.remote.QuickActionActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="sleep"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sleep"
+        android:shortcutShortLabel="@string/shortcut_sleep_short"
+        android:shortcutLongLabel="@string/shortcut_sleep_long">
+        <intent
+            android:action="vn.vuumi.pcdash.remote.action.SLEEP"
+            android:targetPackage="vn.vuumi.pcdash.remote"
+            android:targetClass="vn.vuumi.pcdash.remote.QuickActionActivity" />
+    </shortcut>
+</shortcuts>

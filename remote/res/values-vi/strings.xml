@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tile_wake">Bật PC</string>
+    <string name="shortcut_wake_short">Bật PC</string>
+    <string name="shortcut_wake_long">Bật / Đánh thức PC</string>
+    <string name="shortcut_sleep_short">Cho PC ngủ</string>
+    <string name="shortcut_sleep_long">Đưa PC vào chế độ Sleep</string>
+</resources>

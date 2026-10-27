@@ -100,6 +100,8 @@ public class RemoteMainActivity extends Activity {
     // android.window.OnBackInvokedCallback on API 33+; Object so older phones never load the class.
     private Object backToControlCallback;
     private boolean backCallbackRegistered;
+    // True once controller.open() has finished for this start, so a quick action can be sent.
+    private boolean sessionReady;
 
     private ControlTabView controlTabView;
     private MonitorTabView monitorTabView;
@@ -611,6 +613,8 @@ public class RemoteMainActivity extends Activity {
                         } else {
                             startTailscaleBegin();
                         }
+                        sessionReady = true;
+                        runPendingQuickAction();
                     }
                 });
             }
@@ -618,9 +622,38 @@ public class RemoteMainActivity extends Activity {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // Already open (for example the tile was used while the app was on screen).
+        if (sessionReady) {
+            runPendingQuickAction();
+        }
+    }
+
+    // Wake or Sleep from a launcher shortcut or the Quick Settings tile (see QuickActions).
+    private void runPendingQuickAction() {
+        String action = QuickActions.take(System.currentTimeMillis());
+        if (action == null || isStopped || isDestroyed) {
+            return;
+        }
+        if (controller == null || !controller.isPaired()) {
+            Toast.makeText(this, L10n.t("Pair this phone with the host first", "Hãy ghép đôi điện thoại này với host trước"), Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (navigator != null) {
+            navigator.select(MainTab.CONTROL);
+        }
+        handleActionClick(action, "wake".equals(action)
+                ? L10n.t("Sending the wake signal...", "Đang gửi tín hiệu bật PC...")
+                : L10n.t("Putting the PC to sleep...", "Đang đưa PC vào chế độ Sleep..."));
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         isStopped = true;
+        sessionReady = false;
         isPolling = false;
         statusGeneration.invalidate();
         metricsGeneration.invalidate();

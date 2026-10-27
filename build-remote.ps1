@@ -151,8 +151,12 @@ if (-not $hasExtractNative) {
 if ($xmlTree -match 'VpnService') {
     throw "Manifest check FAILED: illegal VpnService declared"
 }
-if ($xmlTree -match 'E:\s+service\b') {
-    throw "Manifest check FAILED: illegal Service declared"
+# Nothing may run in the background. The only service allowed is the Quick Settings tile, which
+# System UI binds while the panel is open; it just opens the app.
+$serviceCount = ([regex]::Matches($xmlTree, 'E:\s+service\b')).Count
+$tileCount = ([regex]::Matches($xmlTree, 'permission\([^)]*\)="android\.permission\.BIND_QUICK_SETTINGS_TILE"')).Count
+if ($serviceCount -ne $tileCount) {
+    throw "Manifest check FAILED: only Quick Settings tile services are allowed ($serviceCount services, $tileCount tiles)"
 }
 if ($xmlTree -match 'BOOT_COMPLETED|BootReceiver') {
     throw "Manifest check FAILED: illegal BootReceiver declared"
@@ -162,7 +166,7 @@ Write-Host "Manifest verified successfully:"
 Write-Host "  - android:usesCleartextTraffic='true' [OK]"
 Write-Host "  - android:allowBackup='false' [OK]"
 Write-Host "  - android:extractNativeLibs='true' [OK]"
-Write-Host "  - No VpnService, Service, or BootReceiver found [OK]"
+Write-Host "  - No VpnService, BootReceiver or background Service ($tileCount Quick Settings tile) [OK]"
 Write-Host ""
 Write-Host "APK Contents (Native Libraries & Dex):"
 $verifyZip = [System.IO.Compression.ZipFile]::OpenRead($signedApk)

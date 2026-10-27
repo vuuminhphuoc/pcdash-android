@@ -157,6 +157,11 @@ Write-Host "Executing HistoryChartViewDataTest..."
 if ($LASTEXITCODE -ne 0) {
     throw "HistoryChartViewDataTest failed"
 }
+Write-Host "Executing QuickActionsTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.remote.QuickActionsTest
+if ($LASTEXITCODE -ne 0) {
+    throw "QuickActionsTest failed"
+}
 Write-Host "Executing UiThreadSafetyTest..."
 & $java -cp "$classesDir;$androidJar" vn.vuumi.pcdash.remote.UiThreadSafetyTest
 if ($LASTEXITCODE -ne 0) {

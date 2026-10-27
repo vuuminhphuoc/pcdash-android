@@ -29,7 +29,33 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Launcher shortcuts and the Quick Settings tile go through here; see QuickActions. -->
+        <activity
+            android:name=".QuickActionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- The only service: bound by System UI while the Quick Settings panel is open. -->
+        <service
+            android:name=".WakeTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_qs_wake"
+            android:label="@string/tile_wake"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
 
     </application>
 

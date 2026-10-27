@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Labels the system shows (tile, shortcuts). Text inside the app lives in code, see L10n. -->
+<resources>
+    <string name="tile_wake">Wake PC</string>
+    <string name="shortcut_wake_short">Wake PC</string>
+    <string name="shortcut_wake_long">Turn on / wake the PC</string>
+    <string name="shortcut_sleep_short">Sleep PC</string>
+    <string name="shortcut_sleep_long">Put the PC to sleep</string>
+</resources>
