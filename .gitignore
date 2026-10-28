@@ -53,3 +53,6 @@ pcnet/build/
 app/assets/remote-update.apk
 app/assets/remote-update.json
 .superpowers/
+
+# CI caches
+.cache/
