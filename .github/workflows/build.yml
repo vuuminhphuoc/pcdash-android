@@ -51,7 +51,7 @@ jobs:
         run: Add-Content $env:GITHUB_ENV "PCDASH_JAVA_HOME=$env:JAVA_HOME"
 
       # Caches the Gradle distribution and dependencies between runs.
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Install Android SDK packages
         run: |
@@ -109,7 +109,7 @@ jobs:
           $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { "ci-$($env:GITHUB_SHA.Substring(0, 7))" }
           ./scripts/package-release.ps1 -Tag $tag
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: pcdash-${{ github.sha }}
           path: dist/
@@ -159,7 +159,7 @@ jobs:
           echo "::error::Set PCDASH_HOST_KEYSTORE_B64 and PCDASH_REMOTE_KEYSTORE_B64 (and PCDASH_KEYSTORE_PASSWORD if not 'android') before tagging a release."
           exit 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: pcdash-${{ github.sha }}
           path: dist
