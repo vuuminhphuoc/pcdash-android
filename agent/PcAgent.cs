@@ -7,6 +7,7 @@ using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -102,6 +103,17 @@ namespace PcAgent
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetHandleInformation(IntPtr handle, uint mask, uint flags);
+        const uint HANDLE_FLAG_INHERIT = 1;
+
+        // A process the agent starts (the updater's restart helper) must not inherit the listening socket
+        // and keep the port busy after the agent exits.
+        static void KeepOutOfChildren(TcpListener l)
+        {
+            try { SetHandleInformation(l.Server.Handle, HANDLE_FLAG_INHERIT, 0); } catch { }
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
@@ -175,7 +187,152 @@ namespace PcAgent
             return diff == 0;
         }
 
-        // Returns true when the request may proceed; otherwise a 403/503 response was already sent.
+        // A request is signed instead of carrying the token: HMAC-SHA256 keyed with the token over
+        // timestamp, nonce, method, target and body. Sniffing the LAN then yields neither the token nor
+        // anything that can be replayed (each nonce is accepted once, inside a time window). A request with
+        // only the token header is the older protocol: accepted unless a file named "strict" sits next to
+        // the agent (it is for hosts that cannot sign, and has no protection against sniffing).
+        const string TimestampHeader = "X-PcAgent-Ts";
+        const string NonceHeader = "X-PcAgent-Nonce";
+        const string SignatureHeader = "X-PcAgent-Sig";
+        const long SignatureWindowSeconds = 300;
+        const int MaxNonceLength = 64;
+        const int MaxFailsBeforeLock = 5;
+        const int FailWindowSeconds = 60;
+        const int LockSeconds = 60;
+
+        class AuthFails
+        {
+            public int Count;
+            public DateTime FirstUtc;
+            public DateTime LockedUntilUtc;
+        }
+
+        static readonly object authLock = new object();
+        static readonly Dictionary<string, AuthFails> authFails = new Dictionary<string, AuthFails>();
+        static readonly Dictionary<string, DateTime> seenNonces = new Dictionary<string, DateTime>();
+        static readonly HashSet<string> knownClients = new HashSet<string>();
+        static readonly HashSet<string> legacyClientsLogged = new HashSet<string>();
+
+        static bool StrictAuth()
+        {
+            try { return File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "strict")); }
+            catch { return false; }
+        }
+
+        internal static string ComputeSignature(string token, string timestamp, string nonce, string method, string target, string body)
+        {
+            string data = timestamp + "\n" + nonce + "\n" + method + "\n" + target + "\n" + (body ?? "");
+            using (var h = new HMACSHA256(Encoding.UTF8.GetBytes(token)))
+            {
+                byte[] mac = h.ComputeHash(Encoding.UTF8.GetBytes(data));
+                var sb = new StringBuilder(mac.Length * 2);
+                foreach (byte b in mac) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
+        }
+
+        // Null when the credentials are good; otherwise why not: "clock_skew", "replayed",
+        // "bad_signature", "signature_required" or "bad_token".
+        static string CheckCredentials(SimpleRequest req, string ip)
+        {
+            string sig, ts, nonce;
+            if (req.Headers.TryGetValue(SignatureHeader, out sig))
+            {
+                if (!req.Headers.TryGetValue(TimestampHeader, out ts) || !req.Headers.TryGetValue(NonceHeader, out nonce))
+                    return "bad_signature";
+                nonce = nonce.Trim();
+                long t;
+                if (!long.TryParse(ts.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out t) ||
+                    nonce.Length == 0 || nonce.Length > MaxNonceLength)
+                    return "bad_signature";
+                long now = (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+                if (Math.Abs(now - t) > SignatureWindowSeconds) return "clock_skew";
+                string expected = ComputeSignature(agentToken, ts.Trim(), nonce, req.HttpMethod, req.RawUrl, req.Body);
+                if (!ConstantTimeEquals(expected, sig.Trim().ToLowerInvariant())) return "bad_signature";
+                lock (authLock)
+                {
+                    DateTime nowUtc = DateTime.UtcNow;
+                    if (seenNonces.Count > 2048)
+                    {
+                        var stale = new List<string>();
+                        foreach (var kv in seenNonces) if (kv.Value < nowUtc) stale.Add(kv.Key);
+                        foreach (string k in stale) seenNonces.Remove(k);
+                    }
+                    if (seenNonces.ContainsKey(nonce)) return "replayed";
+                    seenNonces[nonce] = nowUtc.AddSeconds(2 * SignatureWindowSeconds);
+                }
+                return null;
+            }
+
+            if (StrictAuth()) return "signature_required";
+            string given;
+            if (!req.Headers.TryGetValue(TokenHeader, out given) || !ConstantTimeEquals(agentToken, given.Trim()))
+                return "bad_token";
+            lock (authLock)
+            {
+                if (legacyClientsLogged.Add(ip))
+                    Log("  note: " + ip + " authenticates with the plain token (older host); update PCDash host to sign requests");
+            }
+            return null;
+        }
+
+        // The PC itself is exempt from the lock-out (it already owns the PC); a test can switch that off.
+        static readonly bool lockLoopback = Environment.GetEnvironmentVariable("PCAGENT_TEST_LOCK_LOOPBACK") == "1";
+
+        static bool IsExempt(string ip)
+        {
+            bool loopback = ip == "::1" || ip.StartsWith("127.") || ip.StartsWith("::ffff:127.");
+            return loopback && !lockLoopback;
+        }
+
+        static bool IsLockedOut(string ip)
+        {
+            if (IsExempt(ip)) return false;
+            lock (authLock)
+            {
+                AuthFails f;
+                return authFails.TryGetValue(ip, out f) && f.LockedUntilUtc > DateTime.UtcNow;
+            }
+        }
+
+        static void NoteAuthFailure(string ip, string path, string reason)
+        {
+            lock (authLock)
+            {
+                DateTime now = DateTime.UtcNow;
+                AuthFails f;
+                if (!authFails.TryGetValue(ip, out f))
+                {
+                    f = new AuthFails { FirstUtc = now };
+                    authFails[ip] = f;
+                }
+                if ((now - f.FirstUtc).TotalSeconds > FailWindowSeconds)
+                {
+                    f.Count = 0;
+                    f.FirstUtc = now;
+                }
+                f.Count++;
+                Log("  AUTH FAIL from " + ip + " on " + path + ": " + reason + " (" + f.Count + " in the last " + FailWindowSeconds + "s)");
+                if (f.Count >= MaxFailsBeforeLock && !IsExempt(ip))
+                {
+                    f.LockedUntilUtc = now.AddSeconds(LockSeconds);
+                    f.Count = 0;
+                    Log("  AUTH LOCK " + ip + " for " + LockSeconds + "s after repeated failures");
+                }
+            }
+        }
+
+        static void NoteAuthSuccess(string ip)
+        {
+            lock (authLock)
+            {
+                authFails.Remove(ip);
+                if (knownClients.Add(ip)) Log("  AUTH NEW client " + ip + " authenticated for the first time since the agent started");
+            }
+        }
+
+        // Returns true when the request may proceed; otherwise a 401/403/429/503 response was already sent.
         static bool Authorize(SimpleRequest req, SimpleResponse res)
         {
             if (agentToken == null)
@@ -184,14 +341,29 @@ namespace PcAgent
                 RespondJson(res, 503, "{\"error\":\"token_not_configured\"}");
                 return false;
             }
-            string given;
-            if (!req.Headers.TryGetValue(TokenHeader, out given) || !ConstantTimeEquals(agentToken, given.Trim()))
+            string ip = req.RemoteEndPoint != null ? req.RemoteEndPoint.Address.ToString() : "?";
+            if (IsLockedOut(ip))
             {
-                Log("  403 forbidden");
-                RespondJson(res, 403, "{\"error\":\"forbidden\"}");
+                Log("  429 locked " + ip);
+                RespondJson(res, 429, "{\"error\":\"too_many_attempts\"}");
                 return false;
             }
-            return true;
+            string reason = CheckCredentials(req, ip);
+            if (reason == null)
+            {
+                NoteAuthSuccess(ip);
+                return true;
+            }
+            NoteAuthFailure(ip, req.Path, reason);
+            if (reason == "clock_skew")
+            {
+                // Not a wrong token: the phone's and the PC's clocks differ. A different code lets the host say so.
+                RespondJson(res, 401, "{\"error\":\"clock_skew\"}");
+                return false;
+            }
+            Log("  403 forbidden");
+            RespondJson(res, 403, "{\"error\":\"forbidden\"}");
+            return false;
         }
 
         static void Main(string[] args)
@@ -232,11 +404,14 @@ namespace PcAgent
             metricsThread.Name = "PcAgentMetrics";
             metricsThread.Start();
 
+            AgentUpdater.Start(Log, stopListeners);
+
             try
             {
                 IPAddress bindAddr4 = bindLocal ? IPAddress.Loopback : IPAddress.Any;
                 listener4 = new TcpListener(bindAddr4, port);
                 listener4.Start();
+                KeepOutOfChildren(listener4);
                 Log("PcAgent listening on port " + port + (bindLocal ? " (local bind)" : " (any bind)"));
 
                 if (Socket.OSSupportsIPv6)
@@ -246,6 +421,7 @@ namespace PcAgent
                         IPAddress bindAddr6 = bindLocal ? IPAddress.IPv6Loopback : IPAddress.IPv6Any;
                         listener6 = new TcpListener(bindAddr6, port);
                         listener6.Start();
+                        KeepOutOfChildren(listener6);
                         var thread6 = new Thread(() => AcceptLoop(listener6));
                         thread6.IsBackground = true;
                         thread6.Name = "PcAgentListenerIPv6";
@@ -1315,10 +1491,12 @@ namespace PcAgent
             {
                 case 200: return "OK";
                 case 400: return "Bad Request";
+                case 401: return "Unauthorized";
                 case 403: return "Forbidden";
                 case 404: return "Not Found";
                 case 405: return "Method Not Allowed";
                 case 413: return "Payload Too Large";
+                case 429: return "Too Many Requests";
                 case 431: return "Request Header Fields Too Large";
                 case 500: return "Internal Server Error";
                 case 503: return "Service Unavailable";
@@ -1416,6 +1594,21 @@ namespace PcAgent
                             return;
                         case "shutdown":
                             result = RunCmd("shutdown.exe", "/s /t 0");
+                            Log("  → " + result);
+                            Respond(res, 200, result);
+                            return;
+                        case "restart":
+                            result = RunCmd("shutdown.exe", "/r /t 0");
+                            Log("  → " + result);
+                            Respond(res, 200, result);
+                            return;
+                        case "lock":
+                            result = RunCmd("rundll32.exe", "user32.dll,LockWorkStation");
+                            Log("  → " + result);
+                            Respond(res, 200, result);
+                            return;
+                        case "logoff":
+                            result = RunCmd("shutdown.exe", "/l");
                             Log("  → " + result);
                             Respond(res, 200, result);
                             return;

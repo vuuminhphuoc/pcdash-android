@@ -400,6 +400,8 @@ public class HostMetricsTest {
         final int port = server.getLocalPort();
         final String token = "secret-token-metrics-456";
         final AtomicReference<String> receivedToken = new AtomicReference<String>();
+        final java.util.concurrent.atomic.AtomicBoolean firstWasSigned = new java.util.concurrent.atomic.AtomicBoolean();
+        final java.util.concurrent.atomic.AtomicBoolean firstHadToken = new java.util.concurrent.atomic.AtomicBoolean();
 
         Thread t = new Thread(new Runnable() {
             @Override
@@ -410,14 +412,30 @@ public class HostMetricsTest {
                     BufferedReader r1 = new BufferedReader(new InputStreamReader(s1.getInputStream(), StandardCharsets.UTF_8));
                     String line;
                     while ((line = r1.readLine()) != null && !line.isEmpty()) {
+                        if (line.toLowerCase().startsWith("x-pcagent-sig:")) {
+                            firstWasSigned.set(true);
+                        }
                         if (line.toLowerCase().startsWith("x-pcagent-token:")) {
-                            receivedToken.set(line.substring(line.indexOf(':') + 1).trim());
+                            firstHadToken.set(true);
                         }
                     }
                     OutputStream os1 = s1.getOutputStream();
                     os1.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
                     os1.flush();
                     s1.close();
+
+                    // 1b. the plain-token retry
+                    Socket s1b = server.accept();
+                    BufferedReader r1b = new BufferedReader(new InputStreamReader(s1b.getInputStream(), StandardCharsets.UTF_8));
+                    while ((line = r1b.readLine()) != null && !line.isEmpty()) {
+                        if (line.toLowerCase().startsWith("x-pcagent-token:")) {
+                            receivedToken.set(line.substring(line.indexOf(':') + 1).trim());
+                        }
+                    }
+                    OutputStream os1b = s1b.getOutputStream();
+                    os1b.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
+                    os1b.flush();
+                    s1b.close();
 
                     // 2. 503 request
                     Socket s2 = server.accept();
@@ -441,6 +459,7 @@ public class HostMetricsTest {
             assertTrue(r403 != null && r403.contains("Agent từ chối: sai mã token"), "403 must return Vietnamese error");
             assertEquals(client.getLastError(), "Agent từ chối: sai mã token", "403 lastError message");
             assertEquals(receivedToken.get(), token, "X-PcAgent-Token header must match");
+            assertTrue(firstWasSigned.get() && !firstHadToken.get(), "The first request is signed and does not carry the token");
 
             PcMetricsClient client2 = new PcMetricsClient("http://127.0.0.1:" + port + "/metrics", token, TimeSource.SYSTEM);
             String r503 = client2.getMetricsJson();

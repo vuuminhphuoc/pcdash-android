@@ -243,24 +243,12 @@ public class PcConn {
 
         HttpURLConnection c = null;
         try {
-            URL u = new URL("http://" + ip + ":" + port + "/exec");
-            c = (HttpURLConnection) u.openConnection();
-            c.setRequestMethod("POST");
-            c.setConnectTimeout(5000);
-            c.setReadTimeout(15000);
-            c.setDoOutput(true);
-            c.setRequestProperty("Content-Type", "application/json");
-            c.setRequestProperty("X-PcAgent-Token", token != null ? token : "");
-            OutputStream os = c.getOutputStream();
-            os.write(("{\"action\":\"" + action + "\"}").getBytes(StandardCharsets.UTF_8));
-            os.flush();
-            os.close();
+            c = AgentAuth.connect("http://" + ip + ":" + port + "/exec", "POST",
+                    ("{\"action\":\"" + action + "\"}").getBytes(StandardCharsets.UTF_8), token, 5000, 15000);
             int code = c.getResponseCode();
-            if (code == 403) {
-                return L10n.t("Agent refused: wrong token", "Agent từ chối: sai mã token");
-            }
-            if (code == 503) {
-                return L10n.t("The PC agent has no token set", "Agent PC chưa cấu hình token");
+            String refusal = AgentAuth.refusalMessage(code);
+            if (refusal != null) {
+                return refusal;
             }
             InputStream is = code >= 400 ? c.getErrorStream() : c.getInputStream();
             StringBuilder sb = new StringBuilder();

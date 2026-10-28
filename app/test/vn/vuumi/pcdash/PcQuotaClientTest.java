@@ -176,37 +176,56 @@ public class PcQuotaClientTest {
         assertTrue(act != null && act.startsWith("Lỗi:"), "doAction should return error starting with Lỗi:");
     }
 
+    /**
+     * Answers one connection: reads the whole request (headers and body, so closing does not reset the
+     * connection under the response), then writes the response. A failure here is swallowed so the
+     * listening socket stays open for the next request.
+     */
+    private static void serveOne(ServerSocket server, String response, AtomicReference<String> headersOut) {
+        try {
+            Socket s = server.accept();
+            try {
+                s.setSoTimeout(5000);
+                BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                int contentLength = 0;
+                StringBuilder headers = new StringBuilder();
+                String line;
+                while ((line = r.readLine()) != null && !line.isEmpty()) {
+                    String lower = line.toLowerCase();
+                    headers.append(lower).append('\n');
+                    if (lower.startsWith("content-length:")) {
+                        contentLength = Integer.parseInt(line.substring(line.indexOf(':') + 1).trim());
+                    }
+                }
+                if (headersOut != null) headersOut.set(headers.toString());
+                for (int i = 0; i < contentLength; i++) {
+                    if (r.read() < 0) break;
+                }
+                OutputStream os = s.getOutputStream();
+                os.write(response.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+                s.shutdownOutput();
+            } finally {
+                try { s.close(); } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     public static void testPcConnAgentExecSendsTokenAndHandles403And503() throws Exception {
         final ServerSocket server = new ServerSocket(0);
         final int port = server.getLocalPort();
         final String token = "test-agent-token-999";
-        final AtomicReference<String> receivedToken = new AtomicReference<String>();
+        final AtomicReference<String> signedRequest = new AtomicReference<String>();
+        final AtomicReference<String> plainRequest = new AtomicReference<String>();
 
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Socket s1 = server.accept();
-                    BufferedReader r1 = new BufferedReader(new InputStreamReader(s1.getInputStream(), StandardCharsets.UTF_8));
-                    String line;
-                    while ((line = r1.readLine()) != null && !line.isEmpty()) {
-                        if (line.toLowerCase().startsWith("x-pcagent-token:")) {
-                            receivedToken.set(line.substring(line.indexOf(':') + 1).trim());
-                        }
-                    }
-                    OutputStream os1 = s1.getOutputStream();
-                    os1.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
-                    os1.flush();
-                    s1.close();
-
-                    Socket s2 = server.accept();
-                    BufferedReader r2 = new BufferedReader(new InputStreamReader(s2.getInputStream(), StandardCharsets.UTF_8));
-                    while ((line = r2.readLine()) != null && !line.isEmpty()) {}
-                    OutputStream os2 = s2.getOutputStream();
-                    os2.write("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 32\r\nConnection: close\r\n\r\n{\"error\":\"token_not_configured\"}".getBytes(StandardCharsets.UTF_8));
-                    os2.flush();
-                    s2.close();
-                } catch (Exception ignored) {
+                    serveOne(server, "HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}", signedRequest);
+                    serveOne(server, "HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}", plainRequest);
+                    serveOne(server, "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 32\r\nConnection: close\r\n\r\n{\"error\":\"token_not_configured\"}", null);
                 } finally {
                     try { server.close(); } catch (Exception ignored) {}
                 }
@@ -227,7 +246,10 @@ public class PcQuotaClientTest {
 
             String r403 = PcConn.doAction("sleep");
             assertEquals(r403, "Agent từ chối: sai mã token", "403 must surface as Vietnamese forbidden message");
-            assertEquals(receivedToken.get(), token, "X-PcAgent-Token header must be sent");
+            assertTrue(signedRequest.get().contains("x-pcagent-sig:") && !signedRequest.get().contains("x-pcagent-token:"),
+                    "The first request is signed and does not carry the token");
+            assertTrue(plainRequest.get().contains("x-pcagent-token: " + token) && !plainRequest.get().contains("x-pcagent-sig:"),
+                    "After a 403 the plain token is sent once, unsigned");
 
             String r503 = PcConn.doAction("sleep");
             assertEquals(r503, "Agent PC chưa cấu hình token", "503 must surface as Vietnamese unconfigured message");
@@ -241,33 +263,16 @@ public class PcQuotaClientTest {
         final ServerSocket server = new ServerSocket(0);
         final int port = server.getLocalPort();
         final String token = "test-quota-token-xyz";
-        final AtomicReference<String> receivedToken = new AtomicReference<String>();
+        final AtomicReference<String> signedRequest = new AtomicReference<String>();
+        final AtomicReference<String> plainRequest = new AtomicReference<String>();
 
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Socket s1 = server.accept();
-                    BufferedReader r1 = new BufferedReader(new InputStreamReader(s1.getInputStream(), StandardCharsets.UTF_8));
-                    String line;
-                    while ((line = r1.readLine()) != null && !line.isEmpty()) {
-                        if (line.toLowerCase().startsWith("x-pcagent-token:")) {
-                            receivedToken.set(line.substring(line.indexOf(':') + 1).trim());
-                        }
-                    }
-                    OutputStream os1 = s1.getOutputStream();
-                    os1.write("HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
-                    os1.flush();
-                    s1.close();
-
-                    Socket s2 = server.accept();
-                    BufferedReader r2 = new BufferedReader(new InputStreamReader(s2.getInputStream(), StandardCharsets.UTF_8));
-                    while ((line = r2.readLine()) != null && !line.isEmpty()) {}
-                    OutputStream os2 = s2.getOutputStream();
-                    os2.write("HTTP/1.1 503 Service Unavailable\r\nContent-Length: 32\r\nConnection: close\r\n\r\n{\"error\":\"token_not_configured\"}".getBytes(StandardCharsets.UTF_8));
-                    os2.flush();
-                    s2.close();
-                } catch (Exception ignored) {
+                    serveOne(server, "HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}", signedRequest);
+                    serveOne(server, "HTTP/1.1 403 Forbidden\r\nContent-Length: 21\r\nConnection: close\r\n\r\n{\"error\":\"forbidden\"}", plainRequest);
+                    serveOne(server, "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 32\r\nConnection: close\r\n\r\n{\"error\":\"token_not_configured\"}", null);
                 } finally {
                     try { server.close(); } catch (Exception ignored) {}
                 }
@@ -280,7 +285,10 @@ public class PcQuotaClientTest {
             String r403 = client.getQuotaJson(false);
             assertTrue(r403 != null && r403.contains("Agent từ chối: sai mã token"), "403 must return error JSON");
             assertEquals(client.getLastError(), "Agent từ chối: sai mã token", "403 lastError message");
-            assertEquals(receivedToken.get(), token, "X-PcAgent-Token must match");
+            assertTrue(signedRequest.get().contains("x-pcagent-sig:") && !signedRequest.get().contains("x-pcagent-token:"),
+                    "The first request is signed and does not carry the token");
+            assertTrue(plainRequest.get().contains("x-pcagent-token: " + token) && !plainRequest.get().contains("x-pcagent-sig:"),
+                    "After a 403 the plain token is sent once, unsigned");
 
             String r503 = client.getQuotaJson(false);
             assertTrue(r503 != null && r503.contains("Agent PC chưa cấu hình token"), "503 must return error JSON");

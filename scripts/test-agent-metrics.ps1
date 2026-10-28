@@ -21,6 +21,9 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
 }
 Write-Host "Build success: $exePath"
 
+# A test agent must never go to GitHub for a real update; the self-update test turns this off for one agent.
+$env:PCAGENT_NO_UPDATE = "1"
+
 $testPort = 18799
 $testToken = "test-token-0123456789abcdef"
 $auth = @{ "X-PcAgent-Token" = $testToken }
@@ -39,6 +42,16 @@ function Get-HttpStatus {
         throw
     }
 }
+function New-SignedHeaders {
+    param([string]$Token, [string]$Method, [string]$Target, [string]$Body = "", [long]$Ts = 0, [string]$Nonce = "")
+    if ($Ts -eq 0) { $Ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
+    if (-not $Nonce) { $Nonce = [guid]::NewGuid().ToString("N") }
+    $data = "$Ts`n$Nonce`n$Method`n$Target`n$Body"
+    $h = New-Object System.Security.Cryptography.HMACSHA256 (,[Text.Encoding]::UTF8.GetBytes($Token))
+    $sig = -join ($h.ComputeHash([Text.Encoding]::UTF8.GetBytes($data)) | ForEach-Object { $_.ToString("x2") })
+    return @{ "X-PcAgent-Ts" = "$Ts"; "X-PcAgent-Nonce" = $Nonce; "X-PcAgent-Sig" = $sig }
+}
+
 Write-Host "=== 2. Starting test PcAgent on port $testPort (local bind) ==="
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = $exePath
@@ -312,6 +325,168 @@ foreach ($k in $requiredTopKeys) {
     $code = Get-HttpStatus -Uri "$base/healthz"
     if ($code -ne 200) { throw "/healthz must stay open, got $code" }
     Write-Host "Assertion PASS: missing or wrong token gets 403 on /metrics, /quota, /exec; /healthz stays open"
+
+    Write-Host "=== 5.x2 Signed requests (HMAC) ==="
+    $okSig = New-SignedHeaders -Token $testToken -Method "GET" -Target "/metrics"
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers $okSig
+    if ($code -ne 200) { throw "Signed GET /metrics expected 200, got $code" }
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers $okSig
+    if ($code -ne 403) { throw "Replayed signed request expected 403, got $code" }
+    $quotaTarget = "/quota?refresh=0"
+    $code = Get-HttpStatus -Uri "$base$quotaTarget" -Headers (New-SignedHeaders -Token $testToken -Method "GET" -Target $quotaTarget)
+    if ($code -ne 200) { throw "Signed GET with a query expected 200 (the query is part of the signature), got $code" }
+    $execBody = '{"action":"ping"}'
+    $code = Get-HttpStatus -Uri "$base/exec" -Method Post -Body $execBody -Headers (New-SignedHeaders -Token $testToken -Method "POST" -Target "/exec" -Body $execBody)
+    if ($code -ne 200) { throw "Signed POST /exec expected 200, got $code" }
+    $code = Get-HttpStatus -Uri "$base/exec" -Method Post -Body '{"action":"sleep"}' -Headers (New-SignedHeaders -Token $testToken -Method "POST" -Target "/exec" -Body $execBody)
+    if ($code -ne 403) { throw "A signature over another body expected 403, got $code" }
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers (New-SignedHeaders -Token "wrong-token-0123456789abcdef" -Method "GET" -Target "/metrics")
+    if ($code -ne 403) { throw "Signature with the wrong token expected 403, got $code" }
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers (New-SignedHeaders -Token $testToken -Method "GET" -Target "/quota")
+    if ($code -ne 403) { throw "A signature for another target expected 403, got $code" }
+    $old = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 3600
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers (New-SignedHeaders -Token $testToken -Method "GET" -Target "/metrics" -Ts $old)
+    if ($code -ne 401) { throw "A signature an hour old expected 401 (clock skew), got $code" }
+    Write-Host "Assertion PASS: signed requests work; replay, wrong token, other body/target get 403; stale time gets 401"
+
+    Write-Host "=== 5.x3 Strict mode refuses the plain token ==="
+    $strictFile = Join-Path $buildDir "strict"
+    Set-Content -Path $strictFile -Value "1"
+    try {
+        $code = Get-HttpStatus -Uri "$base/metrics" -Headers $auth
+        if ($code -ne 403) { throw "Plain token with strict mode expected 403, got $code" }
+        $code = Get-HttpStatus -Uri "$base/metrics" -Headers (New-SignedHeaders -Token $testToken -Method "GET" -Target "/metrics")
+        if ($code -ne 200) { throw "Signed request with strict mode expected 200, got $code" }
+    } finally {
+        Remove-Item $strictFile -Force -ErrorAction SilentlyContinue
+    }
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers $auth
+    if ($code -ne 200) { throw "Plain token without strict mode expected 200, got $code" }
+    Write-Host "Assertion PASS: strict file turns the plain token off, removing it turns it back on"
+
+    Write-Host "=== 5.x4 Repeated failures lock a client out ==="
+    $lockPort = 18804
+    $psiLock = New-Object System.Diagnostics.ProcessStartInfo
+    $psiLock.FileName = $exePath
+    $psiLock.WorkingDirectory = $buildDir
+    $psiLock.UseShellExecute = $false
+    $psiLock.CreateNoWindow = $true
+    $psiLock.EnvironmentVariables["PCAGENT_PORT"] = "$lockPort"
+    $psiLock.EnvironmentVariables["PCAGENT_TOKEN"] = $testToken
+    $psiLock.EnvironmentVariables["PCAGENT_BIND_LOCAL"] = "1"
+    $psiLock.EnvironmentVariables["PCAGENT_TEST_LOCK_LOOPBACK"] = "1"
+    $procLock = [System.Diagnostics.Process]::Start($psiLock)
+    try {
+        Start-Sleep -Seconds 2
+        for ($i = 1; $i -le 5; $i++) {
+            $code = Get-HttpStatus -Uri "http://localhost:$lockPort/metrics" -Headers $badAuth
+            if ($code -ne 403) { throw "Failure $i expected 403, got $code" }
+        }
+        $code = Get-HttpStatus -Uri "http://localhost:$lockPort/metrics" -Headers $badAuth
+        if ($code -ne 429) { throw "Sixth request after 5 failures expected 429, got $code" }
+        $code = Get-HttpStatus -Uri "http://localhost:$lockPort/metrics" -Headers $auth
+        if ($code -ne 429) { throw "Even the right token is refused while locked, expected 429, got $code" }
+        $code = Get-HttpStatus -Uri "http://localhost:$lockPort/healthz"
+        if ($code -ne 200) { throw "/healthz must stay open while locked, got $code" }
+        Write-Host "Assertion PASS: 5 failures lock the client (429) and /healthz stays open"
+    } finally {
+        if ($procLock -and -not $procLock.HasExited) { Stop-Process -Id $procLock.Id -Force -ErrorAction SilentlyContinue }
+    }
+
+    Write-Host "=== 5.x5 Self-update from a (local) release ==="
+    $updRoot = Join-Path $buildDir "upd"
+    if (Test-Path $updRoot) { Remove-Item $updRoot -Recurse -Force }
+    New-Item -ItemType Directory -Path $updRoot | Out-Null
+    $oldDir = Join-Path $updRoot "old"
+    $newDir = Join-Path $updRoot "new"
+    $site = Join-Path $updRoot "site"
+    New-Item -ItemType Directory -Path $oldDir, $newDir, (Join-Path $site "zipstage\build") | Out-Null
+    & $buildScript -Out (Join-Path $oldDir "PcAgent.exe") -Version 1.0.0 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Build of the 1.0.0 test agent failed" }
+    & $buildScript -Out (Join-Path $newDir "PcAgent.exe") -Version 1.0.1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Build of the 1.0.1 test agent failed" }
+    Copy-Item (Join-Path $newDir "PcAgent.exe") (Join-Path $site "zipstage\build\PcAgent.exe")
+    $zipName = "pcdash-agent-windows-v1.0.1.zip"
+    Compress-Archive -Path (Join-Path $site "zipstage\*") -DestinationPath (Join-Path $site $zipName)
+    $zipHash = (Get-FileHash (Join-Path $site $zipName) -Algorithm SHA256).Hash.ToLowerInvariant()
+    $updPort = 18810
+    $releaseJson = '{"tag_name":"v1.0.1","assets":[{"browser_download_url":"http://127.0.0.1:' + $updPort + '/' + $zipName + '"},{"browser_download_url":"http://127.0.0.1:' + $updPort + '/SHA256SUMS.txt"}]}'
+    Set-Content -Path (Join-Path $site "release") -Value $releaseJson -NoNewline
+    $newHash = (Get-FileHash (Join-Path $newDir "PcAgent.exe") -Algorithm SHA256).Hash
+    $oldHash = (Get-FileHash (Join-Path $oldDir "PcAgent.exe") -Algorithm SHA256).Hash
+
+    function Start-UpdateSite {
+        param([string]$Site, [int]$Port)
+        Start-Job -ArgumentList $Site, $Port -ScriptBlock {
+            param($Site, $Port)
+            $l = New-Object System.Net.HttpListener
+            $l.Prefixes.Add("http://127.0.0.1:$Port/")
+            $l.Start()
+            while ($l.IsListening) {
+                $ctx = $l.GetContext()
+                $name = $ctx.Request.Url.AbsolutePath.TrimStart('/')
+                $file = Join-Path $Site $name
+                if ($name -and (Test-Path $file -PathType Leaf)) {
+                    $bytes = [IO.File]::ReadAllBytes($file)
+                    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+                } else {
+                    $ctx.Response.StatusCode = 404
+                }
+                $ctx.Response.Close()
+            }
+        }
+    }
+
+    function Test-AgentUpdate {
+        param([string]$Label, [bool]$ExpectUpdate)
+        $job = Start-UpdateSite -Site $site -Port $updPort
+        Start-Sleep -Seconds 1
+        $psiU = New-Object System.Diagnostics.ProcessStartInfo
+        $psiU.FileName = (Join-Path $oldDir "PcAgent.exe")
+        $psiU.WorkingDirectory = $oldDir
+        $psiU.UseShellExecute = $false
+        $psiU.CreateNoWindow = $true
+        $psiU.EnvironmentVariables["PCAGENT_PORT"] = "18805"
+        $psiU.EnvironmentVariables["PCAGENT_TOKEN"] = $testToken
+        $psiU.EnvironmentVariables["PCAGENT_BIND_LOCAL"] = "1"
+        $psiU.EnvironmentVariables.Remove("PCAGENT_NO_UPDATE")
+        $psiU.EnvironmentVariables["PCAGENT_UPDATE_API"] = "http://127.0.0.1:$updPort/release"
+        $psiU.EnvironmentVariables["PCAGENT_UPDATE_DELAY_SEC"] = "1"
+        $null = [System.Diagnostics.Process]::Start($psiU)
+        try {
+            $deadline = (Get-Date).AddSeconds(40)
+            $updated = $false
+            while ((Get-Date) -lt $deadline) {
+                Start-Sleep -Milliseconds 500
+                $h = (Get-FileHash (Join-Path $oldDir "PcAgent.exe") -Algorithm SHA256).Hash
+                if ($h -eq $newHash) {
+                    $up = $false
+                    try { $up = ((Get-HttpStatus -Uri "http://localhost:18805/healthz") -eq 200) } catch {}
+                    if ($up) { $updated = $true; break }
+                }
+            }
+            if ($ExpectUpdate -and -not $updated) { throw "$Label : the agent did not update itself to 1.0.1 and come back" }
+            if (-not $ExpectUpdate) {
+                Start-Sleep -Seconds 5
+                $h = (Get-FileHash (Join-Path $oldDir "PcAgent.exe") -Algorithm SHA256).Hash
+                if ($h -ne $oldHash) { throw "$Label : the agent replaced itself although the checksum did not match" }
+            }
+        } finally {
+            Get-Process -Name "PcAgent" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$oldDir\PcAgent.exe*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # A wrong checksum: nothing may change.
+    Set-Content -Path (Join-Path $site "SHA256SUMS.txt") -Value ("0" * 64 + "  $zipName") -NoNewline
+    Test-AgentUpdate -Label "Wrong checksum" -ExpectUpdate $false
+    Write-Host "Assertion PASS: a zip that does not match SHA256SUMS.txt is refused"
+
+    # The right one: the agent replaces itself and comes back as 1.0.1.
+    Set-Content -Path (Join-Path $site "SHA256SUMS.txt") -Value "$zipHash  $zipName" -NoNewline
+    Test-AgentUpdate -Label "Right checksum" -ExpectUpdate $true
+    Write-Host "Assertion PASS: a newer release is downloaded, verified, swapped in and started"
 
     Write-Host "=== 5.y Agent without token is closed ==="
     $noTokPort = 18803

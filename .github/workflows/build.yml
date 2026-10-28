@@ -28,6 +28,8 @@ jobs:
       # which is fine for testing but cannot update an installed release.
       HAS_SIGNING_KEYS: ${{ secrets.PCDASH_HOST_KEYSTORE_B64 != '' && secrets.PCDASH_REMOTE_KEYSTORE_B64 != '' }}
       PCDASH_KEYSTORE_PASSWORD: ${{ secrets.PCDASH_KEYSTORE_PASSWORD }}
+      # Stamped into PcAgent.exe so it can tell when a newer release exists. Other builds stay 0.0.0, which never updates itself.
+      PCAGENT_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '0.0.0' }}
     steps:
       - uses: actions/checkout@v5
 

@@ -105,21 +105,12 @@ public class PcQuotaClient {
     protected String fetchRaw(String urlStr, int timeoutMs) throws IOException {
         HttpURLConnection conn = null;
         try {
-            URL u = new URL(urlStr);
-            conn = (HttpURLConnection) u.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(timeoutMs);
-            conn.setReadTimeout(timeoutMs);
-            conn.setUseCaches(false);
-            conn.setRequestProperty("X-PcAgent-Token", currentToken());
+            conn = AgentAuth.connect(urlStr, "GET", null, currentToken(), timeoutMs, timeoutMs);
 
             int code = conn.getResponseCode();
-            if (code == 403) {
-                lastError = L10n.t("Agent refused: wrong token", "Agent từ chối: sai mã token");
-                return "{\"error\":\"" + lastError + "\"}";
-            }
-            if (code == 503) {
-                lastError = L10n.t("The PC agent has no token set", "Agent PC chưa cấu hình token");
+            String refusal = AgentAuth.refusalMessage(code);
+            if (refusal != null) {
+                lastError = refusal;
                 return "{\"error\":\"" + lastError + "\"}";
             }
             if (code != 200) {
