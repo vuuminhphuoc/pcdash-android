@@ -31,14 +31,17 @@ public class ActionGuardTest {
         assertTrue(!ActionGuard.isDangerousAction("wake"), "wake not dangerous");
         assertTrue(!ActionGuard.isDangerousAction("sleep"), "sleep not dangerous");
         assertTrue(!ActionGuard.isDangerousAction("abort"), "abort not dangerous");
-        assertTrue(!ActionGuard.isDangerousAction("restart"), "restart not dangerous");
+        assertTrue(ActionGuard.isDangerousAction("restart"), "restart is dangerous");
+        assertTrue(ActionGuard.isDangerousAction("logoff"), "sign out is dangerous");
+        assertTrue(!ActionGuard.isDangerousAction("lock"), "lock not dangerous");
+        assertTrue(!ActionGuard.isDangerousAction("reboot"), "reboot is not a command");
         assertTrue(!ActionGuard.isDangerousAction(""), "empty not dangerous");
         assertTrue(!ActionGuard.isDangerousAction(null), "null not dangerous");
         System.out.println("PASS: testIsDangerousAction");
     }
 
     public static void testAllActionCombinations() {
-        String[] safeActions = new String[]{"wake", "sleep", "abort", "unknown", "", null};
+        String[] safeActions = new String[]{"wake", "sleep", "lock", "abort", "unknown", "", null};
         boolean[] flags = new boolean[]{true, false};
 
         // All safe actions: always NONE regardless of switch or device security
@@ -53,7 +56,7 @@ public class ActionGuardTest {
         }
 
         // Dangerous actions: hibernate & shutdown
-        String[] dangerousActions = new String[]{"hibernate", "shutdown", "HIBERNATE", "SHUTDOWN"};
+        String[] dangerousActions = new String[]{"hibernate", "shutdown", "restart", "logoff", "HIBERNATE", "SHUTDOWN"};
         for (String action : dangerousActions) {
             // Switch ON + Secure Device -> DEVICE_CREDENTIAL
             ActionGuard.AuthRequirement req1 = ActionGuard.checkAuthRequirement(action, true, true);

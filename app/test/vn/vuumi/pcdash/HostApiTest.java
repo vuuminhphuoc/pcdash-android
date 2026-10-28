@@ -213,15 +213,15 @@ public class HostApiTest {
             assertEquals(executor.statusCalls, 1, "statusCalls should be 1");
             assertTrue(statusResp.body.contains("\"online\":true"), "Status body must match executor output");
 
-            // 5 valid actions: wake, sleep, hibernate, shutdown, abort
-            String[] actions = {"wake", "sleep", "hibernate", "shutdown", "abort"};
+            // 8 valid actions: wake, sleep, hibernate, shutdown, restart, lock, logoff, abort
+            String[] actions = {"wake", "sleep", "hibernate", "shutdown", "restart", "lock", "logoff", "abort"};
             for (String action : actions) {
                 HttpResponse actResp = sendRequest(port, "POST", "/v1/" + action, auth);
                 assertEquals(actResp.code, 200, "POST /v1/" + action + " should return 200");
                 assertEquals(executor.lastAction, action, "Executor lastAction should match " + action);
                 assertTrue(actResp.body.contains("\"ok\":true"), "Action response body should have ok:true");
             }
-            assertEquals(executor.actionCalls, 5, "Executor actionCalls should be 5");
+            assertEquals(executor.actionCalls, 8, "Executor actionCalls should be 8");
 
             // Routes that must return 404
             String[] invalidRoutes = {
@@ -243,8 +243,8 @@ public class HostApiTest {
                 HttpResponse notFound = sendRequest(port, rParts[0], rParts[1], auth);
                 assertEquals(notFound.code, 404, route + " must return 404");
             }
-            assertEquals(executor.actionCalls, 5,
-                    "Invalid and 404 routes MUST NOT increment actionCalls (still exactly 5)");
+            assertEquals(executor.actionCalls, 8,
+                    "Invalid and 404 routes MUST NOT increment actionCalls (still exactly 8)");
             assertEquals(executor.statusCalls, 1,
                     "Invalid and 404 routes MUST NOT increment statusCalls (still exactly 1)");
         } finally {

@@ -1332,7 +1332,7 @@ public class RemoteMainActivity extends ComponentActivity {
         if (req == ActionGuard.AuthRequirement.DEVICE_CREDENTIAL) {
             pendingDangerousAction = action;
             Intent intent = km.createConfirmDeviceCredentialIntent(
-                    "shutdown".equals(action) ? L10n.t("Confirm PC shutdown", "Xác nhận tắt máy PC") : L10n.t("Confirm PC hibernate", "Xác nhận ngủ đông PC"),
+                    confirmTitle(action),
                     L10n.t("Unlock with your PIN or fingerprint to continue", "Vui lòng xác thực mã PIN/vân tay của thiết bị trước khi thực hiện thao tác này"));
             if (intent != null) {
                 startActivityForResult(intent, REQUEST_CODE_DANGEROUS_AUTH);
@@ -1346,11 +1346,31 @@ public class RemoteMainActivity extends ComponentActivity {
         }
     }
 
+    private static String confirmTitle(String action) {
+        if ("shutdown".equals(action)) return L10n.t("Confirm shutdown", "Xác nhận tắt máy");
+        if ("restart".equals(action)) return L10n.t("Confirm restart", "Xác nhận khởi động lại");
+        if ("logoff".equals(action)) return L10n.t("Confirm sign out", "Xác nhận đăng xuất");
+        return L10n.t("Confirm hibernate", "Xác nhận ngủ đông");
+    }
+
+    private static String confirmMessage(String action) {
+        if ("shutdown".equals(action)) {
+            return L10n.t("Shut down the PC now?", "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?");
+        }
+        if ("restart".equals(action)) {
+            return L10n.t("Restart the PC now? Unsaved work on the PC will be lost.",
+                    "Bạn có chắc chắn muốn khởi động lại PC ngay bây giờ không? Việc chưa lưu trên PC sẽ mất.");
+        }
+        if ("logoff".equals(action)) {
+            return L10n.t("Sign out of Windows on the PC now? Unsaved work on the PC will be lost.",
+                    "Bạn có chắc chắn muốn đăng xuất Windows trên PC ngay bây giờ không? Việc chưa lưu trên PC sẽ mất.");
+        }
+        return L10n.t("Hibernate the PC now?", "Bạn có chắc chắn muốn đưa PC vào chế độ ngủ đông (Hibernate) không?");
+    }
+
     private void confirmActionDialog(final String action) {
-        String title = "shutdown".equals(action) ? L10n.t("Confirm shutdown", "Xác nhận tắt máy") : L10n.t("Confirm hibernate", "Xác nhận ngủ đông");
-        String msg = "shutdown".equals(action)
-                ? L10n.t("Shut down the PC now?", "Bạn có chắc chắn muốn tắt máy PC ngay bây giờ không?")
-                : L10n.t("Hibernate the PC now?", "Bạn có chắc chắn muốn đưa PC vào chế độ ngủ đông (Hibernate) không?");
+        String title = confirmTitle(action);
+        String msg = confirmMessage(action);
         AlertDialog confirm = DialogStyle.builder(this)
                 .setTitle(title)
                 .setMessage(msg)
@@ -1564,6 +1584,7 @@ public class RemoteMainActivity extends ComponentActivity {
                     wake ? L10n.t("PC is on", "PC đã bật") : L10n.t("Done", "Xong"),
                     wake ? L10n.t("The PC is on.", "PC đã bật.")
                             : "sleep".equals(action) ? L10n.t("The PC is asleep.", "PC đã ngủ.")
+                            : "restart".equals(action) ? L10n.t("The PC is restarting.", "PC đang khởi động lại.")
                             : L10n.t("The PC is off.", "PC đã tắt."),
                     UiKit.OK);
         } else {
@@ -1582,6 +1603,9 @@ public class RemoteMainActivity extends ComponentActivity {
         }
         if ("sleep".equals(action)) {
             return L10n.t("Sleep sent. Waiting for the PC to go to sleep...", "Đã gửi lệnh Sleep. Đang chờ PC ngủ...");
+        }
+        if ("restart".equals(action)) {
+            return L10n.t("Restart sent. Waiting for the PC to shut down...", "Đã gửi lệnh Restart. Đang chờ PC tắt để khởi động lại...");
         }
         return L10n.t("Command sent. Waiting for the PC to turn off...", "Đã gửi lệnh. Đang chờ PC tắt...");
     }

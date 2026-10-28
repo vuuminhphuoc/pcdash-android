@@ -312,6 +312,28 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         root.addView(sleepRow);
 
+        // 2b. Lock and Sign out side by side (the signed-in Windows session)
+        LinearLayout sessionRow = new LinearLayout(this);
+        sessionRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams sesLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sesLp.setMargins(0, 0, 0, dp(14));
+        sessionRow.setLayoutParams(sesLp);
+
+        Button lockBtn = makeStyledButton(L10n.t("Lock", "Khóa máy"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 46, "lock");
+        LinearLayout.LayoutParams lockLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        lockLp.rightMargin = dp(6);
+        lockBtn.setLayoutParams(lockLp);
+        sessionRow.addView(lockBtn);
+
+        Button logoffBtn = makeStyledButton(L10n.t("Sign out", "Đăng xuất"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 46, "logoff");
+        LinearLayout.LayoutParams logoffLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        logoffLp.leftMargin = dp(6);
+        logoffBtn.setLayoutParams(logoffLp);
+        sessionRow.addView(logoffBtn);
+
+        root.addView(sessionRow);
+
         // 3. Danger zone caption
         TextView dangerCaption = new TextView(this);
         dangerCaption.setText(L10n.t("DANGER ZONE", "VÙNG NGUY HIỂM"));
@@ -328,6 +350,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         shutLp.setMargins(0, 0, 0, dp(8));
         shutdownBtn.setLayoutParams(shutLp);
         root.addView(shutdownBtn);
+
+        Button restartBtn = makeStyledButton(L10n.t("Restart", "Khởi động lại (Restart)"), Color.rgb(34, 20, 22), Color.rgb(248, 81, 73), Color.rgb(248, 81, 73), 50, "restart");
+        LinearLayout.LayoutParams restartLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        restartLp.setMargins(0, 0, 0, dp(8));
+        restartBtn.setLayoutParams(restartLp);
+        root.addView(restartBtn);
 
         // 5. Abort button (smaller secondary button)
         Button abortBtn = makeStyledButton(L10n.t("Cancel shutdown", "Hủy lệnh tắt máy"), Color.rgb(16, 20, 26), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 42, "abort");
@@ -538,7 +567,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private static boolean isPowerAction(String action) {
         return "wake".equals(action) || "sleep".equals(action) || "hibernate".equals(action)
-                || "shutdown".equals(action) || "abort".equals(action);
+                || "shutdown".equals(action) || "restart".equals(action) || "lock".equals(action)
+                || "logoff".equals(action) || "abort".equals(action);
     }
 
     @Override

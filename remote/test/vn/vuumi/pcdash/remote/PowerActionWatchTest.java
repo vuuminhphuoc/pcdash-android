@@ -17,7 +17,7 @@ public class PowerActionWatchTest {
     }
 
     private static void testOffCommandsWaitForThePcToBeOff() {
-        for (String action : new String[]{"sleep", "hibernate", "shutdown"}) {
+        for (String action : new String[]{"sleep", "hibernate", "shutdown", "restart"}) {
             PowerActionWatch w = PowerActionWatch.start(action, 0L);
             assertEquals(w.check(true, 2_000L), PowerActionWatch.Progress.WAITING, action + ": still on");
             assertEquals(w.check(false, 9_000L), PowerActionWatch.Progress.REACHED, action + ": off");
@@ -35,6 +35,8 @@ public class PowerActionWatchTest {
 
     private static void testNothingToWaitFor() {
         assertEquals(PowerActionWatch.start("abort", 0L), null, "Cancel shutdown has no PC state to wait for");
+        assertEquals(PowerActionWatch.start("lock", 0L), null, "Lock leaves the PC on");
+        assertEquals(PowerActionWatch.start("logoff", 0L), null, "Sign out leaves the PC on");
         assertEquals(PowerActionWatch.start(null, 0L), null, "No action");
         System.out.println("PASS: testNothingToWaitFor");
     }

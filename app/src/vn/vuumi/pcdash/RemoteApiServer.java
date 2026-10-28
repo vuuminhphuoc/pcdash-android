@@ -487,7 +487,7 @@ public class RemoteApiServer implements ThreadFactory, Runnable {
 
             if ("POST".equalsIgnoreCase(method) && path.startsWith("/v1/")) {
                 String action = path.substring(4);
-                if (action.matches("^(wake|sleep|hibernate|shutdown|abort)$")) {
+                if (action.matches("^(wake|sleep|hibernate|shutdown|restart|lock|logoff|abort)$")) {
                     String detail = "";
                     boolean ok = true;
                     try {

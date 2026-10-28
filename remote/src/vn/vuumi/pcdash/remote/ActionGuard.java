@@ -15,7 +15,8 @@ public final class ActionGuard {
             return false;
         }
         String a = action.trim();
-        return "hibernate".equalsIgnoreCase(a) || "shutdown".equalsIgnoreCase(a);
+        return "hibernate".equalsIgnoreCase(a) || "shutdown".equalsIgnoreCase(a)
+                || "restart".equalsIgnoreCase(a) || "logoff".equalsIgnoreCase(a);
     }
 
     /** Quên host luôn cần xác thực khi máy có khóa màn hình, không phụ thuộc công tắc lệnh nguy hiểm. */

@@ -79,7 +79,7 @@ public class MoreSheet {
 
         // 1. Cài đặt xác thực
         CheckBox authSwitch = new CheckBox(context);
-        authSwitch.setText(L10n.t("Require unlock for Shut down/Hibernate", "Yêu cầu xác thực cho Tắt máy/Ngủ đông"));
+        authSwitch.setText(L10n.t("Require unlock for Shut down/Restart/Hibernate/Sign out", "Yêu cầu xác thực cho Tắt máy/Khởi động lại/Ngủ đông/Đăng xuất"));
         authSwitch.setTextColor(Color.rgb(201, 209, 217));
         authSwitch.setTextSize(13);
         boolean currentRequireAuth = true;
