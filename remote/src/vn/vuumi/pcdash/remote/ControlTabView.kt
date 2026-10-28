@@ -178,8 +178,19 @@ class ControlTabView(context: Context, private val callback: Callback?) : TabCon
 
     /**
      * @param hostPeer the home phone in the Tailscale device list, when it did not answer (may be null)
+     * @param stillConnecting the tunnel just came up and has not answered yet ([StatusGrace]): show a
+     *     failure as connecting instead of an error
      */
-    fun updateStatus(status: RemoteApiClient.RemoteStatus?, error: Exception?, hostPeer: TailnetPeers.Peer?) {
+    @JvmOverloads
+    fun updateStatus(
+        status: RemoteApiClient.RemoteStatus?, error: Exception?, hostPeer: TailnetPeers.Peer?,
+        stillConnecting: Boolean = false,
+    ) {
+        if (status == null && error != null && stillConnecting) {
+            setStatus(L10n.t("Connecting to the home phone...", "Đang kết nối tới máy ở nhà..."), UiKit.WARN)
+            state.detail = L10n.t("Usually a few seconds", "Thường chỉ mất vài giây")
+            return
+        }
         if (status != null) {
             if (status.online) {
                 setStatus(L10n.t("PC is ON", "PC đang BẬT"), UiKit.OK)

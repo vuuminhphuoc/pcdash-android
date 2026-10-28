@@ -84,6 +84,7 @@ public class RemoteMainActivity extends ComponentActivity {
     private int actionSeq;
     // Status polls that failed in a row, and the last time the tailnet was restarted to recover.
     private int statusFailures;
+    private final StatusGrace statusGrace = new StatusGrace();
     private long lastReconnectAtMs = -RECONNECT_GAP_MS;
     private boolean reconnecting;
     private static final long RECONNECT_GAP_MS = 2 * 60_000L;
@@ -327,7 +328,9 @@ public class RemoteMainActivity extends ComponentActivity {
             return;
         }
         boolean onControl = isPolling && navigator != null && navigator.current() == MainTab.CONTROL;
+        long now = SystemClock.elapsedRealtime();
         if (tailnet != null) {
+            statusGrace.tunnelDown();
             if (controlTabView != null) {
                 controlTabView.showConnecting(tailnet);
             }
@@ -348,12 +351,20 @@ public class RemoteMainActivity extends ComponentActivity {
             triggerUpdateCheck();
         }
         statusFailures = status != null ? 0 : statusFailures + 1;
+        statusGrace.tunnelUp(now);
+        if (status != null) {
+            statusGrace.answered();
+        }
+        // Just after the tunnel came up an early failure is part of connecting, not an error.
+        boolean connecting = status == null && error != null && statusGrace.stillConnecting(statusFailures, now)
+                && (hostPeer == null || hostPeer.online);
         if (controlTabView != null) {
-            controlTabView.updateStatus(status, error, hostPeer);
-            controlTabView.setRefreshing(false);
+            controlTabView.updateStatus(status, error, hostPeer, connecting);
+            controlTabView.setRefreshing(connecting);
         }
         followActionWatch(status);
-        if (status == null && statusFailures >= FAILURES_BEFORE_RECONNECT
+        // While the new tunnel is still connecting, restarting it would only start over.
+        if (status == null && !connecting && statusFailures >= FAILURES_BEFORE_RECONNECT
                 && (hostPeer == null || hostPeer.online)
                 && SystemClock.elapsedRealtime() - lastReconnectAtMs >= RECONNECT_GAP_MS) {
             // The home phone looks reachable but our tunnel keeps failing (often after the app sat in the
@@ -363,7 +374,8 @@ public class RemoteMainActivity extends ComponentActivity {
         }
         if (onControl) {
             // More often while a command changes the PC's state, or just after a failure.
-            long next = actionWatch != null ? 2500 : status == null && statusFailures < FAILURES_BEFORE_RECONNECT ? 2000 : 5000;
+            long next = connecting ? 1500
+                    : actionWatch != null ? 2500 : status == null && statusFailures < FAILURES_BEFORE_RECONNECT ? 2000 : 5000;
             ui.postDelayed(pollStatusTask, next);
         }
     }
@@ -430,7 +442,7 @@ public class RemoteMainActivity extends ComponentActivity {
         if (controlTabView != null) {
             controlTabView.setRefreshing(true);
         }
-        if (statusFailures > 0) {
+        if (statusFailures > 0 && !statusGrace.stillConnecting(statusFailures, SystemClock.elapsedRealtime())) {
             reconnect();
             return;
         }
@@ -444,6 +456,7 @@ public class RemoteMainActivity extends ComponentActivity {
         reconnecting = true;
         lastReconnectAtMs = SystemClock.elapsedRealtime();
         statusFailures = 0;
+        statusGrace.tunnelDown();
         statusGeneration.invalidate();
         ui.removeCallbacks(pollStatusTask);
         if (controlTabView != null) {

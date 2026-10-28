@@ -20,7 +20,7 @@ public class RemoteMainTests {
             "ActionGuardTest", "LogParserTest", "HistoryParserTest", "QuotaParserTest", "QuotaFormatterTest",
             "QuotaViewModelTest", "TabNavigatorTest", "PollGenerationTest", "HistoryChartViewDataTest",
             "HostAlertRulesTest", "PcListTest", "TailnetPeersTest", "PowerActionWatchTest", "QuickActionsTest",
-            "UiThreadSafetyTest",
+            "StatusGraceTest", "UiThreadSafetyTest",
     };
 
     @Parameterized.Parameters(name = "{0}")
