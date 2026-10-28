@@ -3,7 +3,7 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
-## Unreleased (host 1.27, remote 1.27)
+## 1.2.2 (host 1.27, remote 1.27)
 
 - **Host main screen, easier to read**: the four settings buttons (PC settings, App lock, Language, Check for updates) sit in a 2 x 2 grid instead of four full-width rows, so the status cards come up the screen. The result of the last update check stays on screen with its time (it was a toast that vanished), the version shows under the title (the second, duplicate "PCDash" heading is gone), the update button reads "Check updates" / "Tìm bản mới" so it fits on one line, the health lines start with a check mark or a warning sign instead of relying on colour alone, and the footer note is easier to read.
 - **Remote bottom bar and More sheet**: the five tabs use one set of vector icons that take the selection colour (the chart and clipboard emoji kept their own colours), and the Language and App lock buttons lose their emoji.
