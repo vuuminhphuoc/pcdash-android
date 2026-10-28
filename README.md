@@ -36,13 +36,13 @@ phone does not need the Tailscale app or a VPN turned on.
 |---|---|
 | `app/` | **PCDash host**, Android app that stays at home on the old phone. Sends Wake-on-LAN, calls PcAgent, serves the remote API and a web dashboard, embeds its own Tailscale node. |
 | `remote/` | **PCDash Remote**, Android app on the phone you carry. Tabs for control, monitoring with history charts, AI-service quota, command log. Updates itself from the host. |
-| `agent/` | **PcAgent**, a small Windows service (C#, built with `csc.exe`) that runs sleep, hibernate, shutdown, abort and reports metrics. |
+| `agent/` | **PcAgent**, a small Windows service (C#, built with `csc.exe`) that runs sleep, hibernate, shutdown, restart, lock, sign out, abort and reports metrics, and keeps itself up to date. |
 | `pcnet/` | Go `tsnet` library compiled to a native `.so` for both Android apps. |
 | `shared/` | Pairing protocol (SRP-6a) shared by host and remote. |
 
 ## Features
 
-- Wake, Sleep, Hibernate, Shutdown, Abort. Hibernate, Shutdown and "Forget host" ask for biometrics or the screen lock.
+- Wake, Sleep, Hibernate, Shutdown, Restart, Lock, Sign out, Abort. Hibernate, Shutdown, Restart, Sign out and "Forget host" ask for biometrics or the screen lock. Lock and Sign out act on the Windows session PcAgent runs in.
 - Live CPU, GPU, RAM, disks, network, uptime and temperatures, with 1 h and 6 h history.
 - Command log with device, time and result.
 - Quota tab for AI services read through [omp](https://github.com/can1357/oh-my-pi) on the PC (optional).
@@ -55,6 +55,7 @@ phone does not need the Tailscale app or a VPN turned on.
 - Pure-black OLED theme, glass tab bar with a sliding selection pill, screen-reader friendly labels.
 - One-scan setup: the PC shows a QR code, the host phone scans it with its camera.
 - Resilient host: wake locks, boot start, watchdog, battery-optimization and autostart helpers.
+- PcAgent checks a signature on every request (HMAC, no token on the LAN, replays refused), locks out a LAN client after 5 failed tries for a minute and logs failures and first-seen clients to `pcagent.log`. It also updates itself from the GitHub release (checksum-verified); turn that off with a `no-auto-update` file next to `PcAgent.exe`. See [SECURITY.md](SECURITY.md).
 
 ## Requirements
 
