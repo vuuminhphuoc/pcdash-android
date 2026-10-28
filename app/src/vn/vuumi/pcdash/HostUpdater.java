@@ -200,6 +200,11 @@ final class HostUpdater {
         return c;
     }
 
+    /** Removes the APK a finished or abandoned update left in the cache. */
+    static void clearCache(Context context) {
+        deleteContents(new File(context.getCacheDir(), "host-update"));
+    }
+
     private static void deleteContents(File dir) {
         File[] files = dir.listFiles();
         if (files == null) return;

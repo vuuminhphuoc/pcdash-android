@@ -33,7 +33,9 @@ namespace PcAgent
 
         public static void Start(Action<string> log, Action stopListeners)
         {
+            // What an earlier update (or one that was cut short) left behind.
             try { File.Delete(System.Reflection.Assembly.GetExecutingAssembly().Location + ".old"); } catch { }
+            try { Directory.Delete(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update"), true); } catch { }
             if (!Enabled(log)) return;
             var t = new Thread(() => Loop(log, stopListeners));
             t.IsBackground = true;

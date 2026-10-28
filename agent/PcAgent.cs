@@ -1694,11 +1694,45 @@ namespace PcAgent
             res.Send(code, "application/json; charset=utf-8", buf);
         }
 
+        // The log is kept to about a megabyte: past that, the newest quarter of it is all that stays.
+        const string LogFile = "pcagent.log";
+        const long MaxLogBytes = 1024 * 1024;
+        const int KeepLogBytes = 256 * 1024;
+        static readonly object logLock = new object();
+
         static void Log(string msg)
         {
             string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + msg;
             Console.WriteLine(line);
-            try { File.AppendAllText("pcagent.log", line + Environment.NewLine); } catch {}
+            lock (logLock)
+            {
+                try
+                {
+                    var info = new FileInfo(LogFile);
+                    if (info.Exists && info.Length > MaxLogBytes) TrimLog(info.Length);
+                    File.AppendAllText(LogFile, line + Environment.NewLine);
+                }
+                catch {}
+            }
+        }
+
+        static void TrimLog(long length)
+        {
+            byte[] tail = new byte[KeepLogBytes];
+            using (var fs = new FileStream(LogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                fs.Seek(length - KeepLogBytes, SeekOrigin.Begin);
+                int got = 0, n;
+                while (got < tail.Length && (n = fs.Read(tail, got, tail.Length - got)) > 0) got += n;
+                // Start at the first whole line.
+                int start = Array.IndexOf(tail, (byte)10, 0, got) + 1;
+                using (var outFs = new FileStream(LogFile + ".tmp", FileMode.Create, FileAccess.Write))
+                {
+                    outFs.Write(tail, start, got - start);
+                }
+            }
+            File.Delete(LogFile);
+            File.Move(LogFile + ".tmp", LogFile);
         }
 
         static void HandleQuota(SimpleResponse res, bool refresh)

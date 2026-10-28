@@ -349,6 +349,21 @@ foreach ($k in $requiredTopKeys) {
     if ($code -ne 401) { throw "A signature an hour old expected 401 (clock skew), got $code" }
     Write-Host "Assertion PASS: signed requests work; replay, wrong token, other body/target get 403; stale time gets 401"
 
+    Write-Host "=== 5.x2b The log is kept small ==="
+    $logPath = Join-Path $buildDir "pcagent.log"
+    $filler = (1..20000 | ForEach-Object { "old log line $_ padding padding padding padding padding" }) -join "`n"
+    [IO.File]::AppendAllText($logPath, "FIRST-OLD-MARKER`n$filler`nLAST-OLD-MARKER`n")
+    if ((Get-Item $logPath).Length -lt 1100000) { throw "Test setup: the log is only $((Get-Item $logPath).Length) bytes" }
+    $null = Get-HttpStatus -Uri "$base/healthz"
+    $null = Get-HttpStatus -Uri "$base/healthz"
+    $trimmed = Get-Item $logPath
+    if ($trimmed.Length -gt 400000) { throw "The log was not cut: $($trimmed.Length) bytes" }
+    $text = [IO.File]::ReadAllText($logPath)
+    if ($text.Contains("FIRST-OLD-MARKER")) { throw "The oldest lines should be gone" }
+    if (-not $text.Contains("LAST-OLD-MARKER")) { throw "The newest old lines must stay" }
+    if (-not ($text -match "(?m)^old log line \d+ padding" -or $text -match "(?m)^\d{4}-")) { throw "The log must start at a whole line" }
+    Write-Host "Assertion PASS: a log over 1 MB is cut to its newest part, starting at a whole line"
+
     Write-Host "=== 5.x3 Strict mode refuses the plain token ==="
     $strictFile = Join-Path $buildDir "strict"
     Set-Content -Path $strictFile -Value "1"

@@ -9,5 +9,12 @@ public class PcDashApp extends Application {
     public void onCreate() {
         super.onCreate();
         AppLanguage.apply(this);
+        // The APK of an update that has been installed (or never was) is no longer needed.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HostUpdater.clearCache(PcDashApp.this);
+            }
+        }).start();
     }
 }
