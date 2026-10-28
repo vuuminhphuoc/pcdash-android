@@ -275,7 +275,7 @@ public class WebDashboard {
 
     public static String infoText(Context ctx, HostTailnet tailnet) {
         StringBuilder sb = new StringBuilder();
-        sb.append(L10n.t("Web dashboard (same LAN / Tailscale):\n", "Web dashboard (cùng LAN / Tailscale):\n"));
+        sb.append(L10n.t("Web dashboard (home Wi-Fi only):\n", "Web dashboard (chỉ trong Wi-Fi nhà):\n"));
         try {
             java.util.Enumeration<java.net.NetworkInterface> en = java.net.NetworkInterface.getNetworkInterfaces();
             while (en.hasMoreElements()) {
@@ -284,19 +284,16 @@ public class WebDashboard {
                 String name = ni.getName();
                 if (name != null && name.toLowerCase().startsWith("tun")) continue;
                 for (java.net.InterfaceAddress ia : ni.getInterfaceAddresses()) {
-                    if (ia.getAddress() instanceof java.net.Inet4Address) {
+                    // Only addresses the dashboard answers on (not the mobile-data address).
+                    if (LanAddressPolicy.isAllowedPairingPeer(ia.getAddress())) {
                         sb.append("  ").append(name).append(": http://")
                           .append(ia.getAddress().getHostAddress()).append(":").append(PORT).append("\n");
                     }
                 }
             }
         } catch (Exception ignored) {}
-        if (tailnet != null && tailnet.isRunning()) {
-            String tsIp = tailnet.tailnetIp();
-            if (tsIp != null && !tsIp.isEmpty()) {
-                sb.append("  tailscale: http://").append(tsIp).append(":").append(PORT).append("\n");
-            }
-        }
+        // The built-in Tailscale node forwards only the remote API (:8091), not this dashboard; away from
+        // home, use PCDash Remote.
         sb.append(L10n.t("Note: Wake only works while this phone is on the home LAN.", "Lưu ý: nút Wake cần điện thoại đang trong LAN nhà."));
         return sb.toString();
     }
