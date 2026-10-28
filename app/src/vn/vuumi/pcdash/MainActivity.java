@@ -396,6 +396,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         languageBtn.setLayoutParams(langLp);
         root.addView(languageBtn);
 
+        updateBtn = makeStyledButton(L10n.t("⬆ Check for updates", "⬆ Kiểm tra cập nhật"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "check_update");
+        LinearLayout.LayoutParams updLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        updLp.setMargins(0, 0, 0, dp(14));
+        updateBtn.setLayoutParams(updLp);
+        root.addView(updateBtn);
+
         // Tailscale card
         LinearLayout tailscaleCard = new LinearLayout(this);
         tailscaleCard.setOrientation(LinearLayout.VERTICAL);
@@ -573,6 +580,111 @@ public class MainActivity extends Activity implements View.OnClickListener {
         return b;
     }
 
+    private static final String NL = System.getProperty("line.separator", "\n");
+    private Button updateBtn;
+    private boolean updateBusy;
+
+    /** Asks GitHub for a newer host; offers to download and install it. */
+    private void checkForUpdate() {
+        if (updateBusy) return;
+        updateBusy = true;
+        updateBtn.setText(L10n.t("Checking...", "Đang kiểm tra..."));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HostUpdateCheck.Offer found = null;
+                String error = null;
+                try {
+                    found = HostUpdater.check(MainActivity.this);
+                } catch (Exception e) {
+                    error = e.getMessage() != null ? e.getMessage() : e.toString();
+                }
+                final HostUpdateCheck.Offer offer = found;
+                final String failure = error;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateBusy = false;
+                        resetUpdateButton();
+                        if (isFinishing()) return;
+                        if (failure != null) {
+                            Toast.makeText(MainActivity.this, L10n.t("Could not check for updates: ", "Không kiểm tra được cập nhật: ") + failure, Toast.LENGTH_LONG).show();
+                        } else if (offer == null) {
+                            Toast.makeText(MainActivity.this, L10n.t("PCDash host is up to date (", "PCDash host đã là bản mới nhất (")
+                                    + HostUpdater.installedVersionName(MainActivity.this) + ")", Toast.LENGTH_LONG).show();
+                        } else {
+                            askToUpdate(offer);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void resetUpdateButton() {
+        updateBtn.setText(L10n.t("⬆ Check for updates", "⬆ Kiểm tra cập nhật"));
+    }
+
+    private void askToUpdate(final HostUpdateCheck.Offer offer) {
+        android.app.AlertDialog.Builder b = vn.vuumi.pcdash.ui.DialogStyle.builder(this)
+                .setTitle(L10n.t("Update available", "Có bản cập nhật"))
+                .setMessage(L10n.t("PCDash host ", "PCDash host ") + offer.versionName + " (" + offer.tag + ")" + NL
+                        + L10n.t("You have ", "Bạn đang dùng ") + HostUpdater.installedVersionName(this) + "." + NL + NL
+                        + L10n.t("It downloads from this project's GitHub release, is checked against its checksum, and Android asks you to confirm the install. The home phone is unreachable for a moment while it restarts.",
+                                "Tải từ release GitHub của dự án, được kiểm tra mã SHA-256, rồi Android hỏi bạn xác nhận cài đặt. Máy ở nhà sẽ mất kết nối một lúc khi khởi động lại."))
+                .setPositiveButton(L10n.t("Update", "Cập nhật"), new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        downloadAndInstall(offer);
+                    }
+                })
+                .setNegativeButton(L10n.t("Cancel", "Hủy"), null);
+        vn.vuumi.pcdash.ui.DialogStyle.show(b, false);
+    }
+
+    private void downloadAndInstall(final HostUpdateCheck.Offer offer) {
+        if (!HostUpdater.canInstall(this)) {
+            Toast.makeText(this, L10n.t("Allow PCDash to install apps, then tap Update again", "Hãy cho phép PCDash cài ứng dụng, rồi bấm Cập nhật lại"), Toast.LENGTH_LONG).show();
+            startActivity(HostUpdater.installPermissionIntent(this));
+            return;
+        }
+        if (updateBusy) return;
+        updateBusy = true;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String error = null;
+                try {
+                    java.io.File apk = HostUpdater.download(MainActivity.this, offer, new HostUpdater.Progress() {
+                        @Override
+                        public void onPercent(final int percent) {
+                            ui.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateBtn.setText(L10n.t("Downloading ", "Đang tải ") + percent + "%");
+                                }
+                            });
+                        }
+                    });
+                    HostUpdater.install(MainActivity.this, apk);
+                } catch (Exception e) {
+                    error = e.getMessage() != null ? e.getMessage() : e.toString();
+                }
+                final String failure = error;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateBusy = false;
+                        resetUpdateButton();
+                        if (failure != null && !isFinishing()) {
+                            Toast.makeText(MainActivity.this, L10n.t("Update failed: ", "Cập nhật thất bại: ") + failure, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
     private static boolean isPowerAction(String action) {
         return "wake".equals(action) || "sleep".equals(action) || "hibernate".equals(action)
                 || "shutdown".equals(action) || "restart".equals(action) || "lock".equals(action)
@@ -584,7 +696,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Object tag = v.getTag();
         if (tag instanceof String) {
             String action = (String) tag;
-            if ("language".equals(action)) {
+            if ("check_update".equals(action)) {
+                checkForUpdate();
+            } else if ("language".equals(action)) {
                 AppLanguage.showPicker(this);
             } else if ("app_lock".equals(action)) {
                 AppLockSettings.show(this, lockGate);

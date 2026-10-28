@@ -415,31 +415,43 @@ foreach ($k in $requiredTopKeys) {
     $newHash = (Get-FileHash (Join-Path $newDir "PcAgent.exe") -Algorithm SHA256).Hash
     $oldHash = (Get-FileHash (Join-Path $oldDir "PcAgent.exe") -Algorithm SHA256).Hash
 
+    # A listener in its own runspace; stopping it is closing the listener (a job would wait for GetContext).
     function Start-UpdateSite {
         param([string]$Site, [int]$Port)
-        Start-Job -ArgumentList $Site, $Port -ScriptBlock {
-            param($Site, $Port)
-            $l = New-Object System.Net.HttpListener
-            $l.Prefixes.Add("http://127.0.0.1:$Port/")
-            $l.Start()
-            while ($l.IsListening) {
-                $ctx = $l.GetContext()
-                $name = $ctx.Request.Url.AbsolutePath.TrimStart('/')
-                $file = Join-Path $Site $name
-                if ($name -and (Test-Path $file -PathType Leaf)) {
-                    $bytes = [IO.File]::ReadAllBytes($file)
-                    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
-                } else {
-                    $ctx.Response.StatusCode = 404
+        $l = New-Object System.Net.HttpListener
+        $l.Prefixes.Add("http://127.0.0.1:$Port/")
+        $l.Start()
+        $ps = [PowerShell]::Create()
+        [void]$ps.AddScript({
+            param($l, $Site)
+            try {
+                while ($l.IsListening) {
+                    $ctx = $l.GetContext()
+                    $name = $ctx.Request.Url.AbsolutePath.TrimStart('/')
+                    $file = Join-Path $Site $name
+                    if ($name -and (Test-Path $file -PathType Leaf)) {
+                        $bytes = [IO.File]::ReadAllBytes($file)
+                        $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+                    } else {
+                        $ctx.Response.StatusCode = 404
+                    }
+                    $ctx.Response.Close()
                 }
-                $ctx.Response.Close()
-            }
-        }
+            } catch { }
+        }).AddArgument($l).AddArgument($Site)
+        [void]$ps.BeginInvoke()
+        return @{ Listener = $l; Ps = $ps }
+    }
+
+    function Stop-UpdateSite {
+        param($SiteHandle)
+        try { $SiteHandle.Listener.Close() } catch { }
+        try { $SiteHandle.Ps.Dispose() } catch { }
     }
 
     function Test-AgentUpdate {
         param([string]$Label, [bool]$ExpectUpdate)
-        $job = Start-UpdateSite -Site $site -Port $updPort
+        $siteHandle = Start-UpdateSite -Site $site -Port $updPort
         Start-Sleep -Seconds 1
         $psiU = New-Object System.Diagnostics.ProcessStartInfo
         $psiU.FileName = (Join-Path $oldDir "PcAgent.exe")
@@ -454,7 +466,8 @@ foreach ($k in $requiredTopKeys) {
         $psiU.EnvironmentVariables["PCAGENT_UPDATE_DELAY_SEC"] = "1"
         $null = [System.Diagnostics.Process]::Start($psiU)
         try {
-            $deadline = (Get-Date).AddSeconds(40)
+            # An update that must happen gets a long wait; one that must not has been refused within seconds.
+            $deadline = (Get-Date).AddSeconds($(if ($ExpectUpdate) { 40 } else { 6 }))
             $updated = $false
             while ((Get-Date) -lt $deadline) {
                 Start-Sleep -Milliseconds 500
@@ -467,14 +480,12 @@ foreach ($k in $requiredTopKeys) {
             }
             if ($ExpectUpdate -and -not $updated) { throw "$Label : the agent did not update itself to 1.0.1 and come back" }
             if (-not $ExpectUpdate) {
-                Start-Sleep -Seconds 5
                 $h = (Get-FileHash (Join-Path $oldDir "PcAgent.exe") -Algorithm SHA256).Hash
                 if ($h -ne $oldHash) { throw "$Label : the agent replaced itself although the checksum did not match" }
             }
         } finally {
             Get-Process -Name "PcAgent" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$oldDir\PcAgent.exe*" } | Stop-Process -Force -ErrorAction SilentlyContinue
-            Stop-Job $job -ErrorAction SilentlyContinue
-            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            Stop-UpdateSite $siteHandle
         }
     }
 
@@ -666,7 +677,11 @@ foreach ($k in $requiredTopKeys) {
     Write-Host "Assertion PASS: unredacted 'alice@example.com' fell back to '$($secondAcc.label)' and 'example' removed"
 
     # Assert GET /quota?refresh=1 rapid calls trigger omp exactly once
-    if (Test-Path $fakeOmpCountFile) { Remove-Item $fakeOmpCountFile -Force }
+    # The fake omp of the previous request may still hold the file for a moment.
+    for ($try = 0; $try -lt 20 -and (Test-Path $fakeOmpCountFile); $try++) {
+        try { Remove-Item $fakeOmpCountFile -Force -ErrorAction Stop } catch { Start-Sleep -Milliseconds 250 }
+    }
+    if (Test-Path $fakeOmpCountFile) { throw "Cannot remove ${fakeOmpCountFile}: still in use after 5 s" }
     $refResp1 = Invoke-WebRequest -Headers $auth -Uri "$($quotaUrl)?refresh=1" -UseBasicParsing -TimeoutSec 3
     $refResp2 = Invoke-WebRequest -Headers $auth -Uri "$($quotaUrl)?refresh=1" -UseBasicParsing -TimeoutSec 3
     Start-Sleep -Milliseconds 600

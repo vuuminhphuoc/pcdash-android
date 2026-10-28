@@ -49,4 +49,17 @@ $sums = foreach ($f in @($hostOut, $remoteOut, $agentOut)) {
 }
 [IO.File]::WriteAllText((Join-Path $OutDir "SHA256SUMS.txt"), (($sums -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 
+# What this release holds, so an installed host can tell whether it is newer than itself
+# (the tag is the product's version; the apps have their own).
+function Read-Version([string]$Path) {
+    $props = @{}
+    foreach ($line in Get-Content $Path) { if ($line -match '^\s*(\w+)\s*=\s*(.+?)\s*$') { $props[$Matches[1]] = $Matches[2] } }
+    return $props
+}
+$hostVersion = Read-Version (Join-Path $repoRoot "app\version.properties")
+$remoteVersion = Read-Version (Join-Path $repoRoot "remote\version.properties")
+$versionJson = '{{"tag":"{0}","host":{{"versionName":"{1}","versionCode":{2}}},"remote":{{"versionName":"{3}","versionCode":{4}}}}}' -f `
+    $Tag, $hostVersion.versionName, $hostVersion.versionCode, $remoteVersion.versionName, $remoteVersion.versionCode
+[IO.File]::WriteAllText((Join-Path $OutDir "pcdash-version.json"), $versionJson + "`n", (New-Object System.Text.UTF8Encoding($false)))
+
 Get-ChildItem $OutDir | Select-Object Name, @{n='SizeKB';e={[math]::Round($_.Length/1KB,1)}}

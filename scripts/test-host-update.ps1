@@ -74,7 +74,9 @@ $sources = @(
     (Join-Path $app 'src\vn\vuumi\pcdash\RemoteDeviceStore.java'),
     (Join-Path $app 'src\vn\vuumi\pcdash\RemoteApiServer.java'),
     (Join-Path $app 'test\vn\vuumi\pcdash\FakeUpdateAssetSource.java'),
-    (Join-Path $app 'test\vn\vuumi\pcdash\HostUpdateTest.java')
+    (Join-Path $app 'test\vn\vuumi\pcdash\HostUpdateTest.java'),
+    (Join-Path $app 'src\vn\vuumi\pcdash\HostUpdateCheck.java'),
+    (Join-Path $app 'test\vn\vuumi\pcdash\HostUpdateCheckTest.java')
 )
 
 Write-Host "Compiling HostUpdateTest and update server classes..."
@@ -87,6 +89,12 @@ Write-Host "Executing HostUpdateTest..."
 & $java -cp $classesDir vn.vuumi.pcdash.HostUpdateTest
 if ($LASTEXITCODE -ne 0) {
     throw "HostUpdateTest failed"
+}
+
+Write-Host "Executing HostUpdateCheckTest..."
+& $java -cp $classesDir vn.vuumi.pcdash.HostUpdateCheckTest
+if ($LASTEXITCODE -ne 0) {
+    throw "HostUpdateCheckTest failed"
 }
 
 Write-Host "PASS: all host update tests passed!"

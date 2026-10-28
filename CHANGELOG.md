@@ -3,6 +3,11 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
+## Unreleased
+
+- **Check for updates in the host app**: a button on the main screen reads the latest GitHub release, and if it holds a newer host it downloads the APK, checks it against `SHA256SUMS.txt` and opens Android's install screen for you to confirm. Releases now carry a `pcdash-version.json` that says which host and remote versions they hold.
+- Tests: the agent self-update test no longer takes minutes (it waited on a background job).
+
 ## 1.2.0 (host 1.25, remote 1.26)
 
 - **Language button in both apps** (host main screen, remote under More): phone's language, English or Vietnamese. On Android 13+ it is the same setting as Settings > Apps > Language.
