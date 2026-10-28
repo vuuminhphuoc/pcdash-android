@@ -229,18 +229,12 @@ public class MainActivity extends Activity implements View.OnClickListener {
         root.setBackgroundColor(Color.rgb(0, 0, 0));
         scroll.addView(root);
 
-        TextView title = new TextView(this);
-        title.setText("PCDash");
-        title.setTextSize(24);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextColor(Color.rgb(230, 237, 243));
-        root.addView(title);
-
+        // The action bar already says "PCDash"; a second title only cost a screen's worth of space.
         TextView sub = new TextView(this);
-        sub.setText(L10n.t("Remote control for your PC", "Điều khiển PC từ xa"));
+        sub.setText(L10n.t("Remote control for your PC", "Điều khiển PC từ xa") + " · v" + HostUpdater.installedVersionName(this));
         sub.setTextSize(13);
         sub.setTextColor(Color.rgb(139, 148, 158));
-        sub.setPadding(0, dp(4), 0, dp(18));
+        sub.setPadding(0, 0, 0, dp(14));
         root.addView(sub);
 
         // Status Card
@@ -375,33 +369,22 @@ public class MainActivity extends Activity implements View.OnClickListener {
         remoteDevBtn.setLayoutParams(rdLp);
         root.addView(remoteDevBtn);
 
+        // Settings in a 2 x 2 grid: the four quiet buttons no longer push the status cards off the screen.
         Button pcSettingsBtn = makeStyledButton(L10n.t("PC settings", "Cài đặt PC"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "pc_settings");
-        LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        psLp.setMargins(0, 0, 0, dp(14));
-        pcSettingsBtn.setLayoutParams(psLp);
-        root.addView(pcSettingsBtn);
+        Button appLockBtn = makeStyledButton(L10n.t("App lock", "Khóa ứng dụng"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "app_lock");
+        root.addView(buttonPair(pcSettingsBtn, appLockBtn, 8));
 
-        Button appLockBtn = makeStyledButton(L10n.t("🔒 App lock", "🔒 Khóa ứng dụng"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "app_lock");
-        LinearLayout.LayoutParams alLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        alLp.setMargins(0, 0, 0, dp(14));
-        appLockBtn.setLayoutParams(alLp);
-        root.addView(appLockBtn);
+        Button languageBtn = makeStyledButton(L10n.t("Language", "Ngôn ngữ"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "language");
+        updateBtn = makeStyledButton(L10n.t("Check updates", "Tìm bản mới"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "check_update");
+        root.addView(buttonPair(languageBtn, updateBtn, 0));
 
-        Button languageBtn = makeStyledButton(L10n.t("🌐 Language", "🌐 Ngôn ngữ"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "language");
-        LinearLayout.LayoutParams langLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        langLp.setMargins(0, 0, 0, dp(14));
-        languageBtn.setLayoutParams(langLp);
-        root.addView(languageBtn);
-
-        updateBtn = makeStyledButton(L10n.t("⬆ Check for updates", "⬆ Kiểm tra cập nhật"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "check_update");
-        LinearLayout.LayoutParams updLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        updLp.setMargins(0, 0, 0, dp(14));
-        updateBtn.setLayoutParams(updLp);
-        root.addView(updateBtn);
+        // The result of the last update check stays on screen (a toast is gone in seconds).
+        updateStatusView = new TextView(this);
+        updateStatusView.setTextSize(12);
+        updateStatusView.setTextColor(Color.rgb(139, 148, 158));
+        updateStatusView.setPadding(dp(2), dp(2), 0, dp(14));
+        updateStatusView.setText(L10n.t("Version ", "Phiên bản ") + HostUpdater.installedVersionName(this));
+        root.addView(updateStatusView);
 
         // Tailscale card
         LinearLayout tailscaleCard = new LinearLayout(this);
@@ -469,15 +452,26 @@ public class MainActivity extends Activity implements View.OnClickListener {
         btnBattery = makeStyledButton(L10n.t("Turn off battery optimization", "Yêu cầu bỏ tối ưu pin"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "battery_opt");
         healthCard.addView(btnBattery);
 
-        healthCard.addView(makeStyledButton(L10n.t("Autostart settings (Xiaomi / MIUI)", "Cài đặt tự khởi chạy (Xiaomi / MIUI)"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "xiaomi_autostart"));
+        // Xiaomi, Redmi and POCO phones kill background apps unless autostart is on; other phones have no such screen.
+        String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT);
+        if (maker.contains("xiaomi") || maker.contains("redmi") || maker.contains("poco")) {
+            TextView autostartHint = new TextView(this);
+            autostartHint.setText(L10n.t("Android cannot tell whether autostart is on. Open the screen and allow PCDash, or the host may stop after a restart.",
+                    "Android không báo được tự khởi chạy đã bật hay chưa. Hãy mở màn hình này và cho phép PCDash, nếu không host có thể ngừng sau khi khởi động lại."));
+            autostartHint.setTextSize(12);
+            autostartHint.setTextColor(Color.rgb(139, 148, 158));
+            autostartHint.setPadding(dp(2), dp(4), 0, dp(4));
+            healthCard.addView(autostartHint);
+            healthCard.addView(makeStyledButton(L10n.t("Open autostart settings", "Mở cài đặt tự khởi chạy"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 40, "xiaomi_autostart"));
+        }
 
         root.addView(healthCard);
 
         updateHealthState();
 
         TextView info = new TextView(this);
-        info.setTextSize(12);
-        info.setTextColor(Color.rgb(110, 118, 129));
+        info.setTextSize(13);
+        info.setTextColor(Color.rgb(139, 148, 158));
         info.setPadding(0, dp(20), 0, dp(16));
         info.setText(WebDashboard.infoText(this));
         root.addView(info);
@@ -582,7 +576,37 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private static final String NL = System.getProperty("line.separator", "\n");
     private Button updateBtn;
+    private TextView updateStatusView;
     private boolean updateBusy;
+
+    /** Two equal-width buttons side by side. */
+    private LinearLayout buttonPair(Button left, Button right, int bottomMarginDp) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowLp.setMargins(0, 0, 0, dp(bottomMarginDp));
+        row.setLayoutParams(rowLp);
+        LinearLayout.LayoutParams leftLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        leftLp.rightMargin = dp(6);
+        left.setLayoutParams(leftLp);
+        LinearLayout.LayoutParams rightLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        rightLp.leftMargin = dp(6);
+        right.setLayoutParams(rightLp);
+        row.addView(left);
+        row.addView(right);
+        return row;
+    }
+
+    private void showUpdateStatus(String text, boolean problem) {
+        if (updateStatusView == null) return;
+        updateStatusView.setText(text);
+        updateStatusView.setTextColor(problem ? Color.rgb(219, 109, 40) : Color.rgb(139, 148, 158));
+    }
+
+    private String checkedAt() {
+        return android.text.format.DateFormat.getTimeFormat(this).format(new java.util.Date());
+    }
 
     /** Asks GitHub for a newer host; offers to download and install it. */
     private void checkForUpdate() {
@@ -608,10 +632,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
                         resetUpdateButton();
                         if (isFinishing()) return;
                         if (failure != null) {
-                            Toast.makeText(MainActivity.this, L10n.t("Could not check for updates: ", "Không kiểm tra được cập nhật: ") + failure, Toast.LENGTH_LONG).show();
+                            showUpdateStatus(L10n.t("Could not check for updates (", "Không kiểm tra được cập nhật (") + checkedAt() + "): " + failure, true);
                         } else if (offer == null) {
-                            Toast.makeText(MainActivity.this, L10n.t("PCDash host is up to date (", "PCDash host đã là bản mới nhất (")
-                                    + HostUpdater.installedVersionName(MainActivity.this) + ")", Toast.LENGTH_LONG).show();
+                            showUpdateStatus(L10n.t("Version ", "Phiên bản ") + HostUpdater.installedVersionName(MainActivity.this)
+                                    + L10n.t(" is the latest. Checked at ", " là bản mới nhất. Kiểm tra lúc ") + checkedAt(), false);
                         } else {
                             askToUpdate(offer);
                         }
@@ -622,7 +646,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void resetUpdateButton() {
-        updateBtn.setText(L10n.t("⬆ Check for updates", "⬆ Kiểm tra cập nhật"));
+        updateBtn.setText(L10n.t("Check updates", "Tìm bản mới"));
     }
 
     private void askToUpdate(final HostUpdateCheck.Offer offer) {
@@ -677,7 +701,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                         updateBusy = false;
                         resetUpdateButton();
                         if (failure != null && !isFinishing()) {
-                            Toast.makeText(MainActivity.this, L10n.t("Update failed: ", "Cập nhật thất bại: ") + failure, Toast.LENGTH_LONG).show();
+                            showUpdateStatus(L10n.t("Update failed: ", "Cập nhật thất bại: ") + failure, true);
                         }
                     }
                 });
@@ -743,18 +767,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void updateHealthState() {
         boolean running = DashService.isServiceRunning();
         if (healthServiceView != null) {
-            healthServiceView.setText(L10n.t("Host service: ", "Dịch vụ host: ") + (running ? L10n.t("Running", "Đang chạy") : L10n.t("Stopped", "Đã dừng")));
+            healthServiceView.setText((running ? "✓ " : "✗ ") + L10n.t("Host service: ", "Dịch vụ host: ") + (running ? L10n.t("Running", "Đang chạy") : L10n.t("Stopped", "Đã dừng")));
             healthServiceView.setTextColor(running ? Color.rgb(46, 160, 67) : Color.rgb(248, 81, 73));
         }
         boolean listening8091 = DashService.isPort8091Listening();
         if (healthPortView != null) {
-            healthPortView.setText(L10n.t("Port :8091: ", "Cổng :8091: ") + (listening8091 ? L10n.t("Listening", "Đang lắng nghe") : L10n.t("Not ready", "Chưa sẵn sàng")));
+            healthPortView.setText((listening8091 ? "✓ " : "! ") + L10n.t("Port :8091: ", "Cổng :8091: ") + (listening8091 ? L10n.t("Listening", "Đang lắng nghe") : L10n.t("Not ready", "Chưa sẵn sàng")));
             healthPortView.setTextColor(listening8091 ? Color.rgb(46, 160, 67) : Color.rgb(219, 109, 40));
         }
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         boolean ignoring = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
         if (healthBatteryView != null) {
-            healthBatteryView.setText(L10n.t("Battery optimization: ", "Tối ưu pin: ") + (ignoring ? L10n.t("Off for PCDash", "Đã loại trừ") : L10n.t("On (may stop PCDash)", "Chưa loại trừ")));
+            healthBatteryView.setText((ignoring ? "✓ " : "! ") + L10n.t("Battery optimization: ", "Tối ưu pin: ") + (ignoring ? L10n.t("Off for PCDash", "Đã loại trừ") : L10n.t("On (may stop PCDash)", "Chưa loại trừ")));
             healthBatteryView.setTextColor(ignoring ? Color.rgb(46, 160, 67) : Color.rgb(219, 109, 40));
         }
         if (btnBattery != null) {

@@ -250,7 +250,7 @@ public class MoreSheet {
         addSpacing(content, dpToPx(context, 12));
 
         Button languageBtn = new Button(context);
-        languageBtn.setText(L10n.t("🌐 Language", "🌐 Ngôn ngữ"));
+        languageBtn.setText(L10n.t("Language", "Ngôn ngữ"));
         languageBtn.setTextColor(Color.rgb(230, 237, 243));
         languageBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         languageBtn.setTextSize(13);
@@ -268,7 +268,7 @@ public class MoreSheet {
         addSpacing(content, dpToPx(context, 12));
 
         Button appLockBtn = new Button(context);
-        appLockBtn.setText(L10n.t("🔒 App lock", "🔒 Khóa ứng dụng"));
+        appLockBtn.setText(L10n.t("App lock", "Khóa ứng dụng"));
         appLockBtn.setTextColor(Color.rgb(230, 237, 243));
         appLockBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         appLockBtn.setTextSize(13);

@@ -3,8 +3,11 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
-## Unreleased
+## Unreleased (host 1.27, remote 1.27)
 
+- **Host main screen, easier to read**: the four settings buttons (PC settings, App lock, Language, Check for updates) sit in a 2 x 2 grid instead of four full-width rows, so the status cards come up the screen. The result of the last update check stays on screen with its time (it was a toast that vanished), the version shows under the title (the second, duplicate "PCDash" heading is gone), the update button reads "Check updates" / "Tìm bản mới" so it fits on one line, the health lines start with a check mark or a warning sign instead of relying on colour alone, and the footer note is easier to read.
+- **Remote bottom bar and More sheet**: the five tabs use one set of vector icons that take the selection colour (the chart and clipboard emoji kept their own colours), and the Language and App lock buttons lose their emoji.
+- **Autostart button only on Xiaomi, Redmi and POCO phones**, with a line that says Android cannot tell whether it is on.
 - **Less leftover**: `pcagent.log` is cut to its newest part once it passes about 1 MB (it grew for ever), the agent removes a half-finished update folder at start, and the host clears the update APK it downloaded as soon as the app starts again.
 
 ## 1.2.1 (host 1.26, remote 1.26)
