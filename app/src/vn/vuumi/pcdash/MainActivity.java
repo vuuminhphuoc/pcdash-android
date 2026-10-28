@@ -5,6 +5,7 @@ import vn.vuumi.pcdash.lock.AppLockGate;
 import vn.vuumi.pcdash.ui.ButtonProgress;
 import vn.vuumi.pcdash.ui.SystemBarInsets;
 import vn.vuumi.pcdash.ui.Tap;
+import vn.vuumi.pcdash.i18n.AppLanguage;
 import vn.vuumi.pcdash.i18n.L10n;
 import vn.vuumi.pcdash.net.PcnetState;
 import android.Manifest;
@@ -388,6 +389,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         appLockBtn.setLayoutParams(alLp);
         root.addView(appLockBtn);
 
+        Button languageBtn = makeStyledButton(L10n.t("🌐 Language", "🌐 Ngôn ngữ"), Color.rgb(33, 38, 45), Color.rgb(48, 54, 61), Color.rgb(201, 209, 217), 48, "language");
+        LinearLayout.LayoutParams langLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        langLp.setMargins(0, 0, 0, dp(14));
+        languageBtn.setLayoutParams(langLp);
+        root.addView(languageBtn);
+
         // Tailscale card
         LinearLayout tailscaleCard = new LinearLayout(this);
         tailscaleCard.setOrientation(LinearLayout.VERTICAL);
@@ -576,7 +584,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Object tag = v.getTag();
         if (tag instanceof String) {
             String action = (String) tag;
-            if ("app_lock".equals(action)) {
+            if ("language".equals(action)) {
+                AppLanguage.showPicker(this);
+            } else if ("app_lock".equals(action)) {
                 AppLockSettings.show(this, lockGate);
             } else if ("pc_settings".equals(action)) {
                 Intent it = new Intent(this, PcSettingsActivity.class);

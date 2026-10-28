@@ -65,6 +65,7 @@ public class QuotaViewModelTest {
         testCodexOnly30dLongWindow();
         testStrangeWindowIdBecomesLongWindow();
         testDetailsBlocksAndAccountBars();
+        testLabelsFollowTheAppLanguage();
         testRemoteApiClientGetQuota();
         testRemoteControllerGetQuotaUnsupportedRoute404();
         testRemoteControllerGetQuotaDeviceRevoked401();
@@ -103,6 +104,28 @@ public class QuotaViewModelTest {
         validCardList.add(new QuotaViewModel.ProviderCard("p1", "Provider 1", summary, Collections.<QuotaViewModel.DetailBlock>emptyList()));
         assertTrue(QuotaViewModel.hasData(validCardList), "card with summary hasData is true");
         System.out.println("PASS: testHasData");
+    }
+
+    public static void testLabelsFollowTheAppLanguage() {
+        // The PC sends names in its own language; known ones follow the app's.
+        assertTrue("5 giờ".equals(QuotaLabels.window("5h", "5 hours")), "vi: 5h id");
+        assertTrue("Tháng".equals(QuotaLabels.window("monthly", "Month")), "vi: monthly id");
+        assertTrue("Yêu cầu chat".equals(QuotaLabels.window("x", "Chat Requests")), "vi: known English label");
+        assertTrue("Gói lạ".equals(QuotaLabels.window("x", "Gói lạ")), "unknown label stays as received");
+        assertTrue("zz".equals(QuotaLabels.window("zz", "")), "no label falls back to the id");
+        assertTrue("Gợi ý mã".equals(QuotaLabels.group("Completions")), "vi: a group named like a window");
+        L10n.setOverride(L10n.EN);
+        try {
+            assertTrue("Chat requests".equals(QuotaLabels.group("Chat Requests")), "en: group name");
+            assertTrue("5 hours".equals(QuotaLabels.window("5h", "5 giờ")), "en: Vietnamese label");
+            assertTrue("Week".equals(QuotaLabels.window("weekly", "Tuần")), "en: weekly");
+            assertTrue("30 days".equals(QuotaLabels.window("30d", "30 ngày")), "en: 30d");
+            assertTrue("Completions".equals(QuotaLabels.window("x", "Completions")), "en: Completions");
+            assertTrue("Claude & GPT (shared)".equals(QuotaLabels.group("Claude & GPT (shared)")), "en: shared group");
+        } finally {
+            L10n.setOverride(L10n.VI);
+        }
+        System.out.println("PASS: testLabelsFollowTheAppLanguage");
     }
 
     public static void testAntigravityTwoGroupsTwoBarsEach() {
@@ -148,7 +171,7 @@ public class QuotaViewModelTest {
         assertTrue(row1.longWindow == null, "row 1 longWindow is null");
 
         QuotaViewModel.SummaryRow row2 = card.summary.get(1);
-        assertTrue("Claude & GPT (shared)".equals(row2.group), "row 2 group Claude & GPT");
+        assertTrue("Claude & GPT (dùng chung)".equals(row2.group), "row 2 group Claude & GPT: " + row2.group);
         assertTrue(row2.fiveHour != null, "row 2 fiveHour not null");
         assertTrue(row2.fiveHour.pct == 40, "row 2 fiveHour pct 40");
         assertTrue(row2.fiveHour.tier == QuotaFormatter.Tier.MID, "row 2 fiveHour tier MID");

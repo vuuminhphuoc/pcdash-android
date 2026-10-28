@@ -22,7 +22,7 @@ public final class QuotaViewModel {
 
             if (p.groups != null) {
                 for (QuotaSnapshot.Group g : p.groups) {
-                    String groupName = (g.name != null && !g.name.isEmpty()) ? g.name : "";
+                    String groupName = QuotaLabels.group((g.name != null && !g.name.isEmpty()) ? g.name : "");
 
                     QuotaSnapshot.Window w5h = null;
                     QuotaSnapshot.Window wWeekly = null;
@@ -49,15 +49,15 @@ public final class QuotaViewModel {
                     if (w5h != null || wWeekly != null) {
                         if (w5h != null) {
                             fiveHourBar = new Bar(w5h.pooledRemainingPct, QuotaFormatter.tier(w5h.pooledRemainingPct),
-                                    QuotaFormatter.resetText(w5h.resetsAt, nowMs), w5h.label);
+                                    QuotaFormatter.resetText(w5h.resetsAt, nowMs), QuotaLabels.window(w5h.id, w5h.label));
                         }
                         if (wWeekly != null) {
                             weeklyBar = new Bar(wWeekly.pooledRemainingPct, QuotaFormatter.tier(wWeekly.pooledRemainingPct),
-                                    QuotaFormatter.resetText(wWeekly.resetsAt, nowMs), wWeekly.label);
+                                    QuotaFormatter.resetText(wWeekly.resetsAt, nowMs), QuotaLabels.window(wWeekly.id, wWeekly.label));
                         }
                     } else if (wLong != null) {
                         longBar = new Bar(wLong.pooledRemainingPct, QuotaFormatter.tier(wLong.pooledRemainingPct),
-                                QuotaFormatter.resetText(wLong.resetsAt, nowMs), wLong.label);
+                                QuotaFormatter.resetText(wLong.resetsAt, nowMs), QuotaLabels.window(wLong.id, wLong.label));
                     }
 
                     summary.add(new SummaryRow(groupName, fiveHourBar, weeklyBar, longBar));
@@ -66,7 +66,7 @@ public final class QuotaViewModel {
                     if (g.windows != null) {
                         for (QuotaSnapshot.Window w : g.windows) {
                             if (w == null) continue;
-                            String wLabel = (w.label != null && !w.label.isEmpty()) ? w.label : w.id;
+                            String wLabel = QuotaLabels.window(w.id, w.label);
                             Bar wBar = new Bar(w.pooledRemainingPct, QuotaFormatter.tier(w.pooledRemainingPct),
                                     QuotaFormatter.resetText(w.resetsAt, nowMs), wLabel);
 
