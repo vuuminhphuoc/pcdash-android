@@ -21,6 +21,14 @@ $installDir = Join-Path $env:ProgramFiles "PcAgentCpuTemp"
 $dataDir = Join-Path $env:ProgramData "PcAgentCpuTemp"
 $exeInstalled = Join-Path $installDir "CpuTempHelper.exe"
 
+# Dung tac vu neu dang chay. Lan cai dau chua co tac vu, schtasks ghi loi ra stderr; Windows PowerShell 5.1
+# voi ErrorActionPreference = Stop coi do la loi dung script, nen bo qua loi o day.
+function Stop-HelperTask {
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { schtasks.exe /end /tn $TaskName 2>&1 | Out-Null } finally { $ErrorActionPreference = $old }
+}
+
 function Set-AdminOnlyWrite([string]$dir, [bool]$usersRead) {
     $acl = New-Object System.Security.AccessControl.DirectorySecurity
     $acl.SetAccessRuleProtection($true, $false)
@@ -40,8 +48,10 @@ function Set-AdminOnlyWrite([string]$dir, [bool]$usersRead) {
 
 if ($Uninstall) {
     Write-Host "Dang xoa tac vu '$TaskName' va thu muc cai dat..."
-    schtasks.exe /end /tn $TaskName 2>$null | Out-Null
-    schtasks.exe /delete /tn $TaskName /f
+    Stop-HelperTask
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { schtasks.exe /delete /tn $TaskName /f 2>&1 | Out-Null } finally { $ErrorActionPreference = $old }
     Get-Process CpuTempHelper -ErrorAction SilentlyContinue | Stop-Process -Force
     if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
     if (Test-Path $dataDir) { Remove-Item $dataDir -Recurse -Force }
@@ -65,7 +75,7 @@ Write-Host "CpuTempHelper.exe SHA-256: $exeHash"
 foreach ($d in @($installDir, $dataDir)) {
     if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null }
 }
-schtasks.exe /end /tn $TaskName 2>$null | Out-Null
+Stop-HelperTask
 Get-Process CpuTempHelper -ErrorAction SilentlyContinue | Stop-Process -Force
 
 Set-AdminOnlyWrite $installDir $true
@@ -74,9 +84,16 @@ Copy-Item $srcExe $exeInstalled -Force
 Copy-Item $srcDll (Join-Path $installDir "LibreHardwareMonitorLib.dll") -Force
 
 Write-Host "Dang tao tac vu '$TaskName' (chay quyen cao nhat khi dang nhap)..."
-schtasks.exe /create /tn $TaskName /tr "`"$exeInstalled`"" /sc onlogon /rl highest /f
-if ($LASTEXITCODE -ne 0) { throw "Khong the tao tac vu (schtasks exit code: $LASTEXITCODE)" }
-schtasks.exe /run /tn $TaskName | Out-Null
+# Dung cmdlet thay cho schtasks /tr: Windows PowerShell 5.1 lam roi dau ngoac kep quanh duong dan co dau
+# cach ("C:\Program Files\..."), tac vu se tro toi "C:\Program". Khong gioi han thoi gian chay (schtasks mac
+# dinh dung tac vu sau 72 gio).
+$me = "$env:USERDOMAIN\$env:USERNAME"
+$action = New-ScheduledTaskAction -Execute $exeInstalled
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $me
+$principal = New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+Start-ScheduledTask -TaskName $TaskName
 
 Write-Host "Xong. Cai dat tai $installDir, ket qua ghi vao $dataDir\cputemp.txt."
 Write-Host "Go cai dat: chay lai script voi -Uninstall."
