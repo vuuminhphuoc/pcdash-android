@@ -45,7 +45,7 @@ adb -s $env:PCDASH_REMOTE_SERIAL shell dumpsys package vn.vuumi.pcdash.remote | 
 adb -s $env:PCDASH_HOST_SERIAL shell dumpsys package vn.vuumi.pcdash | Select-String "versionName|versionCode"
 ```
 
-Bản trên nhánh này: remote **1.25 (26)**, host **1.24 (25)**.
+Bản trên nhánh này: remote **1.26 (27)**, host **1.25 (26)**.
 
 ## 2. Build và test tại máy
 
@@ -56,7 +56,7 @@ Bản trên nhánh này: remote **1.25 (26)**, host **1.24 (25)**.
 Mong đợi:
 
 - Lần đầu Gradle tải Gradle 8.13, Android Gradle plugin và thư viện (vài trăm MB, vài phút).
-- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.25, code 26)` và `BUILD-ALL SUCCESSFUL`.
+- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.26, code 27)` và `BUILD-ALL SUCCESSFUL`.
 - Ra hai file `remote\build\pcdash-remote-signed.apk` và `app\build\pcdash-signed.apk`.
 
 Chạy các test như CI:
@@ -135,7 +135,7 @@ adb -s $r shell uiautomator dump /sdcard/ui.xml; adb -s $r pull /sdcard/ui.xml r
 7. **Rời tab giữa chừng.** Đang lệnh Bật mà chuyển sang tab Giám sát rồi quay lại: ô vẫn đang quay. Khi kết quả đã hiện mà quay lại tab: không phát lại dấu tích.
 8. ⚠️ **Tắt hiệu ứng.** `adb shell settings put global animator_duration_scale 0` (ghi lại để khôi phục về giá trị cũ, thường là 1). Mở lại tab: không còn gì quay mãi, trạng thái đổi ngay. Lặp lại bước 2.
 9. **Trợ năng.** Trong `ui.xml`, mỗi ô nguồn có `content-desc` đúng nhãn và `clickable="true"`. Ô đang bận có nhãn kèm trạng thái và `enabled="false"`. Tiêu đề "NGUỒN" và "VÙNG NGUY HIỂM" có mặt.
-10. **Thẻ cập nhật** (tùy chọn, dài). Cài lên remote một bản cũ hơn (versionCode < 26) trong khi host chứa bản 1.25 (26). Mong đợi: thẻ xanh "Có bản cập nhật v1.25 (… MB)" trượt vào. Bấm Cập nhật: thanh tiến trình chạy, có nút Hủy. Cuối cùng hiện màn cài đặt của Android (👤 người dùng cài). Thử Hủy giữa chừng: thẻ quay về trạng thái "Có bản cập nhật".
+10. **Thẻ cập nhật** (tùy chọn, dài). Cài lên remote một bản cũ hơn (versionCode < 27) trong khi host chứa bản 1.26 (27). Mong đợi: thẻ xanh "Có bản cập nhật v1.26 (… MB)" trượt vào. Bấm Cập nhật: thanh tiến trình chạy, có nút Hủy. Cuối cùng hiện màn cài đặt của Android (👤 người dùng cài). Thử Hủy giữa chừng: thẻ quay về trạng thái "Có bản cập nhật".
 
 ### 5.2 Thanh chọn PC (nhiều PC)
 

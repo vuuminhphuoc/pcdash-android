@@ -3,8 +3,10 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
-## Unreleased
+## 1.2.0 (host 1.25, remote 1.26)
 
+- **Language button in both apps** (host main screen, remote under More): phone's language, English or Vietnamese. On Android 13+ it is the same setting as Settings > Apps > Language.
+- Quota names from the PC ("5 giờ", "Tuần", "Chat Requests", "(shared)"...) follow the app language.
 - **Restart, Lock and Sign out** for the PC, in the remote's Control tab, the host app and the web
   dashboard. Restart and Sign out ask for confirmation (and the phone's screen lock if "Require unlock"
   is on); Lock does not. Lock and Sign out act on the Windows session PcAgent runs in.
