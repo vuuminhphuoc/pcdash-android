@@ -33,12 +33,13 @@ pwsh -File scripts\lint-ui-thread.ps1             # static: no blocking I/O or m
 pwsh -File scripts\test-remote-java.ps1           # includes UiThreadSafetyTest
 ```
 
-Baselines (last measured after the glass tab bar, on the Honor): 0 ANR, 0 crash, jank 0.26 to 5 percent, p99 10 to 17 ms; host about 32 MB PSS; remote about 125 MB PSS at rest (150 MB right after 30 tab rounds). Flag regressions.
+Baselines (remote 1.25 with the Compose Control tab, on the Honor, Android 17): 0 ANR, 0 crash, jank 0.37 to 0.95 percent, p99 10 to 14 ms; remote about 120 to 150 MB PSS at rest, about 210 to 245 MB right after 30 tab rounds, back to about 145 to 155 MB within a minute. Before Compose (1.23) it was about 125 MB at rest and 150 MB after the rounds. Host: the Xiaomi returns an empty `dumpsys meminfo` for other apps; `adb shell top -b -n 1 -p <pid>` shows about 205 MB RES (resident, includes shared pages, not comparable with PSS). Flag regressions.
 
 How to read the PSS number:
 
-- `dumpsys meminfo vn.vuumi.pcdash.remote` shows where it goes. Last breakdown: native heap about 38 MB (embedded tsnet), EGL mtrack about 28 MB (display buffers at 1256x2808), `.so` mmap about 24 MB, Dalvik heap only about 12 MB. The Java views are not the cost.
-- The script's "PSS increased by more than 40 MB" check trips on a cold app because tsnet and the charts warm up. Open the app, switch through every tab once, wait about 30 s, then run the smoke test. On a warm app the delta is about 23 MB and passes.
+- `dumpsys meminfo vn.vuumi.pcdash.remote` shows where it goes. Last breakdown at rest: native heap about 27 MB (embedded tsnet, up to about 57 to 76 MB while tabs switch), EGL mtrack about 28 MB (display buffers at 1256x2808), `.so` mmap about 22 MB, Dalvik heap about 9 MB (up to about 23 MB while switching). The Java views are not the cost.
+- The tab rounds raise PSS by 60 to 90 MB for a short while (Compose and the charts), then it is given back. `perf-smoke-remote.ps1` therefore waits `-SettleSeconds` (45 by default) and compares the settled PSS with the baseline (limit 40 MB, last result +22 MB). A delta that stays high after settling is a leak.
+- On a cold app tsnet and the charts warm up first: open the app, switch through every tab once and wait about 30 s before the smoke test.
 - The script now fails fast if gfxinfo reports 0 frames (the tab taps did not reach the app); a 4950 ms p99 with 0 frames is a placeholder, not a real result.
 - `perf-smoke-remote.ps1` sets UTF-8 console encoding (Vietnamese tab labels) and falls back to proportional tap coordinates when uiautomator cannot find all 5 tabs.
 

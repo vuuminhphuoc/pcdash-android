@@ -5,7 +5,10 @@
 [CmdletBinding()]
 param(
     [string]$Serial = $env:PCDASH_REMOTE_SERIAL,
-    [int]$Rounds = 30
+    [int]$Rounds = 30,
+    # Compose and the charts allocate while tabs switch and give the memory back once idle, so the
+    # leak check compares the baseline with PSS measured after this pause, not right after the run.
+    [int]$SettleSeconds = 45
 )
 
 $ErrorActionPreference = "Stop"
@@ -164,7 +167,14 @@ $threadDelta = $threadAfter - $threadBefore
 $pssDeltaMb = [Math]::Round(($pssAfterKb - $pssBeforeKb) / 1024.0, 2)
 
 Write-Host "Post Threads: $threadAfter (Delta: $threadDelta)"
-Write-Host "Post PSS:     $pssAfterMb MB (Delta: $pssDeltaMb MB)"
+Write-Host "Post PSS:     $pssAfterMb MB (Delta: $pssDeltaMb MB, peak right after the run)"
+if ($SettleSeconds -gt 0) {
+    Write-Host "Waiting $SettleSeconds s for memory to settle..."
+    Start-Sleep -Seconds $SettleSeconds
+    $pssSettledKb = Get-TotalPssKb $packageName
+    $pssDeltaMb = [Math]::Round(($pssSettledKb - $pssBeforeKb) / 1024.0, 2)
+    Write-Host "Settled PSS:  $([Math]::Round($pssSettledKb / 1024.0, 2)) MB (Delta: $pssDeltaMb MB)"
+}
 
 # Collect gfxinfo
 $gfxRaw = (Invoke-Adb @("shell", "dumpsys gfxinfo $packageName")) -join "`n"
@@ -230,7 +240,7 @@ if ($threadDelta -gt 10) {
     $failures += "Thread count increased by $threadDelta (limit is <= 10)"
 }
 if ($pssDeltaMb -gt 40.0) {
-    $failures += "PSS increased by $pssDeltaMb MB (limit is <= 40 MB)"
+    $failures += "PSS still $pssDeltaMb MB above the baseline after settling (limit is <= 40 MB)"
 }
 
 if ($failures.Count -gt 0) {
@@ -245,6 +255,6 @@ if ($failures.Count -gt 0) {
     Write-Host "  99th percentile: ${p99Ms}ms <= 100ms"
     Write-Host "  ANR: 0, Crashes: 0"
     Write-Host "  Thread delta: $threadDelta <= 10"
-    Write-Host "  PSS delta: $pssDeltaMb MB <= 40 MB"
+    Write-Host "  PSS delta after settling: $pssDeltaMb MB <= 40 MB"
     exit 0
 }
