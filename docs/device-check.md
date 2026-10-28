@@ -45,7 +45,7 @@ adb -s $env:PCDASH_REMOTE_SERIAL shell dumpsys package vn.vuumi.pcdash.remote | 
 adb -s $env:PCDASH_HOST_SERIAL shell dumpsys package vn.vuumi.pcdash | Select-String "versionName|versionCode"
 ```
 
-Bản trên nhánh này: remote **1.26 (27)**, host **1.25 (26)**.
+Bản trên nhánh này: remote **1.26 (27)**, host **1.26 (27)**.
 
 ## 2. Build và test tại máy
 
