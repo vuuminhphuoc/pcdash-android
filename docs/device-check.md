@@ -2,7 +2,7 @@
 
 Tài liệu này dành cho một phiên Claude Code chạy trên máy Windows của bạn, có cắm (hoặc adb không dây) **điện thoại ở nhà (host)** và **điện thoại điều khiển (remote)**. AI làm theo từng mục bên dưới, tự chạy được phần lớn qua adb, chụp màn hình hoặc quay video làm bằng chứng, và hỏi bạn ở những bước tác động lên PC hoặc cần tay người.
 
-Kiểm tra toàn bộ những gì có trên nhánh `ccr-ee4899f2-z93fx1`: build Gradle, Kotlin, tab Điều khiển viết bằng Compose, nhiều PC, ghép đôi QR, khóa ứng dụng, cảnh báo, nút bấm, kết nối lại, ngôn ngữ, ô Cài đặt nhanh.
+Kiểm tra toàn bộ những gì có trên nhánh `ccr-ee4899f2-z93fx1`: build Gradle, Kotlin, tab Điều khiển viết bằng Compose, nhiều PC, ghép đôi QR, khóa ứng dụng, cảnh báo, thông báo có phiên bản mới, nút bấm, kết nối lại, ngôn ngữ, ô Cài đặt nhanh.
 
 Phần đi qua màn hình, đo hiệu năng và tiêu chí đánh giá giao diện nằm trong skill [`pcdash-review`](../.claude/skills/pcdash-review/SKILL.md); tài liệu này dùng lại các script của skill đó và thêm phần kiểm tra chức năng.
 
@@ -45,7 +45,7 @@ adb -s $env:PCDASH_REMOTE_SERIAL shell dumpsys package vn.vuumi.pcdash.remote | 
 adb -s $env:PCDASH_HOST_SERIAL shell dumpsys package vn.vuumi.pcdash | Select-String "versionName|versionCode"
 ```
 
-Bản trên nhánh này: remote **1.27 (28)**, host **1.27 (28)**.
+Bản trên nhánh này: remote **1.28 (29)**, host **1.28 (29)**.
 
 ## 2. Build và test tại máy
 
@@ -56,7 +56,7 @@ Bản trên nhánh này: remote **1.27 (28)**, host **1.27 (28)**.
 Mong đợi:
 
 - Lần đầu Gradle tải Gradle 8.13, Android Gradle plugin và thư viện (vài trăm MB, vài phút).
-- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.26, code 27)` và `BUILD-ALL SUCCESSFUL`.
+- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.28, code 29)` và `BUILD-ALL SUCCESSFUL`.
 - Ra hai file `remote\build\pcdash-remote-signed.apk` và `app\build\pcdash-signed.apk`.
 
 Chạy các test như CI:
@@ -135,7 +135,7 @@ adb -s $r shell uiautomator dump /sdcard/ui.xml; adb -s $r pull /sdcard/ui.xml r
 7. **Rời tab giữa chừng.** Đang lệnh Bật mà chuyển sang tab Giám sát rồi quay lại: ô vẫn đang quay. Khi kết quả đã hiện mà quay lại tab: không phát lại dấu tích.
 8. ⚠️ **Tắt hiệu ứng.** `adb shell settings put global animator_duration_scale 0` (ghi lại để khôi phục về giá trị cũ, thường là 1). Mở lại tab: không còn gì quay mãi, trạng thái đổi ngay. Lặp lại bước 2.
 9. **Trợ năng.** Trong `ui.xml`, mỗi ô nguồn có `content-desc` đúng nhãn và `clickable="true"`. Ô đang bận có nhãn kèm trạng thái và `enabled="false"`. Tiêu đề "NGUỒN" và "VÙNG NGUY HIỂM" có mặt.
-10. **Thẻ cập nhật** (tùy chọn, dài). Cài lên remote một bản cũ hơn (versionCode < 27) trong khi host chứa bản 1.26 (27). Mong đợi: thẻ xanh "Có bản cập nhật v1.26 (… MB)" trượt vào. Bấm Cập nhật: thanh tiến trình chạy, có nút Hủy. Cuối cùng hiện màn cài đặt của Android (👤 người dùng cài). Thử Hủy giữa chừng: thẻ quay về trạng thái "Có bản cập nhật".
+10. **Thẻ cập nhật** (tùy chọn, dài). Cần host chứa bản remote mới hơn bản đang cài trên remote (cách tạo: mục 5.8, bước 2). Mong đợi: thẻ xanh "Có bản cập nhật v… (… MB)" trượt vào. Bấm Cập nhật: thanh tiến trình chạy, có nút Hủy. Cuối cùng hiện màn cài đặt của Android (👤 người dùng cài). Thử Hủy giữa chừng: thẻ quay về trạng thái "Có bản cập nhật".
 
 ### 5.2 Thanh chọn PC (nhiều PC)
 
@@ -192,12 +192,29 @@ Remote: Thêm → "🔒 Khóa ứng dụng". Host: nút "🔒 Khóa ứng dụng
 6. Có nhiều PC thì thông báo ghi tên PC.
 7. Khi xong: tắt cảnh báo nếu người dùng không dùng.
 
-### 5.8 Ô Cài đặt nhanh và lối tắt
+Job bị bỏ qua khi app remote đang mở trên màn hình: bấm Home trước khi chạy job.
+
+### 5.8 Thông báo có phiên bản mới
+
+1. Remote: Thêm → bật "Báo khi máy ở nhà có phiên bản mới của app này". Trên Android 13 trở lên phải hỏi quyền thông báo. Nếu cảnh báo (mục 5.7) đang tắt, `dumpsys jobscheduler` cho thấy job 4201 chạy khoảng 6 giờ một lần; nếu cảnh báo bật thì 15 phút.
+2. ⚠️ Tạo bản mới trên host mà không đụng remote:
+   - cài bản remote hiện tại (mục 3);
+   - tăng `versionCode` và `versionName` trong `remote\version.properties` lên một bậc (chỉ trên máy, không commit);
+   - chạy `.\build.ps1`, rồi chỉ cài `app\build\pcdash-signed.apk` lên host;
+   - trả file về như cũ: `git checkout remote\version.properties`.
+3. Bấm Home trên remote rồi chạy job (lệnh ở mục 5.7). Mong đợi một thông báo "Đã có PCDash Remote v… (… MB)" trong kênh "Bản cập nhật app". Chạy job lần nữa: **không** có thông báo thứ hai cho cùng phiên bản.
+4. Chạm thông báo: app mở ở tab Điều khiển và thẻ cập nhật hiện ra trong vài giây. Thông báo tự mất.
+5. Trường hợp ngược lại: tạo bản mới hơn nữa (lặp bước 2), mở app remote, vào Thêm → "Kiểm tra cập nhật" để thẻ cập nhật hiện, rồi bấm Home và chạy job: **không** có thông báo, vì app đã cho thấy bản này.
+6. ⚠️ Cập nhật qua thẻ (mục 5.1, bước 10). Sau đó chạy job: không có thông báo; thông báo cũ (nếu còn) biến mất.
+7. Tắt lựa chọn này: thông báo đang hiện biến mất. Nếu cảnh báo cũng tắt thì job 4201 không còn trong `dumpsys jobscheduler`.
+8. Khi xong: cài lại host build từ mã chưa sửa nếu người dùng muốn trở về bản thường.
+
+### 5.9 Ô Cài đặt nhanh và lối tắt
 
 1. 👤 Thêm ô "Bật PC" vào Cài đặt nhanh của remote. ⚠️ Bấm ô: app mở và chạy lệnh Bật (chỉ khi người dùng đồng ý).
 2. Nhấn giữ icon PCDash Remote: có lối tắt "Bật PC" và "Cho PC ngủ" (chỉ kiểm tra là có, ⚠️ bấm thì hỏi trước).
 
-### 5.9 Ngôn ngữ (Android 13 trở lên)
+### 5.10 Ngôn ngữ (Android 13 trở lên)
 
 ```powershell
 adb -s $r shell cmd locale set-app-locales vn.vuumi.pcdash.remote --locales en-US
@@ -205,7 +222,7 @@ adb -s $r shell cmd locale set-app-locales vn.vuumi.pcdash.remote --locales en-U
 
 Mở lại app: mọi màn hình bằng tiếng Anh, kể cả tab Điều khiển Compose ("PC is ON", "POWER", "DANGER ZONE") và thanh chip. Chụp từng tab. Trả về tiếng Việt bằng `--locales vi-VN` (hoặc theo ngôn ngữ cũ đã ghi lại). Làm tương tự với host (`vn.vuumi.pcdash`).
 
-### 5.10 Tràn viền và bàn phím (Android 15 trở lên)
+### 5.11 Tràn viền và bàn phím (Android 15 trở lên)
 
 Không có gì bị che dưới thanh trạng thái, thanh điều hướng hay góc bo. Ở màn ghép đôi, ô nhập vẫn nằm trên bàn phím. Hộp thoại có/không dễ đọc trên nền đen.
 
@@ -237,5 +254,6 @@ Khôi phục mọi thứ đã đổi và liệt kê trong báo cáo:
 - chế độ máy bay, Wi-Fi của host;
 - xóa "PC thử" khỏi Cài đặt PC;
 - tắt khóa ứng dụng dùng mã thử, hủy mã ghép đôi còn treo;
-- trạng thái cảnh báo như người dùng muốn;
+- trạng thái cảnh báo và thông báo phiên bản mới như người dùng muốn;
+- `remote\version.properties` không còn bị sửa (`git status` sạch);
 - xóa file trên điện thoại: `adb shell rm /sdcard/fx.mp4 /sdcard/ui.xml`.

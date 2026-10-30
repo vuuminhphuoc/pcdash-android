@@ -113,6 +113,6 @@ adb -s <serial> install -r app\build\pcdash-signed.apk
 
 Do not run two builds at once. Delegated builder agents run host-only `build.ps1`; run `build-all.ps1` only after they finish.
 
-Bump both `version.properties` files on every UI change so `install -r` and the host's self-update path see a new version. Current: remote 1.27 (28), host 1.27 (28).
+Bump both `version.properties` files on every UI change so `install -r` and the host's self-update path see a new version. Current: remote 1.28 (29), host 1.28 (29).
 
 Committing on this machine: git has no `user.name` or `user.email`. Reuse the repo's existing author for that one commit instead of changing config: `git -c user.name="<name>" -c user.email="<email>" commit ...` (see `git log -1 --format=%an,%ae`). Commit and push only when the user asks.

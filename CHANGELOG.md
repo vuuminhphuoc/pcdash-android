@@ -3,6 +3,10 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
+## 1.2.3 (host 1.28, remote 1.28)
+
+- **Notification for a new version (remote)**: under More, "Notify me when the home phone has a new version of this app" (off by default, like the alerts). A background check, about every 6 hours (or with the alerts, about every 15 minutes), tells you when the home phone holds a newer remote; tapping the notification opens the Control tab with the update card. Each version is announced once, and not if the app already showed it.
+
 ## 1.2.2 (host 1.27, remote 1.27)
 
 - **Host main screen, easier to read**: the four settings buttons (PC settings, App lock, Language, Check for updates) sit in a 2 x 2 grid instead of four full-width rows, so the status cards come up the screen. The result of the last update check stays on screen with its time (it was a toast that vanished), the version shows under the title (the second, duplicate "PCDash" heading is gone), the update button reads "Check updates" / "Tìm bản mới" so it fits on one line, the health lines start with a check mark or a warning sign instead of relying on colour alone, and the footer note is easier to read.

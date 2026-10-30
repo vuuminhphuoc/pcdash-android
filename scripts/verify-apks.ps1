@@ -51,7 +51,8 @@ if ($RemoteApk) {
     }
     # Nothing runs in the background on its own. Allowed services: the Quick Settings tile (System UI
     # binds it while the panel is open; it just opens the app) and the opt-in host-alert job
-    # (JobScheduler runs it only after the user turns alerts on). No long-running or foreground service.
+    # (JobScheduler runs it only after the user turns on alerts or new-version notices). No long-running
+    # or foreground service.
     $serviceCount = ([regex]::Matches($xmlTree, 'E:\s+service\b')).Count
     $tileCount = ([regex]::Matches($xmlTree, 'permission\([^)]*\)="android\.permission\.BIND_QUICK_SETTINGS_TILE"')).Count
     $jobCount = ([regex]::Matches($xmlTree, 'permission\([^)]*\)="android\.permission\.BIND_JOB_SERVICE"')).Count
