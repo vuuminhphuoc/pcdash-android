@@ -31,6 +31,8 @@ public class MoreSheet {
         default void onHostAlertsChanged(boolean enabled) {}
 
         default void onPcAlertsChanged(boolean enabled) {}
+
+        default void onUpdateNoticeChanged(boolean enabled) {}
     }
 
     public interface DiagnosticsCallback {
@@ -154,6 +156,32 @@ public class MoreSheet {
         alertsNote.setTextSize(11);
         alertsNote.setPadding(dpToPx(context, 32), 0, 0, 0);
         content.addView(alertsNote);
+
+        addSpacing(content, dpToPx(context, 8));
+
+        CheckBox updateSwitch = new CheckBox(context);
+        updateSwitch.setText(L10n.t("Notify me when the home phone has a new version of this app",
+                "Báo khi máy ở nhà có phiên bản mới của app này"));
+        updateSwitch.setTextColor(Color.rgb(201, 209, 217));
+        updateSwitch.setTextSize(13);
+        updateSwitch.setChecked(UpdateNotice.isEnabled(context));
+        updateSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (callback != null) {
+                    callback.onUpdateNoticeChanged(isChecked);
+                }
+            }
+        });
+        content.addView(updateSwitch);
+
+        TextView updateNote = new TextView(context);
+        updateNote.setText(L10n.t("Checked in the background about every 6 hours, or with the alerts above when they are on.",
+                "Kiểm tra ở chế độ nền khoảng 6 giờ một lần, hoặc cùng lúc với cảnh báo ở trên nếu đã bật."));
+        updateNote.setTextColor(Color.rgb(139, 148, 158));
+        updateNote.setTextSize(11);
+        updateNote.setPadding(dpToPx(context, 32), 0, 0, 0);
+        content.addView(updateNote);
 
         addSpacing(content, dpToPx(context, 8));
 

@@ -28,6 +28,9 @@ import vn.vuumi.pcdash.net.PcnetState;
  * home phone is online. Only when it is does the check ask the PCDash host app for the PC's state and
  * the battery. {@link HostAlertRules} decides what to notify.
  *
+ * The same job also looks for a new version of this app when {@link UpdateNotice} is on; with only
+ * that on it runs about every 6 hours.
+ *
  * The job is not kept across a reboot of this phone (that would need a boot receiver); opening the
  * app schedules it again. Android may also delay it while the phone sits idle (Doze).
  */
@@ -54,18 +57,30 @@ final class HostWatch {
     /** Turns the checks on or off. Not on the UI thread (JobScheduler and prefs I/O). */
     static void setEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_ENABLED, enabled).remove(KEY_STATE).commit();
-        JobScheduler scheduler = context.getSystemService(JobScheduler.class);
-        if (scheduler == null) return;
-        if (enabled) {
-            schedule(context, scheduler);
-        } else {
-            scheduler.cancel(JOB_ID);
+        reschedule(context);
+        if (!enabled) {
             NotificationManager nm = context.getSystemService(NotificationManager.class);
             if (nm != null) {
                 nm.cancel(NOTIFY_CONNECTION);
                 nm.cancel(NOTIFY_BATTERY);
                 cancelPcNotifications(nm);
             }
+        }
+    }
+
+    /** Whether the job has anything to do: alerts or update notices. */
+    static boolean isNeeded(Context context) {
+        return isEnabled(context) || UpdateNotice.isEnabled(context);
+    }
+
+    /** Schedules the job for what is on now, or cancels it. Not on the UI thread. */
+    static void reschedule(Context context) {
+        JobScheduler scheduler = context.getSystemService(JobScheduler.class);
+        if (scheduler == null) return;
+        if (isNeeded(context)) {
+            schedule(context, scheduler);
+        } else {
+            scheduler.cancel(JOB_ID);
         }
     }
 
@@ -98,7 +113,7 @@ final class HostWatch {
 
     /** Schedules the job again if it is on but missing (after a reboot of this phone). */
     static void syncSchedule(Context context) {
-        if (!isEnabled(context)) return;
+        if (!isNeeded(context)) return;
         JobScheduler scheduler = context.getSystemService(JobScheduler.class);
         if (scheduler != null && scheduler.getPendingJob(JOB_ID) == null) {
             schedule(context, scheduler);
@@ -106,9 +121,11 @@ final class HostWatch {
     }
 
     private static void schedule(Context context, JobScheduler scheduler) {
+        // The alerts need a check every 15 minutes; a new version can wait a few hours.
+        long interval = isEnabled(context) ? INTERVAL_MS : UpdateNotice.INTERVAL_MS;
         JobInfo job = new JobInfo.Builder(JOB_ID, new ComponentName(context, HostWatchJobService.class))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setPeriodic(INTERVAL_MS)
+                .setPeriodic(interval)
                 .build();
         scheduler.schedule(job);
     }
@@ -116,7 +133,9 @@ final class HostWatch {
     /** One check, on the job's worker thread. */
     static void runCheck(Context context) {
         RemoteController c = RemoteSession.controller(context);
-        if (!c.isPaired()) return;
+        boolean alerts = isEnabled(context);
+        boolean updates = UpdateNotice.isEnabled(context);
+        if (!c.isPaired() || (!alerts && !updates)) return;
         RemoteSession.acquire();
         try {
             c.open();
@@ -124,42 +143,51 @@ final class HostWatch {
                 // This phone's own tailnet is not up (no sign-in, no route): says nothing about the host.
                 return;
             }
-            TailnetPeers peers = TailnetPeers.parse(c.getBridge().peersJson());
-            TailnetPeers.Peer host = peers != null ? peers.host() : null;
-            Boolean listedOnline = host != null ? Boolean.valueOf(host.online) : null;
-            // Offline in the device list: one request in case the list lags; otherwise up to three
-            // (a single request can land on a blip).
-            int tries = Boolean.FALSE.equals(listedOnline) ? 1 : 3;
-            Map<String, Boolean> pcs = null;
-            Map<String, String> names = new HashMap<String, String>();
-            for (int attempt = 0; attempt < tries && pcs == null; attempt++) {
-                try {
-                    pcs = readPcs(c, names);
-                } catch (RemoteApiClient.DeviceRevokedException e) {
-                    return;
-                } catch (IOException e) {
-                    if (attempt < tries - 1) Thread.sleep(5000);
-                }
+            boolean hostAnswered = !alerts || checkHost(context, c);
+            if (updates && hostAnswered) {
+                UpdateNotice.check(context, c);
             }
-            Double battery = null;
-            Boolean charging = null;
-            if (pcs != null) {
-                try {
-                    MetricsSnapshot m = MetricsParser.parse(c.getMetrics());
-                    if (m.phone != null && m.phone.battery != null) {
-                        battery = m.phone.battery.percent;
-                        charging = m.phone.battery.charging;
-                    }
-                } catch (IOException ignored) {}
-            }
-            record(context, new HostAlertRules.Check(listedOnline, pcs != null, pcs, battery, charging),
-                    host != null ? host.lastSeenMs : -1L, names);
         } catch (IOException | InterruptedException ignored) {
             // Stopped by the system or the tailnet would not start; the next run tries again.
         } finally {
             // A background check closes at once (unless the app came back meanwhile).
             RemoteSession.release(c, true, 0L);
         }
+    }
+
+    // The alerts' part: the home phone, its PCs and battery. False when the host did not answer.
+    private static boolean checkHost(Context context, RemoteController c) throws InterruptedException {
+        TailnetPeers peers = TailnetPeers.parse(c.getBridge().peersJson());
+        TailnetPeers.Peer host = peers != null ? peers.host() : null;
+        Boolean listedOnline = host != null ? Boolean.valueOf(host.online) : null;
+        // Offline in the device list: one request in case the list lags; otherwise up to three
+        // (a single request can land on a blip).
+        int tries = Boolean.FALSE.equals(listedOnline) ? 1 : 3;
+        Map<String, Boolean> pcs = null;
+        Map<String, String> names = new HashMap<String, String>();
+        for (int attempt = 0; attempt < tries && pcs == null; attempt++) {
+            try {
+                pcs = readPcs(c, names);
+            } catch (RemoteApiClient.DeviceRevokedException e) {
+                return false;
+            } catch (IOException e) {
+                if (attempt < tries - 1) Thread.sleep(5000);
+            }
+        }
+        Double battery = null;
+        Boolean charging = null;
+        if (pcs != null) {
+            try {
+                MetricsSnapshot m = MetricsParser.parse(c.getMetrics());
+                if (m.phone != null && m.phone.battery != null) {
+                    battery = m.phone.battery.percent;
+                    charging = m.phone.battery.charging;
+                }
+            } catch (IOException ignored) {}
+        }
+        record(context, new HostAlertRules.Check(listedOnline, pcs != null, pcs, battery, charging),
+                host != null ? host.lastSeenMs : -1L, names);
+        return pcs != null;
     }
 
     // Each PC's state from the host's list (names filled in), or the one PC of an older host under "".
@@ -290,7 +318,7 @@ final class HostWatch {
         return pcId == null || pcId.isEmpty() ? NOTIFY_PC : 1000 + (pcId.hashCode() & 0xffff);
     }
 
-    private static int smallIcon(Context context) {
+    static int smallIcon(Context context) {
         // No R class in this build; the tile's power glyph is a white icon that fits the status bar.
         int id = context.getResources().getIdentifier("ic_qs_wake", "drawable", context.getPackageName());
         return id != 0 ? id : android.R.drawable.stat_sys_warning;

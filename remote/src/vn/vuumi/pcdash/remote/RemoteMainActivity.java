@@ -124,6 +124,8 @@ public class RemoteMainActivity extends ComponentActivity {
     private boolean backCallbackRegistered;
     // True once controller.open() has finished for this start, so a quick action can be sent.
     private boolean sessionReady;
+    // Opened from the new-version notification (see UpdateNotice): show the update card.
+    private boolean pendingShowUpdate;
     private AppLockGate lockGate;
 
     private ControlTabView controlTabView;
@@ -649,6 +651,7 @@ public class RemoteMainActivity extends ComponentActivity {
                 switchTab(tab);
             }
         });
+        pendingShowUpdate = getIntent().getBooleanExtra(UpdateNotice.EXTRA_SHOW_UPDATE, false);
 
         if (savedInstanceState != null) {
             String savedTabName = savedInstanceState.getString("active_tab");
@@ -857,6 +860,7 @@ public class RemoteMainActivity extends ComponentActivity {
                         sessionReady = true;
                         runPendingQuickAction();
                         applyPendingPairingQr();
+                        showPendingUpdate();
                     }
                 });
             }
@@ -867,10 +871,26 @@ public class RemoteMainActivity extends ComponentActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (intent.getBooleanExtra(UpdateNotice.EXTRA_SHOW_UPDATE, false)) {
+            pendingShowUpdate = true;
+        }
         // Already open (for example the tile was used while the app was on screen).
         if (sessionReady) {
             runPendingQuickAction();
+            showPendingUpdate();
         }
+    }
+
+    // From the new-version notification: the Control tab, and a fresh check so its update card shows.
+    private void showPendingUpdate() {
+        if (!pendingShowUpdate || isStopped || isDestroyed || controller == null || !controller.isPaired()) {
+            return;
+        }
+        pendingShowUpdate = false;
+        if (navigator != null) {
+            navigator.select(MainTab.CONTROL);
+        }
+        triggerUpdateCheck();
     }
 
     // Wake or Sleep from a launcher shortcut or the Quick Settings tile (see QuickActions).
@@ -1219,6 +1239,20 @@ public class RemoteMainActivity extends ComponentActivity {
                     @Override
                     public void run() {
                         HostWatch.setEnabled(getApplicationContext(), enabled);
+                    }
+                });
+            }
+
+            @Override
+            public void onUpdateNoticeChanged(final boolean enabled) {
+                if (enabled && Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATIONS);
+                }
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        UpdateNotice.setEnabled(getApplicationContext(), enabled);
                     }
                 });
             }
@@ -2070,11 +2104,13 @@ public class RemoteMainActivity extends ComponentActivity {
             if (manual) {
                 Toast.makeText(this, L10n.t("The home phone has no update", "Máy ở nhà chưa có bản cập nhật nào"), Toast.LENGTH_LONG).show();
             }
+            noteUpdateCheckedInApp(0);
             return;
         }
 
         int installedVersionCode = getInstalledVersionCode();
         boolean hasNew = UpdateChecker.isUpdateAvailable(info, installedVersionCode);
+        noteUpdateCheckedInApp(hasNew ? info.versionCode : 0);
         if (manual) {
             Toast.makeText(this, hasNew ? L10n.t("New version v", "Có bản mới v") + info.versionName
                     : L10n.t("You have the latest version (v", "Đang dùng bản mới nhất (v") + getInstalledVersionName() + ")", Toast.LENGTH_LONG).show();
@@ -2092,6 +2128,17 @@ public class RemoteMainActivity extends ComponentActivity {
                 updateUpdateCardUI();
             }
         }
+    }
+
+    // The update card now says it (or there is nothing new): no notification about this version.
+    private void noteUpdateCheckedInApp(final int newVersionCode) {
+        final Context app = getApplicationContext();
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                UpdateNotice.checkedInApp(app, newVersionCode);
+            }
+        });
     }
 
     private void startUpdateFlow() {

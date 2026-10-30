@@ -111,6 +111,7 @@ Trên điện thoại Xiaomi/MIUI, bật **Cài đặt qua USB** nếu MIUI ch�
    - Chạy `.\build-all.ps1` để build remote, nhúng APK mới vào assets của host (`remote-update.apk`, kèm SHA-256 và size trong `remote-update.json`, tạo ở `app\build\generated\remoteUpdate`), rồi build host.
    - Cài lại host trên điện thoại ở nhà: `adb install -r app\build\pcdash-signed.apk`.
    - Trên máy điều khiển: mở PCDash Remote, app tự phát hiện bản cập nhật mới từ host; bấm nút **Cập nhật** để tải và cài đặt một chạm qua tsnet mà không cần adb hay cáp nối.
+   - Nếu trên máy điều khiển đã bật **Thêm → Báo khi máy ở nhà có phiên bản mới của app này**, máy đó nhận một thông báo trong vòng vài giờ (hoặc khoảng 15 phút nếu đang bật cảnh báo), mỗi phiên bản một lần; chạm thông báo để mở thẻ cập nhật.
 
 ### CI và phát hành trên GitHub
 
