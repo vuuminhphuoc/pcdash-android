@@ -2,8 +2,9 @@ package vn.vuumi.pcdash.remote
 
 /**
  * After the home phone accepted a power command: waits until the PC really is on (Wake) or off (Sleep,
- * Hibernate, Shut down), as seen in the status the app polls, or gives up after a while. A command
- * with nothing to wait for (Cancel shutdown) has no watch.
+ * Hibernate, Shut down, Restart: the PC going off is the first thing seen), as seen in the status the
+ * app polls, or gives up after a while. A command with nothing to wait for (Cancel shutdown, Lock,
+ * Sign out) has no watch.
  */
 class PowerActionWatch private constructor(
     @JvmField val action: String,
@@ -33,7 +34,7 @@ class PowerActionWatch private constructor(
         @JvmStatic
         fun start(action: String?, nowMs: Long): PowerActionWatch? = when (action) {
             "wake" -> PowerActionWatch(action, true, nowMs + WAKE_TIMEOUT_MS)
-            "sleep", "hibernate", "shutdown" -> PowerActionWatch(action, false, nowMs + OFF_TIMEOUT_MS)
+            "sleep", "hibernate", "shutdown", "restart" -> PowerActionWatch(action, false, nowMs + OFF_TIMEOUT_MS)
             else -> null
         }
     }

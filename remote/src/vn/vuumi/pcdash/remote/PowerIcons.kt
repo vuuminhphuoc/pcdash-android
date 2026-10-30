@@ -31,7 +31,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /** The Control tab's icons, drawn with one colour so they stay sharp and match the label. */
-enum class PowerIcon { WAKE, SLEEP, HIBERNATE, SHUTDOWN, ABORT, REFRESH }
+enum class PowerIcon { WAKE, SLEEP, HIBERNATE, SHUTDOWN, RESTART, LOCK, LOGOFF, ABORT, REFRESH }
 
 /** Draws [icon] in the square of side [s] at [topLeft]. */
 internal fun DrawScope.drawPowerIcon(icon: PowerIcon, color: Color, topLeft: Offset, s: Float) {
@@ -68,6 +68,19 @@ internal fun DrawScope.drawPowerIcon(icon: PowerIcon, color: Color, topLeft: Off
         PowerIcon.SHUTDOWN -> {
             drawArc(color, -60f, 300f, false, topLeft = at(0.14f, 0.16f), size = Size(s * 0.72f, s * 0.72f), style = stroke)
             drawLine(color, at(0.5f, 0.06f), at(0.5f, 0.5f), width, cap = StrokeCap.Round)
+        }
+        PowerIcon.RESTART -> drawPowerIcon(PowerIcon.REFRESH, color, topLeft, s)
+        PowerIcon.LOCK -> {
+            // A padlock: a solid body with a shackle above it.
+            drawArc(color, 180f, 180f, false, topLeft = at(0.3f, 0.1f), size = Size(s * 0.4f, s * 0.5f), style = stroke)
+            val body = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(Rect(at(0.18f, 0.44f), at(0.82f, 0.92f)), androidx.compose.ui.geometry.CornerRadius(s * 0.08f))) }
+            drawPath(body, color)
+        }
+        PowerIcon.LOGOFF -> {
+            // A door frame open on the right, with an arrow leaving it.
+            drawPath(polyline(0.46f, 0.12f, 0.14f, 0.12f, 0.14f, 0.88f, 0.46f, 0.88f), color, style = stroke)
+            drawLine(color, at(0.36f, 0.5f), at(0.88f, 0.5f), width, cap = StrokeCap.Round)
+            drawPath(polyline(0.7f, 0.3f, 0.9f, 0.5f, 0.7f, 0.7f), color, style = stroke)
         }
         PowerIcon.ABORT -> {
             drawOval(color, topLeft = at(0.08f, 0.08f), size = Size(s * 0.84f, s * 0.84f), style = stroke)

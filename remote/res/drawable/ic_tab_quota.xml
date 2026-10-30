@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom bar glyph (gauge: a ring that is partly used), white so BottomNavBar can tint it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M12,3.5 A8.5,8.5 0 1,0 20.5,12" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round"/>
+    <path android:pathData="M12,12 L16.5,7.5" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,10.2a1.8,1.8 0 1,0 0.001,0z"/>
+</vector>

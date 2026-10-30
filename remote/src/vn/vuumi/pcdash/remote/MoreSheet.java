@@ -1,6 +1,7 @@
 package vn.vuumi.pcdash.remote;
 
 import vn.vuumi.pcdash.ui.Tap;
+import vn.vuumi.pcdash.i18n.AppLanguage;
 import vn.vuumi.pcdash.i18n.L10n;
 import android.app.Dialog;
 import android.content.Context;
@@ -81,7 +82,7 @@ public class MoreSheet {
 
         // 1. Cài đặt xác thực
         CheckBox authSwitch = new CheckBox(context);
-        authSwitch.setText(L10n.t("Require unlock for Shut down/Hibernate", "Yêu cầu xác thực cho Tắt máy/Ngủ đông"));
+        authSwitch.setText(L10n.t("Require unlock for Shut down/Restart/Hibernate/Sign out", "Yêu cầu xác thực cho Tắt máy/Khởi động lại/Ngủ đông/Đăng xuất"));
         authSwitch.setTextColor(Color.rgb(201, 209, 217));
         authSwitch.setTextSize(13);
         boolean currentRequireAuth = true;
@@ -276,8 +277,26 @@ public class MoreSheet {
 
         addSpacing(content, dpToPx(context, 12));
 
+        Button languageBtn = new Button(context);
+        languageBtn.setText(L10n.t("Language", "Ngôn ngữ"));
+        languageBtn.setTextColor(Color.rgb(230, 237, 243));
+        languageBtn.setBackgroundColor(Color.rgb(33, 38, 45));
+        languageBtn.setTextSize(13);
+        Tap.wire(languageBtn, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                if (context instanceof android.app.Activity) {
+                    AppLanguage.showPicker((android.app.Activity) context);
+                }
+            }
+        });
+        content.addView(languageBtn);
+
+        addSpacing(content, dpToPx(context, 12));
+
         Button appLockBtn = new Button(context);
-        appLockBtn.setText(L10n.t("🔒 App lock", "🔒 Khóa ứng dụng"));
+        appLockBtn.setText(L10n.t("App lock", "Khóa ứng dụng"));
         appLockBtn.setTextColor(Color.rgb(230, 237, 243));
         appLockBtn.setBackgroundColor(Color.rgb(33, 38, 45));
         appLockBtn.setTextSize(13);

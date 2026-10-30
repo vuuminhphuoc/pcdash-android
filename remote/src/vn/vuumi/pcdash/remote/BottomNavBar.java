@@ -10,6 +10,7 @@ import android.animation.ValueAnimator;
 import android.os.Build;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.view.Gravity;
 import android.view.RoundedCorner;
 import android.view.View;
@@ -20,7 +21,7 @@ import android.widget.TextView;
 public class BottomNavBar extends LinearLayout {
 
     private final TabNavigator.Listener listener;
-    private final TextView[] icons = new TextView[MainTab.values().length];
+    private final ImageView[] icons = new ImageView[MainTab.values().length];
     private final TextView[] labels = new TextView[MainTab.values().length];
     private final LinearLayout row;
     private final LinearLayout[] items = new LinearLayout[MainTab.values().length];
@@ -34,7 +35,8 @@ public class BottomNavBar extends LinearLayout {
     private static final int MIN_BOTTOM_DP = 12;
     private static final int ROW_VERTICAL_DP = 6;
 
-    private static final String[] TAB_ICONS = new String[]{"⚡", "📊", "📈", "📋", "☰"};
+    // White vector glyphs in res/drawable (looked up by name: this build has no R class), tinted by the selection.
+    private static final String[] TAB_ICONS = new String[]{"ic_tab_control", "ic_tab_monitor", "ic_tab_quota", "ic_tab_log", "ic_tab_more"};
     private static String[] tabLabels() {
         return new String[]{
                 L10n.t("Control", "Điều khiển"),
@@ -69,11 +71,10 @@ public class BottomNavBar extends LinearLayout {
             itemLayout.setPadding(0, dpToPx(4), 0, dpToPx(4));
             items[i] = itemLayout;
 
-            TextView iconTv = new TextView(context);
-            iconTv.setText(TAB_ICONS[i]);
-            iconTv.setTextSize(16);
-            iconTv.setGravity(Gravity.CENTER);
-            itemLayout.addView(iconTv);
+            ImageView iconTv = new ImageView(context);
+            iconTv.setImageResource(context.getResources().getIdentifier(TAB_ICONS[i], "drawable", context.getPackageName()));
+            iconTv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            itemLayout.addView(iconTv, new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
 
             TextView labelTv = new TextView(context);
             labelTv.setText(labelTexts[i]);
@@ -162,7 +163,7 @@ public class BottomNavBar extends LinearLayout {
             boolean isSelected = (tabs[i] == selectedTab);
             int color = isSelected ? Color.rgb(88, 166, 255) : Color.rgb(139, 148, 158);
             if (icons[i] != null) {
-                icons[i].setTextColor(color);
+                icons[i].setColorFilter(color);
             }
             if (labels[i] != null) {
                 labels[i].setTextColor(color);

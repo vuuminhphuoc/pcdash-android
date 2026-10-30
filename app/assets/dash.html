@@ -66,6 +66,15 @@
     <button class="power" onclick="doAction('shutdown', true)">
       <span class="ico">&#9211;</span>Shutdown
     </button>
+    <button class="sleep" onclick="doAction('lock', true)">
+      <span class="ico">&#128274;</span><span data-en="Lock">Khóa máy</span>
+    </button>
+    <button class="sleep" onclick="doAction('logoff', true)">
+      <span class="ico">&#128682;</span><span data-en="Sign out">Đăng xuất</span>
+    </button>
+    <button class="power" onclick="doAction('restart', true)" style="grid-column: span 2">
+      <span class="ico">&#128260;</span><span data-en="Restart">Khởi động lại</span>
+    </button>
     <button class="abort" onclick="doAction('abort')" data-en="Cancel shutdown (shutdown /a)">Hủy lệnh tắt máy (shutdown /a)</button>
   </div>
 

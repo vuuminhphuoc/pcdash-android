@@ -39,7 +39,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 - **Host** là app `app/` trên điện thoại ở nhà. Giữ dashboard `:8090` trong mạng nhà làm đường dự phòng; API mới `:8091` yêu cầu `Authorization: Bearer <token>` để điều khiển từ APK Remote. Host phát WOL trong LAN và gọi PcAgent trên PC.
 - **PCDash Remote** chạy trên máy Android điều khiển, dùng tsnet Go userspace trong app để vào tailnet, không cần bật Tailscale app/VPN. Kết nối chỉ hoạt động khi mở app; khi đóng app, tsnet dừng (nếu bật Cảnh báo máy ở nhà, app mở tsnet vài giây mỗi lần kiểm tra nền rồi dừng lại). Không có relay/cloud riêng.
 - **Ghép đôi** chỉ thực hiện trong cùng Wi-Fi/LAN nhà. Sau đó Remote gọi API host qua tailnet; Wake do host ở trong LAN thực hiện.
-- **PC** chạy `PcAgent.exe` lắng nghe `:8799`, thực thi Sleep/Hibernate/Shutdown/Abort.
+- **PC** chạy `PcAgent.exe` lắng nghe `:8799`, thực thi Sleep/Hibernate/Shutdown/Restart/Khóa/Đăng xuất/Abort.
 
 ## Thành phần
 
@@ -53,7 +53,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 | `pcnet/` | Thư viện Go tsnet userspace, đóng gói native cho `arm64-v8a` và `armeabi-v7a`. |
 | `shared/` | Giao thức ghép đôi SRP-6a dùng chung giữa host và Remote. |
 | `app/src/.../PcConn.java` | Gửi WOL, kiểm tra trạng thái PC (TCP probe), gọi agent `/exec`. |
-| `agent/PcAgent.cs` | Agent Windows lắng nghe `:8799`, xử lý `sleep`, `hibernate`, `shutdown`, `abort`, `ping`. |
+| `agent/PcAgent.cs` | Agent Windows lắng nghe `:8799`, xử lý `sleep`, `hibernate`, `shutdown`, `restart`, `lock`, `logoff`, `abort`, `ping`. |
 | `agent/build_agent.ps1` | Biên dịch agent bằng `csc.exe`, không cần Python/.NET SDK. |
 | `agent/install.bat` | Cài agent, sinh token truy cập, mở firewall TCP 8799 (chỉ mạng nội bộ) và tạo shortcut Startup. |
 | `build.ps1`, `build-remote.ps1`, `build-all.ps1` | Build APK host và remote bằng Gradle (`settings.gradle.kts`, `*/build.gradle.kts`); bản build host tự đóng gói APK remote vào assets để phục vụ tự cập nhật. |
@@ -149,13 +149,16 @@ Dashboard dự phòng mở tại `http://<IP-điện-thoại>:8090` trong LAN (h
 - **Sleep**: `rundll32 powrprof.dll,SetSuspendState`.
 - **Hibernate**: `shutdown /h`.
 - **Shutdown**: `shutdown /s /t 0`.
+- **Restart**: `shutdown /r /t 0` (hỏi xác nhận trên remote).
+- **Khóa máy**: `rundll32 user32.dll,LockWorkStation`, khóa phiên Windows mà PcAgent đang chạy.
+- **Đăng xuất**: `shutdown /l` (hỏi xác nhận trên remote).
 - **Hủy lệnh tắt**: `shutdown /a`.
 
 Tính năng trong PCDash Remote:
 
 - **Nhật ký lệnh**: host ghi mỗi lệnh (thiết bị, giờ, kết quả) vào `command_log.jsonl`, tối đa 500 dòng. Xem trên remote bằng nút **Nhật ký** hoặc trong màn **Thiết bị điều khiển từ xa** của host.
 - **Biểu đồ**: host lấy mẫu mỗi 30 giây và giữ 6 giờ CPU/GPU, RAM, mạng, nhiệt độ (`/v1/history`); remote vẽ 1 giờ hoặc 6 giờ.
-- **Xác thực**: Hibernate, Shutdown và **Quên host** đòi vân tay/khuôn mặt/PIN màn hình khóa (hộp thoại xác nhận nếu máy không có khóa). Công tắc cho Hibernate/Shutdown nằm trong cài đặt remote; Quên host luôn cần xác thực.
+- **Xác thực**: Hibernate, Shutdown, Restart, Đăng xuất và **Quên host** đòi vân tay/khuôn mặt/PIN màn hình khóa (hộp thoại xác nhận nếu máy không có khóa). Công tắc cho Hibernate/Shutdown nằm trong cài đặt remote; Quên host luôn cần xác thực.
 - **Kiểm tra cập nhật**: nút **Kiểm tra cập nhật** ở cuối màn hình. APK cập nhật tải vào cache riêng của app và bị xóa mỗi lần mở lại app.
 - **Điều hướng**: thanh tab dưới cùng gồm Điều khiển, Giám sát, Quota, Nhật ký và Thêm (Cài đặt, Quên host). App luôn mở ở Điều khiển.
 - **Quota**: PcAgent chạy `omp usage --json --redact` (đường dẫn tùy chỉnh bằng `PCAGENT_OMP_PATH`), gộp theo nhà cung cấp và nhóm, phục vụ `GET /quota`; host chuyển tiếp ở `/v1/quota` và giữ số cũ khi PC tắt. Mỗi thẻ hiện thanh gộp 5 giờ và tuần, chạm để xem mọi cửa sổ và từng tài khoản. Nhãn tài khoản là email đã che của omp (`ten@*`); không gửi email đầy đủ, accountId hay token. Claude chưa có trong tab này.

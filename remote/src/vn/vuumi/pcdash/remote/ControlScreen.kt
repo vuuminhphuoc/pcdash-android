@@ -120,6 +120,9 @@ class ControlState {
         PowerTile("sleep", PowerIcon.SLEEP, "Sleep", Color(26, 84, 176), null, Color.White, 56.dp),
         PowerTile("hibernate", PowerIcon.HIBERNATE, "Hibernate", Color(100, 64, 168), null, Color.White, 56.dp),
         PowerTile("shutdown", PowerIcon.SHUTDOWN, L10n.t("Shut down", "Tắt máy (Shutdown)"), Color(34, 20, 22), Color(UiKit.ERROR), Color(UiKit.ERROR), 56.dp),
+        PowerTile("lock", PowerIcon.LOCK, L10n.t("Lock", "Khóa máy"), Color(UiKit.CARD), Color(UiKit.BORDER), Color(201, 209, 217), 52.dp),
+        PowerTile("logoff", PowerIcon.LOGOFF, L10n.t("Sign out", "Đăng xuất"), Color(UiKit.CARD), Color(UiKit.BORDER), Color(201, 209, 217), 52.dp),
+        PowerTile("restart", PowerIcon.RESTART, L10n.t("Restart", "Khởi động lại (Restart)"), Color(34, 20, 22), Color(UiKit.ERROR), Color(UiKit.ERROR), 56.dp),
         PowerTile("abort", PowerIcon.ABORT, L10n.t("Cancel shutdown", "Hủy lệnh tắt máy"), Color(UiKit.CARD), Color(UiKit.BORDER), Color(201, 209, 217), 48.dp),
     )
 
@@ -167,9 +170,16 @@ fun ControlScreen(state: ControlState, callback: ControlTabView.Callback?) {
             PowerTileView(state.tile("sleep"), onAction, Modifier.weight(1f))
             PowerTileView(state.tile("hibernate"), onAction, Modifier.weight(1f))
         }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PowerTileView(state.tile("lock"), onAction, Modifier.weight(1f))
+            PowerTileView(state.tile("logoff"), onAction, Modifier.weight(1f))
+        }
         Spacer(Modifier.height(18.dp))
         SectionLabel(L10n.t("DANGER ZONE", "VÙNG NGUY HIỂM"))
         PowerTileView(state.tile("shutdown"), onAction)
+        Spacer(Modifier.height(10.dp))
+        PowerTileView(state.tile("restart"), onAction)
         Spacer(Modifier.height(10.dp))
         PowerTileView(state.tile("abort"), onAction)
     }

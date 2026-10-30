@@ -12,6 +12,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
+        android:name=".RemoteApp"
         android:icon="@mipmap/ic_launcher"
         android:label="PCDash Remote"
         android:localeConfig="@xml/locales_config"

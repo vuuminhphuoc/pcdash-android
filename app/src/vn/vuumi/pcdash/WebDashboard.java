@@ -184,7 +184,7 @@ public class WebDashboard {
             }
             if ("POST".equalsIgnoreCase(method) && path.startsWith("/api/")) {
                 String action = path.substring(5);
-                if (!action.matches("wake|sleep|hibernate|shutdown|abort")) {
+                if (!action.matches("wake|sleep|hibernate|shutdown|restart|lock|logoff|abort")) {
                     send(s, 404, "application/json", "{\"error\":\"unknown_action\"}".getBytes(StandardCharsets.UTF_8));
                     return;
                 }

@@ -208,7 +208,8 @@ public class RemoteApiClient {
 
     public RemoteCommandResult postAction(int localPort, String token, String action) throws IOException {
         if (action == null || (!"wake".equals(action) && !"sleep".equals(action)
-                && !"hibernate".equals(action) && !"shutdown".equals(action) && !"abort".equals(action))) {
+                && !"hibernate".equals(action) && !"shutdown".equals(action) && !"restart".equals(action)
+                && !"lock".equals(action) && !"logoff".equals(action) && !"abort".equals(action))) {
             throw new IllegalArgumentException("Action not permitted: " + action);
         }
 

@@ -45,7 +45,7 @@ adb -s $env:PCDASH_REMOTE_SERIAL shell dumpsys package vn.vuumi.pcdash.remote | 
 adb -s $env:PCDASH_HOST_SERIAL shell dumpsys package vn.vuumi.pcdash | Select-String "versionName|versionCode"
 ```
 
-Bản trên nhánh này: remote **1.26 (27)**, host **1.25 (26)**.
+Bản trên nhánh này: remote **1.28 (29)**, host **1.28 (29)**.
 
 ## 2. Build và test tại máy
 
@@ -56,7 +56,7 @@ Bản trên nhánh này: remote **1.26 (27)**, host **1.25 (26)**.
 Mong đợi:
 
 - Lần đầu Gradle tải Gradle 8.13, Android Gradle plugin và thư viện (vài trăm MB, vài phút).
-- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.26, code 27)` và `BUILD-ALL SUCCESSFUL`.
+- Cuối log có `Remote APK verified`, `Host APK verified ... (bundles remote 1.28, code 29)` và `BUILD-ALL SUCCESSFUL`.
 - Ra hai file `remote\build\pcdash-remote-signed.apk` và `app\build\pcdash-signed.apk`.
 
 Chạy các test như CI:
