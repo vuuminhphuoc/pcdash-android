@@ -56,3 +56,6 @@ app/assets/remote-update.json
 
 # CI caches
 .cache/
+
+# Personal Claude Code permissions for this machine
+.claude/settings.local.json
