@@ -78,7 +78,8 @@ phone does not need the Tailscale app or a VPN turned on.
    `agent\show-qr.bat`).
 4. **Configure the host.** In PCDash host open **PC settings** and tap **Scan QR code from PC**. One scan fills the
    PC's LAN IP, MAC address, port and token. Review and tap **Save settings**. You can also type the values
-   by hand (give the PC a DHCP reservation so the IP stays put; the token is printed by the installer).
+   by hand (give the PC a DHCP reservation so the IP stays put; the token is printed by the installer). If the router restarts anyway
+   (a power cut) and hands the PC a new IP, host 1.29 and PcAgent 1.2.4 or later find the PC again in the same subnet and save its new IP.
 5. **Sign in to Tailscale** on both phones inside the apps (same account).
 6. **Pair.** With both phones on the home Wi-Fi, open **Remote devices -> Add device** on the
    host, then on the remote tap **Scan the QR code on the home phone** (or type the 6-character

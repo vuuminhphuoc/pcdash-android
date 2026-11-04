@@ -20,6 +20,7 @@ final class PcFleet {
     private final PcSettings settings;
     private final File dir;
     private final MetricsHistory firstHistory;
+    private volatile PcRecovery recovery;
     private final Map<String, PcMetricsClient> metricsClients = new ConcurrentHashMap<String, PcMetricsClient>();
     private final Map<String, PcQuotaClient> quotaClients = new ConcurrentHashMap<String, PcQuotaClient>();
     private final Map<String, QuotaStore> quotaStores = new ConcurrentHashMap<String, QuotaStore>();
@@ -44,6 +45,11 @@ final class PcFleet {
 
     PcSettings settings() {
         return settings;
+    }
+
+    /** Looks for a PC whose address changed when it stays unreachable (see {@link PcRecovery}). */
+    void setRecovery(PcRecovery recovery) {
+        this.recovery = recovery;
     }
 
     /** Every PC with its current state; the PCs are probed at the same time. */
@@ -128,8 +134,14 @@ final class PcFleet {
                 @Override
                 public void run() {
                     MetricsHistory h = history(pc.id);
-                    h.add(MetricsHistory.parseAgentMetrics(now, metricsClient(pc.id).getMetricsJson()));
+                    String json = metricsClient(pc.id).getMetricsJson();
+                    h.add(MetricsHistory.parseAgentMetrics(now, json));
                     if (save) h.save();
+                    PcRecovery r = recovery;
+                    if (r != null) {
+                        if (json == null) r.onUnreachable(pc);
+                        else r.onReachable(pc.id);
+                    }
                 }
             }));
         }

@@ -220,6 +220,18 @@ namespace PcAgent
             catch { return false; }
         }
 
+        // 16 to 64 letters and digits: what the host sends is 32 hex characters.
+        static bool IsWhoamiChallenge(string c)
+        {
+            if (string.IsNullOrEmpty(c) || c.Length < 16 || c.Length > 64) return false;
+            foreach (char ch in c)
+            {
+                bool ok = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+                if (!ok) return false;
+            }
+            return true;
+        }
+
         internal static string ComputeSignature(string token, string timestamp, string nonce, string method, string target, string body)
         {
             string data = timestamp + "\n" + nonce + "\n" + method + "\n" + target + "\n" + (body ?? "");
@@ -1523,6 +1535,31 @@ namespace PcAgent
                     }
                     Log("  200 /healthz");
                     Respond(res, 200, "ok");
+                    return;
+                }
+
+                // The host finds this PC again after its LAN address changed (the router restarted) by asking
+                // every device on the subnet this. The answer proves the agent holds the token without giving it
+                // away, and cannot be used as the signature of a request (its timestamp is not a number).
+                if (path == "/whoami")
+                {
+                    if (req.HttpMethod != "GET")
+                    {
+                        Respond(res, 405, "method_not_allowed");
+                        return;
+                    }
+                    string challenge;
+                    if (!req.QueryString.TryGetValue("c", out challenge) || !IsWhoamiChallenge(challenge))
+                    {
+                        Respond(res, 400, "bad_challenge");
+                        return;
+                    }
+                    if (agentToken == null)
+                    {
+                        Respond(res, 503, "no_token");
+                        return;
+                    }
+                    RespondJson(res, 200, "{\"proof\":\"" + ComputeSignature(agentToken, "whoami", challenge, "GET", "/whoami", "") + "\"}");
                     return;
                 }
 

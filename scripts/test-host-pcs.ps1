@@ -26,7 +26,8 @@ $sources = @(
     (Join-Path $app 'src\vn\vuumi\pcdash\TimeSource.java'),
     (Join-Path $app 'src\vn\vuumi\pcdash\PcConn.java'),
     (Join-Path $app 'test\vn\vuumi\pcdash\PcConnProbeTest.java'),
-    (Join-Path $app 'test\vn\vuumi\pcdash\PcListTest.java')
+    (Join-Path $app 'test\vn\vuumi\pcdash\PcListTest.java'),
+    (Join-Path $app 'test\vn\vuumi\pcdash\PcLocatorTest.java')
 )
 
 Write-Host "Compiling PC connection tests..."
@@ -45,6 +46,12 @@ Write-Host "Executing PcListTest..."
 & $java -cp "$classesDir;$androidJar" vn.vuumi.pcdash.PcListTest
 if ($LASTEXITCODE -ne 0) {
     throw "PcListTest failed"
+}
+
+Write-Host "Executing PcLocatorTest..."
+& $java -cp "$classesDir;$androidJar" vn.vuumi.pcdash.PcLocatorTest
+if ($LASTEXITCODE -ne 0) {
+    throw "PcLocatorTest failed"
 }
 
 Write-Host "PASS: host PC connection tests passed!"

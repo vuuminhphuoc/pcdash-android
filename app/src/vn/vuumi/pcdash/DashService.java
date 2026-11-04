@@ -9,6 +9,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Build;
@@ -40,6 +42,7 @@ public class DashService extends Service implements RemoteActionExecutor {
     private ScheduledExecutorService metricsScheduler;
     private int sampleCount = 0;
 
+    private ConnectivityManager.NetworkCallback networkCallback;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
 
@@ -139,6 +142,7 @@ public class DashService extends Service implements RemoteActionExecutor {
         commandLog = new CommandLog(new File(getFilesDir(), "command_log.jsonl"));
         metricsHistory = new MetricsHistory(new File(getFilesDir(), "metrics_history.json"));
         fleet = new PcFleet(pcSettings, getFilesDir(), metricsHistory);
+        startPcRecovery(pcSettings);
 
         web = new WebDashboard(this, commandLog, pcSettings);
         web.start();
@@ -177,6 +181,42 @@ public class DashService extends Service implements RemoteActionExecutor {
 
         startMetricsSampling();
         WatchdogReceiver.schedule(this);
+    }
+
+    /**
+     * After a power cut the router hands out new addresses, so the PC's saved one is wrong. When the PC
+     * stays unreachable, or this phone's Wi-Fi just came back, look for the agent in the same subnet.
+     */
+    private void startPcRecovery(PcSettings pcSettings) {
+        final PcRecovery r = new PcRecovery(pcSettings, new AndroidPcNet(), new PcRecovery.Listener() {
+            @Override
+            public void onAddressChanged(String pcName, String oldIp, String newIp) {
+                Log.i(TAG, "PC \"" + pcName + "\" moved from " + oldIp + " to " + newIp + "; saved the new address");
+            }
+        }, TimeSource.SYSTEM, Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable run) {
+                Thread t = new Thread(run, "pcdash-pc-recovery");
+                t.setDaemon(true);
+                return t;
+            }
+        }));
+        fleet.setRecovery(r);
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            if (cm != null) {
+                networkCallback = new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(Network network) {
+                        r.networkChanged();
+                    }
+                };
+                cm.registerDefaultNetworkCallback(networkCallback);
+            }
+        } catch (Exception e) {
+            networkCallback = null;
+            Log.w(TAG, "Could not watch the network: " + e.getMessage());
+        }
     }
 
     private void startMetricsSampling() {
@@ -245,6 +285,14 @@ public class DashService extends Service implements RemoteActionExecutor {
         if (metricsScheduler != null) {
             metricsScheduler.shutdown();
             metricsScheduler = null;
+        }
+
+        if (networkCallback != null) {
+            try {
+                ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+                if (cm != null) cm.unregisterNetworkCallback(networkCallback);
+            } catch (Exception ignored) {}
+            networkCallback = null;
         }
 
         if (fleet != null) {

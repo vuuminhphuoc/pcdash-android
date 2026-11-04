@@ -3,6 +3,11 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
+## Unreleased (host 1.29, PcAgent 1.2.4)
+
+- **The host finds the PC again after a power cut**: when the router restarts it hands out new addresses, and the host kept asking the old one ("PC is OFF / not responding" while the PC was on). Now, when a PC stays unreachable or the phone's Wi-Fi comes back, the host looks for the agent in its own subnet and saves the new address. Each device is asked a random challenge that the agent answers with an HMAC keyed by its token (new `/whoami` route in PcAgent), so only the real PC is accepted and the token never crosses the LAN. It needs PcAgent 1.2.4 or later (it updates itself); an older agent is left where it is. Giving the PC a DHCP reservation on the router is still the best fix.
+- **No more password-manager prompt in PC settings**: the keyboard's password manager no longer offers to save the PC's address and agent token to a Google account.
+
 ## 1.2.3 (host 1.28, remote 1.28)
 
 - **Notification for a new version (remote)**: under More, "Notify me when the home phone has a new version of this app" (off by default, like the alerts). A background check, about every 6 hours (or with the alerts, about every 15 minutes), tells you when the home phone holds a newer remote; tapping the notification opens the Control tab with the update card. Each version is announced once, and not if the app already showed it.

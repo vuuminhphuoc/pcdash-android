@@ -326,6 +326,26 @@ foreach ($k in $requiredTopKeys) {
     if ($code -ne 200) { throw "/healthz must stay open, got $code" }
     Write-Host "Assertion PASS: missing or wrong token gets 403 on /metrics, /quota, /exec; /healthz stays open"
 
+    Write-Host "=== 5.x1b /whoami proof (the host finds the PC again after its address changed) ==="
+    $challenge = "0123456789abcdef0123456789abcdef"
+    $hm = New-Object System.Security.Cryptography.HMACSHA256 (,[Text.Encoding]::UTF8.GetBytes($testToken))
+    $expectedProof = ([BitConverter]::ToString($hm.ComputeHash([Text.Encoding]::UTF8.GetBytes("whoami`n$challenge`nGET`n/whoami`n"))) -replace '-', '').ToLowerInvariant()
+    $who = (Invoke-WebRequest -Uri "$base/whoami?c=$challenge" -UseBasicParsing -TimeoutSec 5).Content | ConvertFrom-Json
+    if ($who.proof -ne $expectedProof) { throw "/whoami proof mismatch: got '$($who.proof)', expected '$expectedProof'" }
+    if ((Invoke-WebRequest -Uri "$base/whoami?c=$challenge" -UseBasicParsing -TimeoutSec 5).Content -match [regex]::Escape($testToken)) { throw "/whoami must never contain the token" }
+    $code = Get-HttpStatus -Uri "$base/whoami"
+    if ($code -ne 400) { throw "/whoami without a challenge expected 400, got $code" }
+    $code = Get-HttpStatus -Uri "$base/whoami?c=short"
+    if ($code -ne 400) { throw "/whoami with a short challenge expected 400, got $code" }
+    $code = Get-HttpStatus -Uri "$base/whoami?c=0123456789abcdef0123456789abcde%22"
+    if ($code -ne 400) { throw "/whoami with a bad character expected 400, got $code" }
+    $code = Get-HttpStatus -Uri "$base/whoami?c=$challenge" -Method Post -Body ''
+    if ($code -ne 405) { throw "POST /whoami expected 405, got $code" }
+    # The proof must not double as the signature of a real request.
+    $code = Get-HttpStatus -Uri "$base/metrics" -Headers @{ "X-PcAgent-Ts" = "whoami"; "X-PcAgent-Nonce" = $challenge; "X-PcAgent-Sig" = $expectedProof }
+    if ($code -eq 200) { throw "The /whoami proof was accepted as a request signature" }
+    Write-Host "Assertion PASS: /whoami proves the token without giving it away, rejects bad challenges, and its proof is no signature"
+
     Write-Host "=== 5.x2 Signed requests (HMAC) ==="
     $okSig = New-SignedHeaders -Token $testToken -Method "GET" -Target "/metrics"
     $code = Get-HttpStatus -Uri "$base/metrics" -Headers $okSig

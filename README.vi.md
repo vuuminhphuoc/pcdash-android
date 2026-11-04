@@ -185,7 +185,7 @@ Tính năng trong PCDash Remote:
 - Remote chỉ kết nối khi app đang mở, không chạy nền, trừ khi bật **Cảnh báo máy ở nhà** (kiểm tra khoảng 15 phút một lần; Android có thể hoãn khi máy để yên lâu; sau khi khởi động lại máy remote cần mở app một lần để lịch kiểm tra chạy lại).
 - Wake cần điện thoại host đang chạy trong LAN và PC hỗ trợ Wake-on-LAN (bật WOL trong BIOS và driver NIC).
 - Nhiệt độ CPU thật cần quyền admin một lần (xem phần PcAgent).
-- IP PC nên đặt DHCP reservation ở router để địa chỉ trong Cài đặt PC không đổi.
+- IP PC nên đặt DHCP reservation ở router để địa chỉ trong Cài đặt PC không đổi. Nếu router khởi động lại (cúp điện) và cấp IP mới cho PC, host 1.29 với PcAgent 1.2.4 trở lên tự tìm lại PC trong cùng mạng và lưu IP mới.
 - PcAgent dùng HTTP thường trong LAN; chỉ dùng trên mạng Wi-Fi bạn tin cậy.
 
 ## Kiểm thử

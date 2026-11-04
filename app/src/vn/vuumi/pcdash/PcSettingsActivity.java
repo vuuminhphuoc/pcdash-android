@@ -314,6 +314,9 @@ public class PcSettingsActivity extends Activity implements View.OnClickListener
         root.addView(webCard);
 
         setContentView(scroll);
+        // The address and the agent token are not a sign-in: without this the keyboard's password manager
+        // offers to save them (to the person's Google account) every time the form is saved.
+        getWindow().getDecorView().setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         SystemBarInsets.pad(findViewById(android.R.id.content), SystemBarInsets.ALL);
         lockGate = new AppLockGate(this, 0);
 
