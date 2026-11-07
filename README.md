@@ -38,6 +38,7 @@ phone does not need the Tailscale app or a VPN turned on.
 | `remote/` | **PCDash Remote**, Android app on the phone you carry. Tabs for control, monitoring with history charts, AI-service quota, command log. Updates itself from the host. |
 | `agent/` | **PcAgent**, a small Windows service (C#, built with `csc.exe`) that runs sleep, hibernate, shutdown, restart, lock, sign out, abort and reports metrics, and keeps itself up to date. |
 | `pcnet/` | Go `tsnet` library compiled to a native `.so` for both Android apps. |
+| `winremote/` | **PCDash Remote for Windows**, the remote for a Windows PC (Go): a tray icon and a page on `127.0.0.1` with the Control, Monitor, Quota and Log screens. It has its own Tailscale node, so it needs no Tailscale app. Release file `pcdash-remote-windows-*.zip`. |
 | `shared/` | Pairing protocol (SRP-6a) shared by host and remote. |
 
 ## Features
@@ -45,6 +46,7 @@ phone does not need the Tailscale app or a VPN turned on.
 - Wake, Sleep, Hibernate, Shutdown, Restart, Lock, Sign out, Abort. Hibernate, Shutdown, Restart, Sign out and "Forget host" ask for biometrics or the screen lock. Lock and Sign out act on the Windows session PcAgent runs in.
 - Live CPU, GPU, RAM, disks, network, uptime and temperatures, with 1 h and 6 h history.
 - Command log with device, time and result.
+- PCDash Remote for Windows: the same control, monitor, quota and log screens on a Windows PC, from a tray icon (`pcdash-remote-windows-*.zip`, one `.exe`). It signs in to Tailscale and pairs with the home phone by itself; see `winremote\README.txt`.
 - Quota tab for AI services read through [omp](https://github.com/can1357/oh-my-pi) on the PC (optional).
 - Wake PC Quick Settings tile and Wake / Sleep app shortcuts (long-press the PCDash Remote icon). They open the app, which sends the command once connected; nothing runs in the background.
 - Optional alerts on the remote when the home phone goes offline or its battery is low, and optionally when the PC turns off (More > alerts, off by default). When on, the remote reads the Tailscale device list about every 15 minutes in the background, so an offline home phone is known at once without waiting on requests; the PC's state comes from the home phone, and a Sleep / Shut down sent from the remote does not raise a PC alert. Android may delay checks while the phone sits idle. When the home phone does not answer, the Control tab also says whether Tailscale shows it offline (and since when) or online with the host app not answering.
@@ -84,6 +86,9 @@ phone does not need the Tailscale app or a VPN turned on.
 6. **Pair.** With both phones on the home Wi-Fi, open **Remote devices -> Add device** on the
    host, then on the remote tap **Scan the QR code on the home phone** (or type the 6-character
    code). After that the remote works from anywhere.
+7. **Optional: a Windows remote.** Unzip `pcdash-remote-windows-*.zip` on the PC you carry and run `PCDashRemote.exe`: sign in to Tailscale
+   (same account) on the page it opens, then pair with the home phone (**Add device**, type its Wi-Fi address and the code).
+   Pairing needs the same Wi-Fi once; after that it controls the home PC from any network.
 
 Detailed steps, release flow, tests and ANR guardrails are in [README.vi.md](README.vi.md).
 

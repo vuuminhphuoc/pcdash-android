@@ -51,6 +51,7 @@ Ghép đôi lần đầu: hai điện thoại cùng Wi-Fi nhà, mã tạm thời
 | `app/src/.../RemoteDeviceStore.java` | Lưu thông tin thiết bị đã ghép và hash token, không lưu token thô. |
 | `remote/` | APK `PCDash Remote` cho máy điều khiển (Java và Kotlin; tab Điều khiển và thanh chọn PC vẽ bằng Jetpack Compose); pairing, giao diện điều khiển và cầu JNI tới tsnet. Build bằng `build-remote.ps1`. |
 | `pcnet/` | Thư viện Go tsnet userspace, đóng gói native cho `arm64-v8a` và `armeabi-v7a`. |
+| `winremote/` | **PCDash Remote cho Windows** (Go): biểu tượng ở khay hệ thống và trang trên `127.0.0.1` với các màn Điều khiển, Giám sát, Quota, Nhật ký. Có node Tailscale riêng nên không cần app Tailscale. File phát hành `pcdash-remote-windows-*.zip`, build bằng `winremoteuild.ps1`, test bằng `scripts	est-winremote.ps1` (gồm ghép đôi thật với `PairingManager` Java). |
 | `shared/` | Giao thức ghép đôi SRP-6a dùng chung giữa host và Remote. |
 | `app/src/.../PcConn.java` | Gửi WOL, kiểm tra trạng thái PC (TCP probe), gọi agent `/exec`. |
 | `agent/PcAgent.cs` | Agent Windows lắng nghe `:8799`, xử lý `sleep`, `hibernate`, `shutdown`, `restart`, `lock`, `logoff`, `abort`, `ping`. |
@@ -139,7 +140,7 @@ Mở app host, bấm **Cài đặt PC** rồi **Quét mã QR từ PC** và hư�
 2. **Remote:** cài APK remote, mở app, bước 1 bấm **Đăng nhập Tailscale** (cùng tài khoản), đợi "✓ Đã đăng nhập".
 3. Đặt hai điện thoại trong cùng Wi-Fi nhà. Trên host mở **Thiết bị điều khiển từ xa → Thêm thiết bị**: màn hình hiện mã QR và mã 6 ký tự (5 phút). Trên remote bấm **📷 Quét mã QR trên máy ở nhà** (cần quyền camera) là ghép đôi luôn; hoặc nhập mã (host thường được tìm tự động, hoặc nhập IP LAN hiện dưới mã) rồi **Bắt đầu ghép đôi**. Mã dùng một lần, tối đa 5 lần nhập sai; chỉ IP LAN riêng được ghép.
 
-Sau đó điều khiển được từ bất kỳ đâu, kể cả 5G, không cần mở VPN. Trên host, xóa thiết bị sẽ thu hồi token ngay (node còn trong trang Machines của Tailscale đến khi bạn xóa tay). **Quên host** trên Remote xóa cấu hình, trạng thái đăng nhập và cần xác thực màn hình khóa. Khóa node Tailscale hết hạn thì app báo "Cần đăng nhập" kèm nút đăng nhập lại; có thể tắt hết hạn khóa trong trang Machines.
+Sau đó điều khiển được từ bất kỳ đâu, kể cả 5G, không cần mở VPN. Muốn điều khiển từ một máy Windows khác: giải nén `pcdash-remote-windows-*.zip`, chạy `PCDashRemote.exe`, đăng nhập Tailscale (cùng tài khoản) trên trang vừa mở rồi ghép đôi với máy ở nhà (**Thêm thiết bị**, nhập địa chỉ Wi-Fi của điện thoại host và mã); bước ghép đôi cần cùng Wi-Fi một lần. Chi tiết trong `winremote\README.txt`. Trên host, xóa thiết bị sẽ thu hồi token ngay (node còn trong trang Machines của Tailscale đến khi bạn xóa tay). **Quên host** trên Remote xóa cấu hình, trạng thái đăng nhập và cần xác thực màn hình khóa. Khóa node Tailscale hết hạn thì app báo "Cần đăng nhập" kèm nút đăng nhập lại; có thể tắt hết hạn khóa trong trang Machines.
 
 ## Sử dụng
 

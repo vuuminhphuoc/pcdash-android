@@ -6,6 +6,7 @@ PCDash itself is MIT licensed (see `LICENSE`). It builds on:
 |---|---|---|
 | [tailscale.com `tsnet`](https://github.com/tailscale/tailscale) and the Go modules it pulls in (29 modules in `libpcnet.so`, see `pcnet/go.mod`, grouped below) | Embedded userspace Tailscale node in both Android apps (`pcnet/`, built into `libpcnet.so`) | BSD-3-Clause, MIT and Apache-2.0 (each module keeps its own license) |
 | [TailSocks](https://github.com/bropines/tailsocks) | `pcnet/netmon_android.go` is adapted from its Android network-interface getter. Full notice in `pcnet/THIRD_PARTY_NOTICES.md` | BSD-3-Clause |
+| [fyne.io/systray](https://github.com/fyne-io/systray) | Notification-area icon of PCDash Remote for Windows (`winremote/`) | Apache-2.0 |
 | [wlynxg/anet](https://github.com/wlynxg/anet) | Network interface listing on Android | BSD-3-Clause |
 | Go standard library | Runtime of `libpcnet.so` | BSD-3-Clause |
 | [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) 0.9.3 (optional) | CPU package temperature through `agent/CpuTempHelper.cs`. Downloaded by `agent/download_lhm.ps1` with a pinned SHA-256; not stored in this repository. The Windows release zip ships the unmodified DLL in `build\`; its source is at the link | MPL-2.0 |

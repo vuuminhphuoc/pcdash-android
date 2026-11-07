@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1117">
 <title>PCDash</title>
 <style>
   :root { color-scheme: dark; }
@@ -16,7 +17,7 @@
   .status { display: flex; align-items: center; gap: 10px; background: #161b22;
             border: 1px solid #30363d; border-radius: 12px; padding: 14px 16px;
             margin-bottom: 18px; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; background: #6e7681;
+  .dot { width: 12px; height: 12px; flex: none; border-radius: 50%; background: #6e7681;
          box-shadow: 0 0 8px transparent; transition: all .3s; }
   .dot.on { background: #3fb950; box-shadow: 0 0 10px #3fb950aa; }
   .dot.off { background: #f85149; box-shadow: 0 0 10px #f85149aa; }
@@ -28,7 +29,9 @@
            cursor: pointer; display: flex; flex-direction: column; align-items: center;
            gap: 8px; transition: transform .08s, background .15s; }
   button:active { transform: scale(0.97); }
-  button:disabled { opacity: .45; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
+  button.busy { opacity: 1; border-color: #d29922; }
   .ico { font-size: 26px; line-height: 1; }
   .wake { border-color: #238636; } .wake:hover { background: #12351d; }
   .sleep { border-color: #1f6feb; } .sleep:hover { background: #10203a; }
@@ -36,50 +39,60 @@
   .power { border-color: #da3633; } .power:hover { background: #3a1210; }
   .abort { grid-column: span 2; padding: 10px; font-size: 13px; font-weight: 400;
            color: #8b949e; }
-  .log { margin-top: 18px; background: #161b22; border: 1px solid #30363d;
+  .wide { grid-column: span 2; }
+  .result { margin-top: 18px; min-height: 22px; font-size: 14px; font-weight: 600; }
+  .result.ok { color: #3fb950; }
+  .result.err { color: #f85149; }
+  .result.wait { color: #d29922; }
+  .log { margin-top: 10px; background: #161b22; border: 1px solid #30363d;
          border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #8b949e;
          max-height: 180px; overflow-y: auto; white-space: pre-wrap; }
   .note { margin-top: 12px; font-size: 11px; color: #6e7681; }
+  @media (prefers-reduced-motion: reduce) {
+    .dot, button { transition: none; }
+    button:active { transform: none; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>PCDash</h1>
-  <div class="sub" data-en="Control your PC, from anywhere over Tailscale">Quản lý PC — qua Tailscale từ xa</div>
+  <div class="sub" data-en="Control your PC from the home Wi-Fi">Điều khiển PC trong Wi-Fi nhà</div>
 
-  <div class="status">
+  <div class="status" role="status" aria-live="polite">
     <div class="dot" id="dot"></div>
     <div class="txt" id="state" data-en="Checking...">Đang kiểm tra...</div>
     <div class="who" id="who"></div>
   </div>
 
   <div class="grid">
-    <button class="wake" onclick="doAction('wake')">
+    <button class="wake" id="b-wake" onclick="doAction('wake')">
       <span class="ico">&#9889;</span><span data-en="Turn on / Wake">Bật / Đánh thức</span>
     </button>
-    <button class="sleep" onclick="doAction('sleep', true)">
-      <span class="ico">&#128164;</span>Sleep
+    <button class="sleep" id="b-sleep" onclick="doAction('sleep', true)">
+      <span class="ico">&#128164;</span><span data-en="Sleep">Ngủ (Sleep)</span>
     </button>
-    <button class="hib" onclick="doAction('hibernate', true)">
-      <span class="ico">&#127769;</span>Hibernate
+    <button class="hib" id="b-hibernate" onclick="doAction('hibernate', true)">
+      <span class="ico">&#127769;</span><span data-en="Hibernate">Ngủ đông</span>
     </button>
-    <button class="power" onclick="doAction('shutdown', true)">
-      <span class="ico">&#9211;</span>Shutdown
+    <button class="power" id="b-shutdown" onclick="doAction('shutdown', true)">
+      <span class="ico">&#9211;</span><span data-en="Shutdown">Tắt máy</span>
     </button>
-    <button class="sleep" onclick="doAction('lock', true)">
+    <button class="sleep" id="b-lock" onclick="doAction('lock', true)">
       <span class="ico">&#128274;</span><span data-en="Lock">Khóa máy</span>
     </button>
-    <button class="sleep" onclick="doAction('logoff', true)">
+    <button class="sleep" id="b-logoff" onclick="doAction('logoff', true)">
       <span class="ico">&#128682;</span><span data-en="Sign out">Đăng xuất</span>
     </button>
-    <button class="power" onclick="doAction('restart', true)" style="grid-column: span 2">
+    <button class="power wide" id="b-restart" onclick="doAction('restart', true)">
       <span class="ico">&#128260;</span><span data-en="Restart">Khởi động lại</span>
     </button>
-    <button class="abort" onclick="doAction('abort')" data-en="Cancel shutdown (shutdown /a)">Hủy lệnh tắt máy (shutdown /a)</button>
+    <button class="abort" id="b-abort" onclick="doAction('abort')" data-en="Cancel a pending shutdown / restart">Hủy lệnh tắt máy / khởi động lại đang chờ</button>
   </div>
 
+  <div class="result" id="result" role="status" aria-live="polite"></div>
   <div class="log" id="log"></div>
-  <div class="note" data-en="Turn on works while the phone is on the home LAN (the magic packet broadcast does not cross Tailscale).">Nút Bật hoạt động khi điện thoại đang trong LAN nhà (magic packet broadcast không đi qua Tailscale).</div>
+  <div class="note" data-en="Turn on works while the phone is on the home LAN (the magic packet broadcast does not cross Tailscale). This page only opens from the home network; away from home, use PCDash Remote (Android or Windows).">Nút Bật hoạt động khi điện thoại đang trong LAN nhà (magic packet broadcast không đi qua Tailscale). Trang này chỉ mở được trong mạng nhà; khi ở ngoài, dùng PCDash Remote (Android hoặc Windows).</div>
 </div>
 
 <script>
@@ -92,9 +105,22 @@ if (VI) {
   document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });
 }
 
+const ACTION_NAME = {
+  wake: ['Turn on', 'Bật máy'], sleep: ['Sleep', 'Ngủ'], hibernate: ['Hibernate', 'Ngủ đông'],
+  shutdown: ['Shut down', 'Tắt máy'], restart: ['Restart', 'Khởi động lại'], lock: ['Lock', 'Khóa máy'],
+  logoff: ['Sign out', 'Đăng xuất'], abort: ['Cancel pending shutdown', 'Hủy lệnh đang chờ']
+};
+const actionName = name => { const n = ACTION_NAME[name] || [name, name]; return T(n[0], n[1]); };
+
 function addLog(msg) {
   const t = new Date().toTimeString().slice(0, 8);
   $('log').textContent = `[${t}] ${msg}\n` + $('log').textContent;
+}
+
+function showResult(kind, msg) {
+  const r = $('result');
+  r.className = 'result ' + kind;
+  r.textContent = msg;
 }
 
 async function api(path, method = 'GET') {
@@ -105,14 +131,19 @@ async function api(path, method = 'GET') {
   }
   let res = await fetch(path, { method, headers });
   if (res.status === 401 && method === 'POST') {
-    const code = window.prompt(T('Enter the web dashboard access code (X-PCDash-Token):', 'Nhập mã truy cập Web Dashboard (X-PCDash-Token):'));
+    const code = window.prompt(token
+      ? T('The access code was not accepted. Enter it again (see PC settings on the host):', 'Mã truy cập không đúng. Nhập lại (xem trong Cài đặt PC trên host):')
+      : T('Enter the web dashboard access code (X-PCDash-Token):', 'Nhập mã truy cập Web Dashboard (X-PCDash-Token):'));
     if (code) {
       const trimmed = code.trim();
-      localStorage.setItem('pcdash_token', trimmed);
       headers['X-PCDash-Token'] = trimmed;
       res = await fetch(path, { method, headers });
+      // Keep the code only once the host accepted it.
+      if (res.status === 401) localStorage.removeItem('pcdash_token');
+      else localStorage.setItem('pcdash_token', trimmed);
     }
   }
+  if (res.status === 401) return { ok: false, unauthorized: true };
   return res.json();
 }
 
@@ -126,25 +157,41 @@ async function refreshStatus() {
     } else {
       $('dot').className = 'dot ' + (s.online ? 'on' : 'off');
       $('state').textContent = s.online ? T('PC is on', 'PC đang bật') : T('PC is off / offline', 'PC đang tắt / offline');
-      $('who').textContent = s.online ? ('port ' + s.port + ' | ' + s.rtt_ms + 'ms') : '';
+      $('who').textContent = s.online ? ('port ' + s.port + ' | ' + s.rtt_ms + ' ms') : '';
     }
   } catch (e) {
     $('dot').className = 'dot';
     $('state').textContent = T('Cannot reach the dashboard', 'Không kết nối được dashboard');
+    $('who').textContent = '';
   }
 }
 
+function setBusy(button, busy) {
+  document.querySelectorAll('button').forEach(b => { b.disabled = busy; b.classList.remove('busy'); });
+  if (busy && button) button.classList.add('busy');
+}
+
 async function doAction(name, confirmFirst) {
-  if (confirmFirst && !confirm(T(name.toUpperCase() + ' the PC?', 'Xác nhận ' + name.toUpperCase() + ' PC?'))) return;
+  const label = actionName(name);
+  if (confirmFirst && !confirm(T(label + ' the PC?', label + ' PC?'))) return;
+  const button = $('b-' + name);
   addLog(T('Sending: ', 'Gửi lệnh: ') + name + ' ...');
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  showResult('wait', T('Sending: ', 'Đang gửi: ') + label + ' ...');
+  setBusy(button, true);
   try {
     const r = await api('/api/' + name, 'POST');
-    addLog((r.ok ? 'OK' : T('ERROR', 'LỖI')) + ': ' + name + ' ' + JSON.stringify(r.detail));
+    if (r.unauthorized) {
+      addLog(T('ERROR: access code missing or wrong', 'LỖI: thiếu hoặc sai mã truy cập'));
+      showResult('err', T('Access code missing or wrong', 'Thiếu hoặc sai mã truy cập'));
+    } else {
+      addLog((r.ok ? 'OK' : T('ERROR', 'LỖI')) + ': ' + name + ' ' + JSON.stringify(r.detail));
+      showResult(r.ok ? 'ok' : 'err', (r.ok ? '✓ ' : '✗ ') + label + (r.detail ? ' — ' + r.detail : ''));
+    }
   } catch (e) {
     addLog(T('Connection error: ', 'LỖI kết nối: ') + e);
+    showResult('err', '✗ ' + T('Cannot reach the dashboard', 'Không kết nối được dashboard'));
   } finally {
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    setBusy(null, false);
     setTimeout(refreshStatus, 1500);
   }
 }

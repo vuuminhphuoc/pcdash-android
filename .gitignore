@@ -49,6 +49,7 @@ local.properties
 *.iml
 agent/build/
 pcnet/build/
+winremote/build/
 *.idsig
 app/assets/remote-update.apk
 app/assets/remote-update.json

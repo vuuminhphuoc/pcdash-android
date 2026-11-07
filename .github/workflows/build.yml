@@ -68,7 +68,7 @@ jobs:
           path: |
             .cache/go-build
             .cache/go-mod
-          key: go-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('pcnet/go.sum') }}
+          key: go-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('pcnet/go.sum', 'winremote/go.sum') }}
           restore-keys: go-${{ runner.os }}-${{ env.GO_VERSION }}-
 
       - name: Restore release signing keys
@@ -86,13 +86,16 @@ jobs:
       - name: Build PcAgent
         run: ./agent/build_agent.ps1 -Out "$env:GITHUB_WORKSPACE\agent\build\" -WithHelper
 
+      - name: Build PCDash Remote for Windows
+        run: ./winremote/build.ps1 -Version $env:PCAGENT_VERSION
+
       - name: Tests
         run: |
           $tests = @(
             'test-build-toolchain', 'lint-ui-thread', 'lint-l10n',
             'test-host-api', 'test-host-pairing', 'test-host-ui-model', 'test-host-update',
             'test-host-metrics', 'test-host-log-history', 'test-host-provisioning', 'test-host-quota', 'test-host-pcs',
-            'test-remote-java', 'test-pairing-e2e', 'test-qr-roundtrip', 'test-agent-metrics'
+            'test-remote-java', 'test-pairing-e2e', 'test-winremote', 'test-qr-roundtrip', 'test-agent-metrics'
           )
           $failed = @()
           foreach ($t in $tests) {
@@ -135,7 +138,7 @@ jobs:
           path: |
             .cache/go-build
             .cache/go-mod
-          key: go-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('pcnet/go.sum') }}
+          key: go-${{ runner.os }}-${{ env.GO_VERSION }}-${{ hashFiles('pcnet/go.sum', 'winremote/go.sum') }}
           restore-keys: go-${{ runner.os }}-${{ env.GO_VERSION }}-
 
       - name: Go tests (pcnet)

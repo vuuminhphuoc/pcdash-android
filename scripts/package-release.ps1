@@ -4,8 +4,9 @@ param(
 )
 
 # Collects the release files into dist\ with the names used on GitHub Releases:
-# pcdash-host-<tag>.apk, pcdash-remote-<tag>.apk, pcdash-agent-windows-<tag>.zip, SHA256SUMS.txt.
-# Run build-all.ps1 and agent\build_agent.ps1 -Out agent\build\ -WithHelper first.
+# pcdash-host-<tag>.apk, pcdash-remote-<tag>.apk, pcdash-agent-windows-<tag>.zip,
+# pcdash-remote-windows-<tag>.zip, SHA256SUMS.txt.
+# Run build-all.ps1, agent\build_agent.ps1 -Out agent\build\ -WithHelper and winremote\build.ps1 first.
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
@@ -17,7 +18,9 @@ $agentBuild = Join-Path $repoRoot "agent\build"
 $agentBinaries = @("PcAgent.exe", "CpuTempHelper.exe", "LibreHardwareMonitorLib.dll")
 $agentScripts = @("install.bat", "install.ps1", "uninstall.ps1", "show-qr.bat", "install-cputemp-task.ps1")
 
-foreach ($p in @($hostApk, $remoteApk) + ($agentBinaries | ForEach-Object { Join-Path $agentBuild $_ })) {
+$winRemoteExe = Join-Path $repoRoot "winremote\build\PCDashRemote.exe"
+
+foreach ($p in @($hostApk, $remoteApk, $winRemoteExe) + ($agentBinaries | ForEach-Object { Join-Path $agentBuild $_ })) {
     if (-not (Test-Path $p)) { throw "Missing build output: $p" }
 }
 
@@ -44,7 +47,20 @@ try {
     Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$sums = foreach ($f in @($hostOut, $remoteOut, $agentOut)) {
+# PCDash Remote for Windows: one exe (it needs no installer; it keeps its settings in %APPDATA%\PCDashRemote).
+$stageWin = Join-Path ([IO.Path]::GetTempPath()) ("pcdash-remote-win-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $stageWin -Force | Out-Null
+try {
+    Copy-Item $winRemoteExe $stageWin
+    Copy-Item (Join-Path $repoRoot "LICENSE"), (Join-Path $repoRoot "THIRD_PARTY.md") $stageWin
+    Copy-Item (Join-Path $repoRoot "winremote\README.txt") $stageWin
+    $winRemoteOut = Join-Path $OutDir "pcdash-remote-windows-$Tag.zip"
+    Compress-Archive -Path (Join-Path $stageWin "*") -DestinationPath $winRemoteOut
+} finally {
+    Remove-Item $stageWin -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+$sums = foreach ($f in @($hostOut, $remoteOut, $agentOut, $winRemoteOut)) {
     "{0}  {1}" -f (Get-FileHash $f -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $f -Leaf)
 }
 [IO.File]::WriteAllText((Join-Path $OutDir "SHA256SUMS.txt"), (($sums -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))

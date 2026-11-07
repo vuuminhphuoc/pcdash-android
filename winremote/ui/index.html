@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<meta name="pcdash-local" content="{{SECRET}}">
+<title>PCDash Remote</title>
+<style>
+  :root { color-scheme: dark; --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --mut:#8b949e;
+          --ok:#3fb950; --bad:#f85149; --warn:#d29922; --blue:#1f6feb; --violet:#8957e5; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         min-height:100vh; display:flex; justify-content:center; padding:20px 14px 40px; }
+  .wrap { width:100%; max-width:560px; }
+  header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  h1 { font-size:20px; margin:0; flex:1; }
+  h1 small { color:var(--mut); font-weight:400; font-size:12px; margin-left:6px; }
+  h2 { font-size:15px; margin:0 0 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .mut { color:var(--mut); font-size:13px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .grow { flex:1; }
+  .dot { width:12px; height:12px; flex:none; border-radius:50%; background:#6e7681; transition:all .3s; }
+  .dot.on { background:var(--ok); box-shadow:0 0 10px #3fb950aa; }
+  .dot.off { background:var(--bad); box-shadow:0 0 10px #f85149aa; }
+  button, .btn { border:1px solid var(--line); background:#21262d; color:var(--txt); border-radius:10px; padding:10px 14px;
+                 font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; font-family:inherit; }
+  button:hover, .btn:hover { background:#292e36; }
+  button:disabled { opacity:.45; cursor:default; }
+  button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
+  button.primary { background:#238636; border-color:#2ea043; }
+  button.primary:hover { background:#2ea043; }
+  button.quiet { background:transparent; font-weight:400; color:var(--mut); }
+  .tabs { display:flex; gap:6px; margin-bottom:14px; border-bottom:1px solid var(--line); }
+  .tab { background:none; border:none; border-bottom:2px solid transparent; border-radius:0; color:var(--mut); padding:10px 12px; }
+  .tab[aria-selected="true"] { color:var(--txt); border-bottom-color:#58a6ff; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .pbtn { display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 8px; border-radius:12px; font-size:15px; }
+  .pbtn .ico { font-size:24px; line-height:1; }
+  .pbtn.wake { border-color:#238636; } .pbtn.sleep { border-color:var(--blue); } .pbtn.hib { border-color:var(--violet); } .pbtn.power { border-color:#da3633; }
+  .wide { grid-column:span 2; }
+  .abort { grid-column:span 2; padding:9px; font-size:13px; font-weight:400; color:var(--mut); }
+  .result { min-height:22px; font-size:14px; font-weight:600; margin-top:14px; }
+  .result.ok { color:var(--ok); } .result.err { color:var(--bad); } .result.wait { color:var(--warn); }
+  label { display:block; font-size:13px; color:var(--mut); margin:12px 0 4px; }
+  input, select { width:100%; background:#0d1117; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:15px; font-family:inherit; }
+  input.code { letter-spacing:4px; text-transform:uppercase; font-size:18px; }
+  .step { display:flex; gap:12px; }
+  .num { width:24px; height:24px; flex:none; border-radius:50%; background:#21262d; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; }
+  .num.done { background:#238636; }
+  .bar { height:8px; border-radius:4px; background:#21262d; overflow:hidden; }
+  .bar > i { display:block; height:100%; background:#58a6ff; border-radius:4px; transition:width .4s; }
+  .bar.hot > i { background:var(--warn); } .bar.crit > i { background:var(--bad); } .bar.good > i { background:var(--ok); }
+  .kv { display:flex; justify-content:space-between; gap:12px; font-size:14px; padding:3px 0; }
+  .kv span:first-child { color:var(--mut); }
+  .metric { margin:10px 0; }
+  .metric .top { display:flex; justify-content:space-between; font-size:14px; margin-bottom:4px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:600; }
+  .pill { font-size:12px; padding:1px 8px; border-radius:10px; border:1px solid var(--line); }
+  .pill.ok { color:var(--ok); border-color:#238636; } .pill.err { color:var(--bad); border-color:#da3633; }
+  .menu { position:relative; }
+  .menu .pop { position:absolute; right:0; top:42px; background:var(--card); border:1px solid var(--line); border-radius:10px; min-width:230px; padding:6px; z-index:5; box-shadow:0 8px 24px #0008; }
+  .menu .pop button { display:block; width:100%; text-align:left; background:none; border:none; font-weight:400; padding:9px 10px; }
+  .menu .pop button:hover { background:#21262d; }
+  .hidden { display:none !important; }
+  .error { color:var(--bad); font-size:14px; margin-top:10px; }
+  @media (prefers-reduced-motion: reduce) { .dot, .bar > i { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>PCDash <small id="ver"></small></h1>
+    <div id="pcsw" class="hidden"><select id="pcsel" aria-label="PC"></select></div>
+    <div class="menu hidden" id="menu">
+      <button id="menubtn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">&#8943;</button>
+      <div class="pop hidden" id="pop">
+        <button id="m-lang"></button>
+        <button id="m-unpair"></button>
+        <button id="m-signout"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- setup: not paired yet -->
+  <section id="setup" class="hidden">
+    <div class="card">
+      <div class="step"><div class="num" id="n1">1</div>
+        <div class="grow">
+          <h2 id="s1t"></h2>
+          <div class="mut" id="s1d"></div>
+          <div style="margin-top:10px" id="s1a"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="pairCard">
+      <div class="step"><div class="num" id="n2">2</div>
+        <div class="grow">
+          <h2 id="s2t"></h2>
+          <div class="mut" id="s2d"></div>
+          <label for="ip" id="ipl"></label>
+          <input id="ip" inputmode="decimal" autocomplete="off" placeholder="192.168.1.20">
+          <label for="code" id="codel"></label>
+          <input id="code" class="code" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABC234">
+          <label for="dname" id="dnamel"></label>
+          <input id="dname" autocomplete="off" maxlength="40">
+          <div style="margin-top:14px"><button class="primary" id="pairbtn"></button></div>
+          <div class="error" id="pairerr" role="alert"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mut" id="setupnote"></div>
+  </section>
+
+  <!-- main: paired -->
+  <section id="main" class="hidden">
+    <div class="tabs" role="tablist" id="tabs"></div>
+
+    <div id="tab-control">
+      <div class="card row" role="status" aria-live="polite">
+        <div class="dot" id="dot"></div>
+        <div class="grow"><b id="state"></b><div class="mut" id="sub"></div></div>
+        <button class="quiet" id="refresh"></button>
+      </div>
+      <div class="grid" id="power"></div>
+      <div class="result" id="result" role="status" aria-live="polite"></div>
+    </div>
+
+    <div id="tab-monitor" class="hidden"></div>
+
+    <div id="tab-quota" class="hidden">
+      <div class="row" style="margin-bottom:10px"><div class="grow mut" id="qinfo"></div><button id="qrefresh"></button></div>
+      <div id="qbody"></div>
+    </div>
+
+    <div id="tab-log" class="hidden"><div class="card"><div id="logbody"></div></div></div>
+  </section>
+
+  <div id="banner" class="card hidden" role="alert"></div>
+</div>
+
+<script>
+'use strict';
+const SECRET = document.querySelector('meta[name="pcdash-local"]').content;
+const $ = id => document.getElementById(id);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+
+/* ---------- language ---------- */
+const STR = {
+  en: {
+    tabs: ['Control', 'Monitor', 'Quota', 'Log'],
+    checking: 'Checking...', pcOn: 'PC is on', pcOff: 'PC is off / offline', notSetUp: 'PC not set up on the host',
+    refresh: 'Refresh', menuLang: 'Language: English', menuUnpair: 'Unpair from the home phone', menuSignout: 'Sign out of Tailscale',
+    s1t: 'Sign in to Tailscale', s1wait: 'Starting the connection...', s1login: 'Open the sign-in page, sign in with the same Tailscale account as the home phone, then come back here.',
+    s1open: 'Open sign-in page', s1ok: 'Signed in to Tailscale', s1err: 'Tailscale error: ',
+    s2t: 'Pair with the home phone', s2d: 'On the home phone, open PCDash host and tap Add device to see a code. Both devices must be on the same Wi-Fi for this step.',
+    ipl: "Home phone's Wi-Fi address (shown next to the code)", codel: 'Pairing code (6 characters)', dnamel: 'Name of this PC',
+    pair: 'Pair', pairing: 'Pairing...', needTs: 'Sign in to Tailscale first.',
+    setupnote: 'Pairing is only needed once. After it, this PC controls yours from any network through Tailscale.',
+    sending: 'Sending: ', confirm: ' the PC?', away: 'Cannot reach the home phone. Check that it is on and signed in to Tailscale.',
+    revoked: 'The home phone no longer knows this device. Pair again.', hostOld: 'The home phone does not support this yet. Update PCDash host.',
+    wake: 'Turn on / Wake', sleep: 'Sleep', hibernate: 'Hibernate', shutdown: 'Shutdown', restart: 'Restart', lock: 'Lock', logoff: 'Sign out',
+    abort: 'Cancel a pending shutdown / restart',
+    unpairAsk: 'Forget the pairing on this PC? The home phone keeps the entry until you remove it there.', signoutAsk: 'Sign out of Tailscale and forget the pairing?',
+    pc: 'PC', phone: 'Home phone', cpu: 'CPU', gpu: 'GPU', ram: 'RAM', net: 'Network', down: 'Down', up: 'Up', disks: 'Disks', uptime: 'Uptime', temp: 'Temperature',
+    battery: 'Battery', charging: 'charging', wifi: 'Wi-Fi', storage: 'Storage free', thermal: 'Thermal', tailscale: 'Tailscale', offlinePc: 'The PC is off or not reachable.', noMetrics: 'No data yet.',
+    qrefresh: 'Refresh now', qloading: 'Loading...', qnone: 'No quota data from the PC.', qleft: 'left', qresets: 'resets in ', qstale: 'May be out of date', qupdated: 'Updated ',
+    time: 'Time', device: 'Device', action: 'Action', result: 'Result', logNone: 'No commands yet.', ok: 'OK', fail: 'Failed',
+    d: 'd', hh: 'h', mm: 'm', ago: ' ago',
+  },
+  vi: {
+    tabs: ['Điều khiển', 'Giám sát', 'Quota', 'Nhật ký'],
+    checking: 'Đang kiểm tra...', pcOn: 'PC đang bật', pcOff: 'PC đang tắt / offline', notSetUp: 'Host chưa cấu hình PC',
+    refresh: 'Làm mới', menuLang: 'Ngôn ngữ: Tiếng Việt', menuUnpair: 'Hủy ghép đôi với máy ở nhà', menuSignout: 'Đăng xuất Tailscale',
+    s1t: 'Đăng nhập Tailscale', s1wait: 'Đang khởi động kết nối...', s1login: 'Mở trang đăng nhập, đăng nhập cùng tài khoản Tailscale với máy ở nhà, rồi quay lại đây.',
+    s1open: 'Mở trang đăng nhập', s1ok: 'Đã đăng nhập Tailscale', s1err: 'Lỗi Tailscale: ',
+    s2t: 'Ghép đôi với máy ở nhà', s2d: 'Trên điện thoại ở nhà, mở PCDash host và bấm Thêm thiết bị để thấy mã. Hai thiết bị phải cùng Wi-Fi ở bước này.',
+    ipl: 'Địa chỉ Wi-Fi của máy ở nhà (hiện cạnh mã)', codel: 'Mã ghép đôi (6 ký tự)', dnamel: 'Tên của PC này',
+    pair: 'Ghép đôi', pairing: 'Đang ghép đôi...', needTs: 'Hãy đăng nhập Tailscale trước.',
+    setupnote: 'Chỉ cần ghép đôi một lần. Sau đó PC này điều khiển PC ở nhà từ mạng nào cũng được, qua Tailscale.',
+    sending: 'Đang gửi: ', confirm: ' PC?', away: 'Không kết nối được máy ở nhà. Kiểm tra máy đang bật và đã đăng nhập Tailscale.',
+    revoked: 'Máy ở nhà không còn nhận thiết bị này. Hãy ghép đôi lại.', hostOld: 'Máy ở nhà chưa hỗ trợ, hãy cập nhật PCDash host.',
+    wake: 'Bật / Đánh thức', sleep: 'Ngủ (Sleep)', hibernate: 'Ngủ đông', shutdown: 'Tắt máy', restart: 'Khởi động lại', lock: 'Khóa máy', logoff: 'Đăng xuất',
+    abort: 'Hủy lệnh tắt máy / khởi động lại đang chờ',
+    unpairAsk: 'Quên ghép đôi trên PC này? Máy ở nhà vẫn giữ mục này cho đến khi bạn xóa ở đó.', signoutAsk: 'Đăng xuất Tailscale và quên ghép đôi?',
+    pc: 'PC', phone: 'Máy ở nhà', cpu: 'CPU', gpu: 'GPU', ram: 'RAM', net: 'Mạng', down: 'Tải xuống', up: 'Tải lên', disks: 'Ổ đĩa', uptime: 'Thời gian chạy', temp: 'Nhiệt độ',
+    battery: 'Pin', charging: 'đang sạc', wifi: 'Wi-Fi', storage: 'Bộ nhớ trống', thermal: 'Nhiệt', tailscale: 'Tailscale', offlinePc: 'PC đang tắt hoặc không kết nối được.', noMetrics: 'Chưa có dữ liệu.',
+    qrefresh: 'Làm mới ngay', qloading: 'Đang tải...', qnone: 'PC chưa gửi dữ liệu quota.', qleft: 'còn', qresets: 'đặt lại sau ', qstale: 'Có thể đã cũ', qupdated: 'Cập nhật ',
+    time: 'Giờ', device: 'Thiết bị', action: 'Lệnh', result: 'Kết quả', logNone: 'Chưa có lệnh nào.', ok: 'OK', fail: 'Lỗi',
+    d: ' ngày', hh: ' giờ', mm: ' phút', ago: ' trước',
+  }
+};
+let lang = (navigator.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en';
+const t = k => STR[lang][k];
+
+/* ---------- local api ---------- */
+async function local(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: Object.assign({ 'X-PCDash-Local': SECRET, 'Accept-Language': lang }, body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return res.json();
+}
+async function host(path, method = 'GET') {
+  const res = await fetch(path, { method, headers: { 'X-PCDash-Local': SECRET, 'Accept-Language': lang } });
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* empty body */ }
+  if (res.status === 401) throw Object.assign(new Error(t('revoked')), { revoked: true });
+  if (res.status === 404) throw Object.assign(new Error(t('hostOld')), { old: true });
+  if (res.status === 502) throw new Error(t('away'));
+  if (!res.ok) throw new Error((data && (data.error || data.detail)) || ('HTTP ' + res.status));
+  return data;
+}
+
+/* ---------- helpers ---------- */
+function fmtBps(n) {
+  if (n == null) return '-';
+  const u = ['B/s', 'KB/s', 'MB/s', 'GB/s']; let i = 0, v = n;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return v.toFixed(v >= 100 || i === 0 ? 0 : 1) + ' ' + u[i];
+}
+function fmtDur(sec) {
+  if (sec == null) return '-';
+  const d = Math.floor(sec / 86400), hr = Math.floor(sec % 86400 / 3600), mi = Math.floor(sec % 3600 / 60);
+  return (d ? d + t('d') + ' ' : '') + (hr || d ? hr + t('hh') + ' ' : '') + mi + t('mm');
+}
+function fmtIn(ms) {
+  const sec = Math.max(0, Math.round((ms - Date.now()) / 1000));
+  return fmtDur(sec);
+}
+const pct = v => v == null ? null : Math.max(0, Math.min(100, v));
+function bar(value, kind) {
+  const p = pct(value);
+  const cls = 'bar ' + (kind === 'free' ? (p < 15 ? 'crit' : p < 35 ? 'hot' : 'good') : (p >= 90 ? 'crit' : p >= 75 ? 'hot' : ''));
+  return h('div', { class: cls, role: 'progressbar', 'aria-valuenow': p == null ? '' : Math.round(p), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + (p || 0) + '%' }));
+}
+function metric(label, value, text, sub) {
+  return h('div', { class: 'metric' }, h('div', { class: 'top' }, h('span', {}, label), h('span', {}, text == null ? '-' : text)), value == null ? null : bar(value), sub ? h('div', { class: 'mut' }, sub) : null);
+}
+function kv(a, b) { return h('div', { class: 'kv' }, h('span', {}, a), h('span', {}, b == null ? '-' : b)); }
+const temp = v => v == null ? null : Math.round(v) + ' °C';
+
+function banner(msg) {
+  const b = $('banner');
+  if (!msg) { b.classList.add('hidden'); b.textContent = ''; return; }
+  b.textContent = msg; b.classList.remove('hidden');
+}
+
+/* ---------- state ---------- */
+let S = null, curTab = 0, curPc = null, timer = null, busy = false;
+const TABS = ['control', 'monitor', 'quota', 'log'];
+const ICON = { wake: '⚡', sleep: '💤', hibernate: '🌙', shutdown: '⏻', lock: '🔒', logoff: '🚪', restart: '🔄' };
+const pcq = (first) => curPc ? (first ? '?pc=' : '&pc=') + encodeURIComponent(curPc) : '';
+
+function applyTexts() {
+  document.documentElement.lang = lang;
+  $('ver').textContent = S ? 'Windows ' + S.version : '';
+  $('m-lang').textContent = t('menuLang'); $('m-unpair').textContent = t('menuUnpair'); $('m-signout').textContent = t('menuSignout');
+  $('s1t').textContent = t('s1t'); $('s2t').textContent = t('s2t'); $('s2d').textContent = t('s2d');
+  $('ipl').textContent = t('ipl'); $('codel').textContent = t('codel'); $('dnamel').textContent = t('dnamel');
+  $('pairbtn').textContent = t('pair'); $('setupnote').textContent = t('setupnote');
+  $('refresh').textContent = t('refresh'); $('qrefresh').textContent = t('qrefresh');
+  const tabs = $('tabs'); tabs.replaceChildren();
+  t('tabs').forEach((name, i) => tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(i === curTab), onclick: () => selectTab(i) }, name)));
+  buildPower();
+}
+
+function buildPower() {
+  const p = $('power'); p.replaceChildren();
+  const mk = (name, cls, wide, confirmFirst) => h('button', { class: 'pbtn ' + cls + (wide ? ' wide' : ''), id: 'b-' + name, onclick: () => doAction(name, confirmFirst) },
+    h('span', { class: 'ico' }, ICON[name]), h('span', {}, t(name)));
+  p.append(mk('wake', 'wake', false, false), mk('sleep', 'sleep', false, true), mk('hibernate', 'hib', false, true), mk('shutdown', 'power', false, true),
+    mk('lock', 'sleep', false, true), mk('logoff', 'sleep', false, true), mk('restart', 'power', true, true),
+    h('button', { class: 'abort', id: 'b-abort', onclick: () => doAction('abort', false) }, t('abort')));
+}
+
+function selectTab(i) {
+  curTab = i;
+  TABS.forEach((n, j) => $('tab-' + n).classList.toggle('hidden', j !== i));
+  [...$('tabs').children].forEach((b, j) => b.setAttribute('aria-selected', String(j === i)));
+  refreshTab();
+}
+
+async function refreshState() {
+  try { S = await local('/local/state'); } catch (e) { banner(t('away')); return; }
+  if (S.language === 'en' || S.language === 'vi') lang = S.language;
+  const paired = S.paired;
+  $('setup').classList.toggle('hidden', paired);
+  $('main').classList.toggle('hidden', !paired);
+  $('menu').classList.toggle('hidden', false);
+  $('m-unpair').classList.toggle('hidden', !paired);
+  applyTexts();
+  if (!paired) renderSetup(); else { banner(''); if (!timer) startPolling(); }
+}
+
+function renderSetup() {
+  const tn = S.tailnet || {};
+  const a = $('s1a'); a.replaceChildren();
+  $('n1').classList.toggle('done', tn.state === 'running');
+  if (tn.state === 'running') {
+    $('s1d').textContent = t('s1ok') + (tn.ips && tn.ips[0] ? ' (' + tn.ips[0] + ')' : '');
+  } else if (tn.state === 'needs_login' && tn.authUrl) {
+    $('s1d').textContent = t('s1login');
+    a.append(h('a', { class: 'btn primary', href: tn.authUrl, target: '_blank', rel: 'noopener noreferrer' }, t('s1open')));
+  } else if (tn.state === 'error') {
+    $('s1d').textContent = t('s1err') + (tn.error || '');
+  } else {
+    $('s1d').textContent = t('s1wait');
+  }
+  $('pairbtn').disabled = tn.state !== 'running' || pairing;
+  if (!$('dname').value) $('dname').value = S.deviceName || S.defaultName || '';
+}
+
+let pairing = false;
+async function doPair() {
+  if (pairing) return;
+  pairing = true; $('pairerr').textContent = ''; $('pairbtn').disabled = true; $('pairbtn').textContent = t('pairing');
+  try {
+    const r = await local('/local/pair', { ip: $('ip').value, code: $('code').value, name: $('dname').value });
+    if (r.ok) { await refreshState(); }
+    else $('pairerr').textContent = r.error || 'Error';
+  } catch (e) { $('pairerr').textContent = String(e); }
+  pairing = false; $('pairbtn').textContent = t('pair'); renderSetup();
+}
+
+/* ---------- polling ---------- */
+function startPolling() {
+  stopPolling();
+  loadPcs(); refreshTab();
+  timer = setInterval(() => { if (document.visibilityState === 'visible') refreshTab(); }, curTab === 1 ? 5000 : 5000);
+}
+function stopPolling() { if (timer) { clearInterval(timer); timer = null; } }
+
+async function loadPcs() {
+  try {
+    const d = await host('/v1/pcs');
+    const sel = $('pcsel'); sel.replaceChildren();
+    (d.pcs || []).forEach(p => sel.append(h('option', { value: p.id, selected: p.id === curPc }, p.name || p.id)));
+    $('pcsw').classList.toggle('hidden', !d.pcs || d.pcs.length < 2);
+    if (!curPc && d.pcs && d.pcs.length) { curPc = d.pcs[0].id; sel.value = curPc; }
+  } catch (e) { $('pcsw').classList.add('hidden'); }
+}
+
+async function refreshTab() {
+  if (!S || !S.paired) return;
+  try {
+    if (curTab === 0) await refreshStatus();
+    else if (curTab === 1) await refreshMonitor();
+    else if (curTab === 2) await refreshQuota(false);
+    else await refreshLog();
+    banner('');
+  } catch (e) {
+    if (e.revoked) { stopPolling(); banner(e.message); } else banner(e.message);
+  }
+}
+
+async function refreshStatus() {
+  const s = await host('/v1/status' + pcq(true));
+  const dot = $('dot');
+  if (s.configured === false) { dot.className = 'dot'; $('state').textContent = t('notSetUp'); $('sub').textContent = ''; return; }
+  dot.className = 'dot ' + (s.online ? 'on' : 'off');
+  $('state').textContent = s.online ? t('pcOn') : t('pcOff');
+  $('sub').textContent = s.online ? 'port ' + s.port + ' | ' + s.rtt_ms + ' ms' : '';
+}
+
+async function doAction(name, confirmFirst) {
+  if (busy) return;
+  const label = t(name);
+  if (confirmFirst && !confirm(lang === 'vi' ? label + t('confirm') : label + t('confirm'))) return;
+  busy = true;
+  const r = $('result'); r.className = 'result wait'; r.textContent = t('sending') + label + ' ...';
+  document.querySelectorAll('#power button').forEach(b => b.disabled = true);
+  try {
+    const d = await host('/v1/' + name + pcq(true), 'POST');
+    r.className = 'result ' + (d.ok ? 'ok' : 'err');
+    r.textContent = (d.ok ? '✓ ' : '✗ ') + label + (d.detail ? ' — ' + d.detail : '');
+  } catch (e) {
+    r.className = 'result err'; r.textContent = '✗ ' + e.message;
+  } finally {
+    busy = false;
+    document.querySelectorAll('#power button').forEach(b => b.disabled = false);
+    setTimeout(refreshTab, 1500);
+  }
+}
+
+async function refreshMonitor() {
+  const m = await host('/v1/metrics' + pcq(true));
+  const root = $('tab-monitor'); root.replaceChildren();
+  const pc = m.pc, ph = m.phone;
+  const pcCard = h('div', { class: 'card' }, h('h2', {}, t('pc')));
+  if (!pc || pc.online === false) {
+    pcCard.append(h('div', { class: 'mut' }, t('offlinePc')));
+  } else {
+    if (pc.cpu) pcCard.append(metric(t('cpu'), pc.cpu.percent, pc.cpu.percent == null ? null : Math.round(pc.cpu.percent) + '%', [pc.cpu.name, temp(pc.cpu.tempC)].filter(Boolean).join(' · ')));
+    if (pc.ram) pcCard.append(metric(t('ram'), pc.ram.percent, pc.ram.usedMB == null ? null : (pc.ram.usedMB / 1024).toFixed(1) + ' / ' + (pc.ram.totalMB / 1024).toFixed(1) + ' GB'));
+    if (pc.gpu) pcCard.append(metric(t('gpu'), pc.gpu.percent, pc.gpu.percent == null ? null : Math.round(pc.gpu.percent) + '%',
+      [pc.gpu.name, temp(pc.gpu.tempC), pc.gpu.memTotalMB ? (pc.gpu.memUsedMB / 1024).toFixed(1) + ' / ' + (pc.gpu.memTotalMB / 1024).toFixed(1) + ' GB' : null].filter(Boolean).join(' · ')));
+    if (pc.net) { pcCard.append(kv(t('down'), fmtBps(pc.net.downBps)), kv(t('up'), fmtBps(pc.net.upBps))); }
+    if (pc.sys && pc.sys.tempC != null) pcCard.append(kv(t('temp'), temp(pc.sys.tempC)));
+    pcCard.append(kv(t('uptime'), fmtDur(pc.uptimeSec)));
+    (pc.disks || []).forEach(d => pcCard.append(metric(d.name || t('disks'), d.totalGB ? d.usedGB * 100 / d.totalGB : null, d.totalGB ? d.usedGB.toFixed(0) + ' / ' + d.totalGB.toFixed(0) + ' GB' : null)));
+  }
+  root.append(pcCard);
+  if (ph) {
+    const c = h('div', { class: 'card' }, h('h2', {}, t('phone')));
+    if (ph.battery) c.append(metric(t('battery'), ph.battery.percent, ph.battery.percent == null ? null : Math.round(ph.battery.percent) + '%' + (ph.battery.charging ? ' (' + t('charging') + ')' : ''), temp(ph.battery.tempC)));
+    if (ph.ram && ph.ram.totalMB) { const used = ph.ram.totalMB - ph.ram.availMB; c.append(metric(t('ram'), used * 100 / ph.ram.totalMB, (used / 1024).toFixed(1) + ' / ' + (ph.ram.totalMB / 1024).toFixed(1) + ' GB')); }
+    if (ph.storage && ph.storage.totalGB) c.append(metric(t('storage'), ph.storage.freeGB * 100 / ph.storage.totalGB, ph.storage.freeGB.toFixed(0) + ' / ' + ph.storage.totalGB.toFixed(0) + ' GB'));
+    if (ph.wifi) c.append(kv(t('wifi'), (ph.wifi.rssiDbm != null ? ph.wifi.rssiDbm + ' dBm' : '-') + (ph.wifi.linkMbps != null ? ' · ' + ph.wifi.linkMbps + ' Mbps' : '')));
+    if (ph.thermal) c.append(kv(t('thermal'), ph.thermal));
+    if (ph.tailscale != null) c.append(kv(t('tailscale'), ph.tailscale ? t('ok') : t('fail')));
+    c.append(kv(t('uptime'), fmtDur(ph.uptimeSec)));
+    root.append(c);
+  }
+}
+
+async function refreshQuota(refresh) {
+  const q = await host('/v1/quota' + (refresh ? '?refresh=1' + pcq(false) : pcq(true)));
+  $('qinfo').textContent = q.loading ? t('qloading') : (q.fetchedAt ? t('qupdated') + fmtDur(Math.max(0, (Date.now() - q.fetchedAt) / 1000)) + t('ago') : '') + (q.stale ? ' · ' + t('qstale') : '');
+  const body = $('qbody'); body.replaceChildren();
+  if (q.error) body.append(h('div', { class: 'error' }, q.error));
+  const providers = q.providers || [];
+  if (!providers.length) { body.append(h('div', { class: 'card mut' }, t('qnone'))); return; }
+  providers.forEach(p => {
+    const card = h('div', { class: 'card' }, h('h2', {}, p.name || p.id));
+    (p.groups || []).forEach(g => {
+      if (g.name) card.append(h('div', { class: 'mut', style: 'margin-top:8px' }, g.name));
+      (g.windows || []).forEach(w => {
+        const left = w.pooledRemainingPct;
+        card.append(h('div', { class: 'metric' },
+          h('div', { class: 'top' }, h('span', {}, w.label || w.id), h('span', {}, left + '% ' + t('qleft'))),
+          bar(left, 'free'),
+          h('div', { class: 'mut' }, (w.accountsTotal ? w.accountsWithQuota + '/' + w.accountsTotal : '') + (w.resetsAt ? (w.accountsTotal ? ' · ' : '') + t('qresets') + fmtIn(w.resetsAt) : ''))));
+      });
+    });
+    body.append(card);
+  });
+}
+
+async function refreshLog() {
+  const d = await host('/v1/log?limit=50');
+  const root = $('logbody'); root.replaceChildren();
+  const rows = d.entries || [];
+  if (!rows.length) { root.append(h('div', { class: 'mut' }, t('logNone'))); return; }
+  const tbl = h('table', {}, h('tr', {}, h('th', {}, t('time')), h('th', {}, t('device')), h('th', {}, t('action')), h('th', {}, t('result'))));
+  rows.forEach(e => tbl.append(h('tr', {},
+    h('td', {}, new Date(e.ts).toLocaleString(lang === 'vi' ? 'vi-VN' : undefined, { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })),
+    h('td', {}, [e.device, e.source].filter(Boolean).join(' · ')),
+    h('td', {}, e.action),
+    h('td', {}, h('span', { class: 'pill ' + (e.ok ? 'ok' : 'err') }, e.ok ? t('ok') : t('fail'))))));
+  root.append(tbl);
+}
+
+/* ---------- menu and events ---------- */
+function togglePop(open) {
+  const pop = $('pop'); const o = open === undefined ? pop.classList.contains('hidden') : open;
+  pop.classList.toggle('hidden', !o); $('menubtn').setAttribute('aria-expanded', String(o));
+}
+$('menubtn').addEventListener('click', e => { e.stopPropagation(); togglePop(); });
+document.addEventListener('click', () => togglePop(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') togglePop(false); });
+$('m-lang').addEventListener('click', async () => {
+  lang = lang === 'en' ? 'vi' : 'en';
+  await local('/local/language', { language: lang });
+  if (S) S.language = lang;
+  applyTexts(); if (S && !S.paired) renderSetup(); else refreshTab();
+});
+$('m-unpair').addEventListener('click', async () => {
+  if (!confirm(t('unpairAsk'))) return;
+  stopPolling(); await local('/local/unpair', {}); curPc = null; await refreshState();
+});
+$('m-signout').addEventListener('click', async () => {
+  if (!confirm(t('signoutAsk'))) return;
+  stopPolling(); await local('/local/signout', {}); curPc = null; await refreshState();
+});
+$('pcsel').addEventListener('change', e => { curPc = e.target.value; refreshTab(); });
+$('refresh').addEventListener('click', refreshTab);
+$('qrefresh').addEventListener('click', async () => { try { await refreshQuota(true); } catch (e) { banner(e.message); } });
+$('pairbtn').addEventListener('click', doPair);
+$('code').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refreshState(); } });
+
+refreshState();
+setInterval(() => { if (S && !S.paired && document.visibilityState === 'visible') refreshState(); }, 2000);
+</script>
+</body>
+</html>

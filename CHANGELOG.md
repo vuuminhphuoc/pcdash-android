@@ -3,6 +3,11 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
+## Unreleased
+
+- **PCDash Remote for Windows** (`pcdash-remote-windows-*.zip`, one `.exe`): the remote for a Windows PC. A tray icon opens a page on `127.0.0.1` with the Control, Monitor (PC and home phone), Quota and Log screens, a PC switcher when the host has several PCs, and English / Vietnamese. It has its own Tailscale node (sign in from the page, no Tailscale app needed) and pairs with the home phone the same way the Android remote does (same SRP-6a handshake, checked against the Java host in `scripts/test-winremote.ps1`). Only the routes the Android remote uses are forwarded to the home phone. "Start with Windows" is in the tray menu, off by default.
+- **Web dashboard `:8090`, clearer page**: the subtitle no longer says it works "from anywhere over Tailscale" (the page only opens on the home network; away from home use PCDash Remote), the button labels are in Vietnamese too, the result of an action stays on screen with a tick or a cross (it was only in a small log), a wrong access code is no longer kept (it asks again), and keyboard focus is visible.
+
 ## 1.2.4 (host 1.29, remote 1.28, PcAgent 1.2.4)
 
 - **The host finds the PC again after a power cut**: when the router restarts it hands out new addresses, and the host kept asking the old one ("PC is OFF / not responding" while the PC was on). Now, when a PC stays unreachable or the phone's Wi-Fi comes back, the host looks for the agent in its own subnet and saves the new address. Each device is asked a random challenge that the agent answers with an HMAC keyed by its token (new `/whoami` route in PcAgent), so only the real PC is accepted and the token never crosses the LAN. It needs PcAgent 1.2.4 or later (it updates itself); an older agent is left where it is. Giving the PC a DHCP reservation on the router is still the best fix.
