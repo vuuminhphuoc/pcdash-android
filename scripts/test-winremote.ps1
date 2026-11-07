@@ -79,8 +79,12 @@ try {
     for ($i = 0; $i -lt 100 -and -not $code; $i++) {
         Start-Sleep -Milliseconds 200
         if (Test-Path $out) {
-            $m = [regex]::Match((Get-Content $out -Raw -ErrorAction SilentlyContinue), 'CODE=(\w+) PORT=(\d+)')
-            if ($m.Success) { $code = $m.Groups[1].Value; $port = $m.Groups[2].Value }
+            # The file is empty until the Java host has printed its first line.
+            $text = Get-Content $out -Raw -ErrorAction SilentlyContinue
+            if ($text) {
+                $m = [regex]::Match($text, 'CODE=(\w+) PORT=(\d+)')
+                if ($m.Success) { $code = $m.Groups[1].Value; $port = $m.Groups[2].Value }
+            }
         }
     }
     if (-not $code) { throw "The Java pairing host did not start: $(Get-Content $err -Raw -ErrorAction SilentlyContinue)" }

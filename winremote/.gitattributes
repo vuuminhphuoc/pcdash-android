@@ -1,0 +1,2 @@
+# gofmt rejects CRLF, and Windows checkouts convert to CRLF by default.
+*.go text eol=lf
