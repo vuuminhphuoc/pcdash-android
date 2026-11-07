@@ -3,7 +3,7 @@
 What changed in each release. Host and remote version numbers are in the release notes; the apps update
 themselves from the host phone.
 
-## Unreleased
+## 1.3.0 (host 1.30, remote 1.28, PcAgent 1.3.0, PCDash Remote for Windows 1.3.0)
 
 - **PCDash Remote for Windows** (`pcdash-remote-windows-*.zip`, one `.exe`): the remote for a Windows PC. A tray icon opens a page on `127.0.0.1` with the Control, Monitor (PC and home phone), Quota and Log screens, a PC switcher when the host has several PCs, and English / Vietnamese. It has its own Tailscale node (sign in from the page, no Tailscale app needed) and pairs with the home phone the same way the Android remote does (same SRP-6a handshake, checked against the Java host in `scripts/test-winremote.ps1`). Only the routes the Android remote uses are forwarded to the home phone. "Start with Windows" is in the tray menu, off by default.
 - **Web dashboard `:8090`, clearer page**: the subtitle no longer says it works "from anywhere over Tailscale" (the page only opens on the home network; away from home use PCDash Remote), the button labels are in Vietnamese too, the result of an action stays on screen with a tick or a cross (it was only in a small log), a wrong access code is no longer kept (it asks again), and keyboard focus is visible.
